@@ -2,6 +2,7 @@ package com.julio.odentix.odentix_backend.auth.config;
 
 import com.julio.odentix.odentix_backend.auth.dto.AuthenticatedUser;
 import com.julio.odentix.odentix_backend.auth.service.JwtService;
+import com.julio.odentix.odentix_backend.shared.context.TenantContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,8 +19,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Filtro que intercepta cada petición HTTP, extrae el token Bearer del header Authorization
- * y establece la autenticación en el SecurityContext (FASE1-07).
+ * Filtro que intercepta cada petición HTTP, extrae el token Bearer del header Authorization,
+ * establece la autenticación en el SecurityContext (FASE1-07) y configura el TenantContext
+ * asegurando su limpieza en el bloque finally para evitar fugas de memoria o hilos contaminados (FASE1-08).
  */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -37,31 +39,34 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       @NonNull FilterChain filterChain)
       throws ServletException, IOException {
 
-    String authHeader = request.getHeader("Authorization");
+    try {
+      String authHeader = request.getHeader("Authorization");
 
-    if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+      if (authHeader != null && authHeader.startsWith("Bearer ")) {
+        String token = authHeader.substring(7);
+
+        if (jwtService.validateToken(token)) {
+          UUID userId = jwtService.extractUserId(token);
+          UUID tenantId = jwtService.extractTenantId(token);
+          String email = jwtService.extractEmail(token);
+          String role = jwtService.extractRole(token);
+
+          TenantContext.setTenantId(tenantId);
+
+          AuthenticatedUser user = new AuthenticatedUser(userId, tenantId, email, role);
+
+          SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role.toUpperCase());
+          UsernamePasswordAuthenticationToken authentication =
+              new UsernamePasswordAuthenticationToken(user, null, List.of(authority));
+          authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+          SecurityContextHolder.getContext().setAuthentication(authentication);
+        }
+      }
+
       filterChain.doFilter(request, response);
-      return;
+    } finally {
+      TenantContext.clear();
     }
-
-    String token = authHeader.substring(7);
-
-    if (jwtService.validateToken(token)) {
-      UUID userId = jwtService.extractUserId(token);
-      UUID tenantId = jwtService.extractTenantId(token);
-      String email = jwtService.extractEmail(token);
-      String role = jwtService.extractRole(token);
-
-      AuthenticatedUser user = new AuthenticatedUser(userId, tenantId, email, role);
-
-      SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + role.toUpperCase());
-      UsernamePasswordAuthenticationToken authentication =
-          new UsernamePasswordAuthenticationToken(user, null, List.of(authority));
-      authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-      SecurityContextHolder.getContext().setAuthentication(authentication);
-    }
-
-    filterChain.doFilter(request, response);
   }
 }
