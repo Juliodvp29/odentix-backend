@@ -668,15 +668,15 @@ Restringir endpoints según el rol del usuario autenticado.
 
 **Tareas:**
 
-- [ ] Habilitar `@EnableMethodSecurity` en la configuración de
+- [x] Habilitar `@EnableMethodSecurity` en la configuración de
       seguridad.
-- [ ] Anotar al menos un endpoint de prueba con
+- [x] Anotar al menos un endpoint de prueba con
       `@PreAuthorize("hasRole('PROPIETARIO')")`.
-- [ ] Mapear el `role` del JWT a las authorities de Spring Security.
+- [x] Mapear el `role` del JWT a las authorities de Spring Security.
 
 **Criterios de aceptación:**
 
-- [ ] Un usuario con rol `RECEPCION` recibe `403` al llamar un endpoint
+- [x] Un usuario con rol `RECEPCION` recibe `403` al llamar un endpoint
       restringido a `PROPIETARIO`.
 
 ---
