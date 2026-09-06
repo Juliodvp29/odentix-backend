@@ -5,8 +5,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * Base reutilizable para todos los tests de integración (FASE0-06).
@@ -20,12 +18,15 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * Testcontainers maneja el ciclo de vida solo.
  */
 @SpringBootTest
-@Testcontainers
 @ActiveProfiles("test")
 public abstract class AbstractIntegrationTest {
 
-  @Container
-  static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16");
+  static final PostgreSQLContainer<?> POSTGRES;
+
+  static {
+    POSTGRES = new PostgreSQLContainer<>("postgres:16");
+    POSTGRES.start();
+  }
 
   // Inyecta la URL y credenciales del contenedor desechable, pisando los
   // valores de application-test.yml (que quedan como fallback local).
