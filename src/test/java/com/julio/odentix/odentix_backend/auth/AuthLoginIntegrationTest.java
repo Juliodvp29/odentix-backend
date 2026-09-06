@@ -13,6 +13,7 @@ import com.julio.odentix.odentix_backend.auth.service.JwtService;
 import com.julio.odentix.odentix_backend.auth.service.UserService;
 import com.julio.odentix.odentix_backend.tenant.entity.Tenant;
 import com.julio.odentix.odentix_backend.tenant.repository.TenantRepository;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,13 +43,18 @@ class AuthLoginIntegrationTest extends AbstractIntegrationTest {
   private JwtService jwtService;
 
   private Tenant tenant;
+  private String userEmail;
 
   @BeforeEach
   void setUp() {
+    // Email único por método: la BD de Testcontainers se comparte entre métodos
+    // y el login exige un único candidato por email (colisión → 401 aunque la
+    // clave sea correcta). Antes este test dependía del orden de ejecución.
+    userEmail = "doctor+" + UUID.randomUUID() + "@odontix.com";
     tenant = tenantRepository.save(new Tenant("Clínica Odontix Norte", "900999888-1"));
     userService.createUser(
         tenant.getId(),
-        "doctor@odontix.com",
+        userEmail,
         "ClaveSegura123*",
         "Dr. Mario Casas",
         UserRole.odontologo
@@ -57,7 +63,7 @@ class AuthLoginIntegrationTest extends AbstractIntegrationTest {
 
   @Test
   void loginExitosoDevuelveTokenYDatosDeUsuario() throws Exception {
-    LoginRequest request = new LoginRequest("doctor@odontix.com", "ClaveSegura123*");
+    LoginRequest request = new LoginRequest(userEmail, "ClaveSegura123*");
 
     MvcResult result = mockMvc.perform(post("/api/v1/auth/login")
             .contentType(MediaType.APPLICATION_JSON)
@@ -66,7 +72,7 @@ class AuthLoginIntegrationTest extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.accessToken").isNotEmpty())
         .andExpect(jsonPath("$.tokenType").value("Bearer"))
         .andExpect(jsonPath("$.expiresInSeconds").isNumber())
-        .andExpect(jsonPath("$.user.email").value("doctor@odontix.com"))
+        .andExpect(jsonPath("$.user.email").value(userEmail))
         .andExpect(jsonPath("$.user.role").value("odontologo"))
         .andExpect(jsonPath("$.user.tenantId").value(tenant.getId().toString()))
         .andReturn();
@@ -77,12 +83,12 @@ class AuthLoginIntegrationTest extends AbstractIntegrationTest {
     assertThat(jwtService.validateToken(token)).isTrue();
     assertThat(jwtService.extractRole(token)).isEqualTo("odontologo");
     assertThat(jwtService.extractTenantId(token)).isEqualTo(tenant.getId());
-    assertThat(jwtService.extractEmail(token)).isEqualTo("doctor@odontix.com");
+    assertThat(jwtService.extractEmail(token)).isEqualTo(userEmail);
   }
 
   @Test
   void loginConPasswordErroneaDevuelve401() throws Exception {
-    LoginRequest request = new LoginRequest("doctor@odontix.com", "PasswordErronea999");
+    LoginRequest request = new LoginRequest(userEmail, "PasswordErronea999");
 
     mockMvc.perform(post("/api/v1/auth/login")
             .contentType(MediaType.APPLICATION_JSON)
