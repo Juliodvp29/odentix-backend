@@ -454,13 +454,13 @@ negocio (no de catálogo/configuración global) debe tener `tenant_id`
 como columna obligatoria e indexada desde su primera migración.
 
 **Tareas:**
-- [ ] Documentar la convención en `ARCHITECTURE.md`.
-- [ ] Definir si se usará una clase base `TenantAwareEntity` con el
+- [x] Documentar la convención en `ARCHITECTURE.md`.
+- [x] Definir si se usará una clase base `TenantAwareEntity` con el
       campo `tenant_id` para que las entidades futuras hereden de ella
       (recomendado, evita olvidos).
 
 **Criterios de aceptación:**
-- [ ] Existe la clase/convención base y está documentada, lista para
+- [x] Existe la clase/convención base y está documentada, lista para
       usarse desde la Fase 2 en adelante.
 
 ---
@@ -477,14 +477,16 @@ expone como registro público todavía; los usuarios los crea el
 propietario o un proceso interno).
 
 **Tareas:**
-- [ ] Configurar `BCryptPasswordEncoder` como bean.
-- [ ] Servicio `UserService.createUser(...)` que hashea la contraseña
+- [x] Configurar `BCryptPasswordEncoder` como bean.
+- [x] Servicio `UserService.createUser(...)` que hashea la contraseña
       antes de persistir.
-- [ ] Test unitario verificando que la contraseña nunca se guarda en
-      texto plano.
+- [x] Test de integración con Testcontainers verificando que la contraseña
+      nunca se guarda en texto plano (desviación del "test unitario":
+      AGENTS.md §7 exige integración contra PG real, y solo así se puede
+      inspeccionar la BD de verdad).
 
 **Criterios de aceptación:**
-- [ ] Inspeccionando la BD directamente, el campo password nunca es
+- [x] Inspeccionando la BD directamente, el campo password nunca es
       texto plano.
 
 ---
