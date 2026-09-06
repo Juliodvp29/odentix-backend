@@ -502,17 +502,17 @@ Autenticación por credenciales que devuelve un JWT con la información
 mínima necesaria para las siguientes fases.
 
 **Tareas:**
-- [ ] Agregar librería JWT (ej. `jjwt`).
-- [ ] Endpoint `POST /api/v1/auth/login` (email + password).
-- [ ] JWT firmado que incluye: `user_id`, `tenant_id`, `role`,
+- [x] Agregar librería JWT (ej. `jjwt`).
+- [x] Endpoint `POST /api/v1/auth/login` (email + password).
+- [x] JWT firmado que incluye: `user_id`, `tenant_id`, `role`,
       expiración.
-- [ ] Manejo de error claro si las credenciales son inválidas (sin
+- [x] Manejo de error claro si las credenciales son inválidas (sin
       filtrar si el error fue "usuario no existe" vs "password
       incorrecta", por seguridad).
 
 **Criterios de aceptación:**
-- [ ] Login válido devuelve `200` con el token.
-- [ ] Login inválido devuelve `401` con mensaje genérico.
+- [x] Login válido devuelve `200` con el token.
+- [x] Login inválido devuelve `401` con mensaje genérico.
 
 ---
 
@@ -527,17 +527,17 @@ Configurar la cadena de filtros de Spring Security para que valide el
 JWT y rechace requests sin token válido.
 
 **Tareas:**
-- [ ] Filtro personalizado (`OncePerRequestFilter`) que extrae y valida
+- [x] Filtro personalizado (`OncePerRequestFilter`) que extrae y valida
       el JWT del header `Authorization: Bearer ...`.
-- [ ] `SecurityFilterChain` configurado: rutas públicas (`/auth/login`,
+- [x] `SecurityFilterChain` configurado: rutas públicas (`/auth/login`,
       `/actuator/health`) vs. protegidas (todo lo demás).
-- [ ] Endpoint de prueba `GET /api/v1/me` protegido que devuelve los
+- [x] Endpoint de prueba `GET /api/v1/me` protegido que devuelve los
       datos del usuario autenticado extraídos del JWT.
 
 **Criterios de aceptación:**
-- [ ] Request sin token a `/api/v1/me` → `401`.
-- [ ] Request con token válido → `200` con los datos correctos.
-- [ ] Request con token expirado/manipulado → `401`.
+- [x] Request sin token a `/api/v1/me` → `401`.
+- [x] Request con token válido → `200` con los datos correctos.
+- [x] Request con token expirado/manipulado → `401`.
 
 ---
 
