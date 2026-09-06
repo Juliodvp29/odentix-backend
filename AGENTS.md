@@ -295,4 +295,6 @@ que quede desactualizada visiblemente a que no exista.)*
 - Base de datos de producción: PostgreSQL 16 administrada en Render (`odentix-postgres` en región Ohio).
 - Pipeline de CI: activo en GitHub Actions (`.github/workflows/ci.yml`) con Java 25 y Testcontainers sobre `dev` y `main`.
 - `server.port=8081` en local (el puerto 8080 lo ocupa un proceso `AgentService.exe` ajeno al proyecto en la máquina de desarrollo). En producción se lee de `$PORT` (Render asigna 10000).
-- Todavía no existe `TenantAwareEntity` base ni entidades de negocio reales (comienzan en Fase 1).
+- Postgres local de Docker en `localhost:5434` (los puertos 5432 y 5433-IPv4 los ocupan servicios nativos `postgresql-x64-17/18` de la máquina de desarrollo).
+- Fase 1 en curso: FASE1-01 a FASE1-03 completadas (`Tenant`, `User`, `UserRole`, migraciones V2/V3, tests con Testcontainers). Existe `shared.entity.TenantAwareEntity` (FASE1-04) lista para las entidades de la Fase 2; `Tenant` y `User` son excepciones intencionales (ver ARCHITECTURE.md).
+- Las entidades reales de negocio (pacientes, citas, etc.) comienzan en Fase 2.
