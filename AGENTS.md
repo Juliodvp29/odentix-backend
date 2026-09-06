@@ -289,19 +289,10 @@ de ticket.
 *(Actualiza esta sección a medida que el proyecto avanza — es más útil
 que quede desactualizada visiblemente a que no exista.)*
 
-- Fase actual: **Fase 0 — Fundamentos y esqueleto del proyecto**.
-- `application.properties` tiene temporalmente excluidas
-  `DataSourceAutoConfiguration`, `HibernateJpaAutoConfiguration` y
-  `FlywayAutoConfiguration` porque todavía no existe una base de datos
-  real conectada. **Estas exclusiones se deben eliminar en la Fase 0.4**
-  (Docker Compose con PostgreSQL) — si estás trabajando en esa fase o
-  posterior y siguen presentes, es una señal de que quedaron olvidadas,
-  no de que sigan siendo necesarias.
-- `server.port=8081` en local (el puerto 8080 lo ocupa un proceso
-  `AgentService.exe` ajeno al proyecto en la máquina de desarrollo). No
-  es necesariamente así en otras máquinas ni en producción — no lo
-  generalices a otros entornos sin confirmarlo.
-- Todavía no existen `docker-compose.yml`, migraciones Flyway reales, ni
-  el `TenantAwareEntity` base — si tu tarea depende de alguno de estos y
-  no existe, es porque su ticket aún no se ha ejecutado, no un error del
-  repositorio.
+- Fase completada: **Fase 0 — Fundamentos y esqueleto del proyecto** (todos los tickets FASE0-01 a FASE0-09 completados).
+- Siguiente fase: **Fase 1 — Identidad, autenticación y multi-tenancy** (empezando por FASE1-01: modelar entidad `Tenant`).
+- Despliegue en la nube: activo en Render (`https://odentix-backend.onrender.com/actuator/health`).
+- Base de datos de producción: PostgreSQL 16 administrada en Render (`odentix-postgres` en región Ohio).
+- Pipeline de CI: activo en GitHub Actions (`.github/workflows/ci.yml`) con Java 25 y Testcontainers sobre `dev` y `main`.
+- `server.port=8081` en local (el puerto 8080 lo ocupa un proceso `AgentService.exe` ajeno al proyecto en la máquina de desarrollo). En producción se lee de `$PORT` (Render asigna 10000).
+- Todavía no existe `TenantAwareEntity` base ni entidades de negocio reales (comienzan en Fase 1).

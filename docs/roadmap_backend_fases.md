@@ -323,17 +323,17 @@ Validar que la imagen Docker corre en el proveedor elegido, antes de
 automatizar nada.
 
 **Tareas:**
-- [ ] Crear cuenta y proyecto en Render **o** Railway (elegir uno para
+- [x] Crear cuenta y proyecto en Render **o** Railway (elegir uno para
       empezar).
-- [ ] Crear instancia de PostgreSQL administrada en el mismo proveedor.
-- [ ] Configurar variables de entorno del servicio (credenciales de
+- [x] Crear instancia de PostgreSQL administrada en el mismo proveedor.
+- [x] Configurar variables de entorno del servicio (credenciales de
       BD, perfil activo) desde el panel del proveedor, no en el
       código.
-- [ ] Desplegar manualmente la imagen/proyecto.
+- [x] Desplegar manualmente la imagen/proyecto.
 
 **Criterios de aceptación:**
-- [ ] `GET /actuator/health` responde `UP` desde una URL pública.
-- [ ] Ningún secreto está en el repositorio de GitHub.
+- [x] `GET /actuator/health` responde `UP` desde una URL pública.
+- [x] Ningún secreto está en el repositorio de GitHub.
 
 ---
 
@@ -348,14 +348,14 @@ Que ningún Pull Request se pueda mergear si el código no compila o si
 las pruebas fallan.
 
 **Tareas:**
-- [ ] Crear workflow de GitHub Actions (`.github/workflows/ci.yml`)
+- [x] Crear workflow de GitHub Actions (`.github/workflows/ci.yml`)
       que se dispare en push/PR contra `dev` y `main`.
-- [ ] Pasos: checkout, setup JDK 25, build, test.
-- [ ] Configurar la rama `main` (y `dev` si aplica) como protegida,
+- [x] Pasos: checkout, setup JDK 25, build, test.
+- [x] Configurar la rama `main` (y `dev` si aplica) como protegida,
       exigiendo que el pipeline pase antes de mergear.
 
 **Criterios de aceptación:**
-- [ ] Un PR con un test que falla queda bloqueado automáticamente por
+- [x] Un PR con un test que falla queda bloqueado automáticamente por
       GitHub.
 
 **Nota:** el deploy automático (CD) se deja para la Fase 12, cuando ya
@@ -385,13 +385,13 @@ todas las entidades ya preparadas.
 Crear la entidad raíz que representa a cada clínica cliente.
 
 **Tareas:**
-- [ ] Entidad `Tenant`: id, nombre, estado (activo/suspendido/trial),
+- [x] Entidad `Tenant`: id, nombre, estado (activo/suspendido/trial),
       fecha de creación.
-- [ ] Migración Flyway `V2__create_tenant.sql`.
-- [ ] Repositorio JPA básico (`TenantRepository`).
+- [x] Migración Flyway `V2__create_tenants.sql`.
+- [x] Repositorio JPA básico (`TenantRepository`).
 
 **Criterios de aceptación:**
-- [ ] Se puede persistir y recuperar un `Tenant` desde un test de
+- [x] Se puede persistir y recuperar un `Tenant` desde un test de
       integración con Testcontainers.
 
 ---
@@ -406,16 +406,16 @@ Crear la entidad raíz que representa a cada clínica cliente.
 Usuario del sistema, siempre asociado a un único tenant en esta etapa.
 
 **Tareas:**
-- [ ] Entidad `User`: id, tenant_id (`@ManyToOne`), email, password
+- [x] Entidad `User`: id, tenant_id (`@ManyToOne`), email, password
       (hash), nombre, estado (activo/inactivo).
-- [ ] Constraint único de `email` **por tenant** (no global — dos
+- [x] Constraint único de `email` **por tenant** (no global — dos
       clínicas distintas podrían tener un usuario con el mismo email
       en teoría, aunque en la práctica sea raro; no asumir lo
       contrario).
-- [ ] Migración Flyway correspondiente.
+- [x] Migración Flyway correspondiente.
 
 **Criterios de aceptación:**
-- [ ] No se puede crear dos usuarios con el mismo email dentro del
+- [x] No se puede crear dos usuarios con el mismo email dentro del
       mismo tenant (constraint de BD, no solo validación en código).
 
 ---
@@ -430,15 +430,15 @@ Usuario del sistema, siempre asociado a un único tenant en esta etapa.
 Catálogo de roles y su asignación a usuarios.
 
 **Tareas:**
-- [ ] Definir roles como enum o tabla: `PROPIETARIO`, `ODONTOLOGO`,
+- [x] Definir roles como enum o tabla: `PROPIETARIO`, `ODONTOLOGO`,
       `RECEPCION`, `AUXILIAR`, `ESPECIALISTA_EXTERNO`.
-- [ ] Relación `User` ↔ `Role` (puede ser un solo rol por usuario en
+- [x] Relación `User` ↔ `Role` (puede ser un solo rol por usuario en
       esta fase; permitir múltiples roles es una mejora futura, no
       bloqueante).
-- [ ] Migración Flyway correspondiente.
+- [x] Migración Flyway correspondiente.
 
 **Criterios de aceptación:**
-- [ ] Un `User` persistido tiene un rol válido consultable.
+- [x] Un `User` persistido tiene un rol válido consultable.
 
 ---
 
