@@ -1,10 +1,9 @@
 package com.julio.odentix.odentix_backend;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class OdentixBackendApplicationTests {
+// El contexto levanta contra PostgreSQL real vía Testcontainers (ver base).
+class OdentixBackendApplicationTests extends AbstractIntegrationTest {
 
 	@Test
 	void contextLoads() {
