@@ -323,17 +323,17 @@ Validar que la imagen Docker corre en el proveedor elegido, antes de
 automatizar nada.
 
 **Tareas:**
-- [ ] Crear cuenta y proyecto en Render **o** Railway (elegir uno para
+- [x] Crear cuenta y proyecto en Render **o** Railway (elegir uno para
       empezar).
-- [ ] Crear instancia de PostgreSQL administrada en el mismo proveedor.
-- [ ] Configurar variables de entorno del servicio (credenciales de
+- [x] Crear instancia de PostgreSQL administrada en el mismo proveedor.
+- [x] Configurar variables de entorno del servicio (credenciales de
       BD, perfil activo) desde el panel del proveedor, no en el
       código.
-- [ ] Desplegar manualmente la imagen/proyecto.
+- [x] Desplegar manualmente la imagen/proyecto.
 
 **Criterios de aceptación:**
-- [ ] `GET /actuator/health` responde `UP` desde una URL pública.
-- [ ] Ningún secreto está en el repositorio de GitHub.
+- [x] `GET /actuator/health` responde `UP` desde una URL pública.
+- [x] Ningún secreto está en el repositorio de GitHub.
 
 ---
 
@@ -348,14 +348,14 @@ Que ningún Pull Request se pueda mergear si el código no compila o si
 las pruebas fallan.
 
 **Tareas:**
-- [ ] Crear workflow de GitHub Actions (`.github/workflows/ci.yml`)
+- [x] Crear workflow de GitHub Actions (`.github/workflows/ci.yml`)
       que se dispare en push/PR contra `dev` y `main`.
-- [ ] Pasos: checkout, setup JDK 25, build, test.
-- [ ] Configurar la rama `main` (y `dev` si aplica) como protegida,
+- [x] Pasos: checkout, setup JDK 25, build, test.
+- [x] Configurar la rama `main` (y `dev` si aplica) como protegida,
       exigiendo que el pipeline pase antes de mergear.
 
 **Criterios de aceptación:**
-- [ ] Un PR con un test que falla queda bloqueado automáticamente por
+- [x] Un PR con un test que falla queda bloqueado automáticamente por
       GitHub.
 
 **Nota:** el deploy automático (CD) se deja para la Fase 12, cuando ya
