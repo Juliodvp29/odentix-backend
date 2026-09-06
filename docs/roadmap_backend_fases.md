@@ -641,19 +641,19 @@ Fase 2 sin que este ticket esté cerrado y en verde.
 
 **Tareas:**
 
-- [ ] Crear en el test dos tenants (A y B) con datos de una misma
+- [x] Crear en el test dos tenants (A y B) con datos de una misma
       entidad de negocio simple (puede ser una entidad de prueba si
       todavía no existe ninguna real).
-- [ ] Autenticarse como usuario del tenant A e intentar leer/modificar
+- [x] Autenticarse como usuario del tenant A e intentar leer/modificar
       un registro del tenant B **usando su ID directamente**.
-- [ ] Verificar que la respuesta es `404` (no `403`, para no confirmar
+- [x] Verificar que la respuesta es `404` (no `403`, para no confirmar
       siquiera que el recurso existe).
 
 **Criterios de aceptación:**
 
-- [ ] El test falla intencionalmente si alguien comenta o rompe el
+- [x] El test falla intencionalmente si alguien comenta o rompe el
       filtro de tenant (para servir como red de seguridad futura).
-- [ ] El test corre en el pipeline de CI en cada PR.
+- [x] El test corre en el pipeline de CI en cada PR.
 
 ---
 
