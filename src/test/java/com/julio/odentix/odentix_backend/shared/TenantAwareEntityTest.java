@@ -32,6 +32,8 @@ class TenantAwareEntityTest {
     assertThat(columna.name()).isEqualTo("tenant_id");
     assertThat(columna.nullable()).isFalse();
     assertThat(columna.updatable()).isFalse();
+
+    assertThat(campo.isAnnotationPresent(org.hibernate.annotations.TenantId.class)).isTrue();
   }
 
   @Test
