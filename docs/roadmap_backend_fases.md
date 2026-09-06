@@ -693,12 +693,16 @@ igual que se hizo con el aislamiento de tenant.
 
 **Tareas:**
 
-- [ ] Test que autentica usuarios con distintos roles y verifica
+- [x] Test que autentica usuarios con distintos roles y verifica
       `200` vs `403` según corresponda en el endpoint de prueba.
+      (Cubierto por `RoleAuthorizationIntegrationTest`, creado en FASE1-11:
+      propietario → 200, recepción/odontólogo → 403, sin token → 401.)
 
 **Criterios de aceptación:**
 
-- [ ] El test corre en CI y falla si la restricción de rol se rompe.
+- [x] El test corre en CI y falla si la restricción de rol se rompe.
+      (Verificado con `clean verify`: 5/5 en verde; las aserciones 403
+      fallarían si `@PreAuthorize` se rompe.)
 
 ---
 
@@ -754,7 +758,7 @@ Antes de pasar a la Fase 2, verificar:
 
 - [ ] FASE1-10 (test de aislamiento cross-tenant) está en verde y
       corre en CI.
-- [ ] FASE1-12 (test de autorización por rol) está en verde y corre en
+- [x] FASE1-12 (test de autorización por rol) está en verde y corre en
       CI.
 - [ ] La convención `TenantAwareEntity` (FASE1-04) está lista para que
       las entidades de la Fase 2 la usen desde su primera migración.
