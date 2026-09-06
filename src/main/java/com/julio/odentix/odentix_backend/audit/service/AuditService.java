@@ -6,6 +6,7 @@ import com.julio.odentix.odentix_backend.audit.repository.AuditRepository;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -35,7 +36,10 @@ public class AuditService {
    * @param detail detalle libre JSON (anulable; nunca incluir contraseñas)
    * @throws IllegalArgumentException si falta tenant, acción o entidad
    */
-  @Transactional
+  // REQUIRES_NEW (FASE1-14): la auditoría debe persistir aunque la transacción
+  // que la originó haga rollback (ej. un login fallido lanza excepción y su
+  // transacción se revierte; sin esto, el registro del fallo se perdería).
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
   public AuditLog log(
       UUID tenantId,
       UUID userId,

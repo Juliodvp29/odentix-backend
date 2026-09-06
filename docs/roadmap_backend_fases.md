@@ -749,13 +749,21 @@ Primer caso de uso real del sistema de auditoría.
 
 **Tareas:**
 
-- [ ] Llamar a `AuditService.log(...)` en login exitoso y en login
+- [x] Llamar a `AuditService.log(...)` en login exitoso y en login
       fallido (sin registrar la contraseña, ni siquiera fallida).
+      (`AuthService` registra `login_success` con usuario y `login_failed`
+      cuando el tenant es atribuible; detalle solo con el email.)
+- [x] `AuditService.log` con `REQUIRES_NEW` para que el rollback del login
+      fallido no borre la propia entrada de auditoría.
 
 **Criterios de aceptación:**
 
-- [ ] Un intento de login (exitoso o fallido) genera una entrada
+- [x] Un intento de login (exitoso o fallido) genera una entrada
       consultable en `audit_log`.
+      (Verificado con `LoginAuditIntegrationTest` 4/4. Excepción
+      documentada: sin tenant atribuible —email inexistente sin `tenantId`
+      o colisión sin desambiguar— no se registra nada, porque inventar un
+      tenant violaría el aislamiento y `tenant_id` es NOT NULL.)
 
 ---
 
