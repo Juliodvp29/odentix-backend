@@ -139,18 +139,18 @@ Crear el proyecto base con Spring Initializr y dejarlo corriendo
 localmente sin lógica de negocio.
 
 **Tareas:**
-- [ ] Generar proyecto con dependencias: Spring Web, Spring Data JPA,
+- [x] Generar proyecto con dependencias: Spring Web, Spring Data JPA,
       Spring Security, Validation, Actuator, PostgreSQL Driver, Flyway.
-- [ ] Decidir Maven vs Gradle (sugerido: Maven, por ser el más común en
+- [x] Decidir Maven vs Gradle (sugerido: Maven, por ser el más común en
       tutoriales/documentación de Spring si es tu primera vez).
-- [ ] Evaluar si usar Lombok o no (mientras aprendes, puede ser más
+- [x] Evaluar si usar Lombok o no (mientras aprendes, puede ser más
       claro escribir getters/setters explícitos al inicio).
-- [ ] Subir el proyecto vacío a GitHub con `.gitignore` apropiado para
+- [x] Subir el proyecto vacío a GitHub con `.gitignore` apropiado para
       Java/Maven/IDE.
 
 **Criterios de aceptación:**
-- [ ] `./mvnw spring-boot:run` levanta la app sin errores.
-- [ ] `GET /actuator/health` responde `200 OK` con `{"status":"UP"}`.
+- [x] `./mvnw spring-boot:run` levanta la app sin errores.
+- [x] `GET /actuator/health` responde `200 OK` con `{"status":"UP"}`.
 
 **Temas de Spring Boot para investigar:** estructura de un proyecto
 Spring Boot, `@SpringBootApplication`, autoconfiguración.
@@ -168,17 +168,17 @@ Separar configuración de `dev`, `test` y `prod` para no mezclar
 credenciales ni comportamientos entre entornos.
 
 **Tareas:**
-- [ ] Crear `application.yml` base + `application-dev.yml`,
+- [x] Crear `application.yml` base + `application-dev.yml`,
       `application-test.yml`, `application-prod.yml`.
-- [ ] Mover valores sensibles (credenciales de BD) a variables de
+- [x] Mover valores sensibles (credenciales de BD) a variables de
       entorno con sintaxis `${VAR:valor_default}`.
-- [ ] Documentar en el `README.md` cómo correr el proyecto en cada
+- [x] Documentar en el `README.md` cómo correr el proyecto en cada
       perfil.
 
 **Criterios de aceptación:**
-- [ ] La app puede iniciar con `-Dspring.profiles.active=dev` sin
+- [x] La app puede iniciar con `-Dspring.profiles.active=dev` sin
       errores.
-- [ ] Ningún secreto real está commiteado en el repositorio.
+- [x] Ningún secreto real está commiteado en el repositorio.
 
 **Temas de Spring Boot:** `@Profile`, `spring.profiles.active`,
 resolución de propiedades por entorno.
@@ -198,17 +198,17 @@ del documento de arquitectura para el criterio (capas vs. por
 módulo/feature).
 
 **Tareas:**
-- [ ] Elegir el criterio de organización (sugerido para tu caso, dado
+- [x] Elegir el criterio de organización (sugerido para tu caso, dado
       que vienes de un mundo más orientado a módulos en Angular: por
       **módulo de negocio** — `patient`, `appointment`, `auth`, etc. —
       cada uno con sus propias sub-capas internas).
-- [ ] Crear la estructura de carpetas vacía con un `package-info.java`
+- [x] Crear la estructura de carpetas vacía con un `package-info.java`
       o README corto explicando la convención.
-- [ ] Anotar la decisión en el propio repositorio (ej. `ARCHITECTURE.md`)
+- [x] Anotar la decisión en el propio repositorio (ej. `ARCHITECTURE.md`)
       para no tener que volver a discutirla en cada módulo nuevo.
 
 **Criterios de aceptación:**
-- [ ] Existe un documento corto en el repo que explica la convención
+- [x] Existe un documento corto en el repo que explica la convención
       de paquetes elegida.
 
 ---
@@ -224,14 +224,14 @@ Tener una base de datos PostgreSQL reproducible en un solo comando,
 igual para vos que para cualquier otra persona que clone el repo.
 
 **Tareas:**
-- [ ] Crear `docker-compose.yml` con servicio `postgres` (versión
+- [x] Crear `docker-compose.yml` con servicio `postgres` (versión
       fijada, ej. `postgres:16`).
-- [ ] Configurar `application-dev.yml` para apuntar a esa instancia.
-- [ ] Documentar en `README.md` el comando para levantarla
+- [x] Configurar `application-dev.yml` para apuntar a esa instancia.
+- [x] Documentar en `README.md` el comando para levantarla
       (`docker compose up -d`).
 
 **Criterios de aceptación:**
-- [ ] `docker compose up -d` levanta PostgreSQL y la app conecta sin
+- [x] `docker compose up -d` levanta PostgreSQL y la app conecta sin
       configuración adicional.
 
 ---
@@ -247,15 +247,15 @@ Establecer desde ya que **todo** cambio de esquema pasa por una
 migración versionada, nunca por `ddl-auto: update`.
 
 **Tareas:**
-- [ ] Configurar `spring.jpa.hibernate.ddl-auto=validate` (nunca
+- [x] Configurar `spring.jpa.hibernate.ddl-auto=validate` (nunca
       `update` ni `create` en ningún perfil, ni siquiera `dev`).
-- [ ] Crear `V1__init.sql` (puede ser una tabla mínima de prueba).
-- [ ] Verificar que Flyway corre automáticamente al iniciar la app.
+- [x] Crear `V1__init.sql` (puede ser una tabla mínima de prueba).
+- [x] Verificar que Flyway corre automáticamente al iniciar la app.
 
 **Criterios de aceptación:**
-- [ ] La tabla `flyway_schema_history` existe después de iniciar la
+- [x] La tabla `flyway_schema_history` existe después de iniciar la
       app y contiene el registro de `V1`.
-- [ ] `ddl-auto` está en `validate` en todos los perfiles.
+- [x] `ddl-auto` está en `validate` en todos los perfiles.
 
 **Temas de Spring Boot:** Flyway + Spring Boot, por qué `ddl-auto:
 update` es una mala práctica en cualquier proyecto real.
@@ -273,15 +273,15 @@ Configurar pruebas de integración contra una base de datos PostgreSQL
 real y desechable, no H2 ni mocks, desde el primer test.
 
 **Tareas:**
-- [ ] Agregar dependencia de Testcontainers para PostgreSQL.
-- [ ] Crear una clase base de test (`@SpringBootTest` +
+- [x] Agregar dependencia de Testcontainers para PostgreSQL.
+- [x] Crear una clase base de test (`@SpringBootTest` +
       `@Testcontainers`) reutilizable para todos los tests de
       integración futuros.
-- [ ] Escribir un primer test trivial que solo valide que el contexto
+- [x] Escribir un primer test trivial que solo valide que el contexto
       de Spring levanta correctamente con la base de Testcontainers.
 
 **Criterios de aceptación:**
-- [ ] El test corre localmente y en el pipeline de CI sin Docker
+- [x] El test corre localmente y en el pipeline de CI sin Docker
       preinstalado manualmente (Testcontainers lo maneja).
 
 **Temas de Spring Boot:** `@Testcontainers`, `@DynamicPropertySource`
@@ -300,14 +300,14 @@ Empaquetar la aplicación como imagen Docker liviana, separando el
 proceso de build del runtime.
 
 **Tareas:**
-- [ ] Escribir `Dockerfile` multi-stage: stage 1 con Maven+JDK para
+- [x] Escribir `Dockerfile` multi-stage: stage 1 con Maven+JDK para
       compilar, stage 2 con JRE 25 slim solo para ejecutar el `.jar`.
-- [ ] Construir la imagen localmente y correrla con `docker run`.
-- [ ] Verificar que las variables de entorno (perfil `prod`, conexión a
+- [x] Construir la imagen localmente y correrla con `docker run`.
+- [x] Verificar que las variables de entorno (perfil `prod`, conexión a
       BD) se pasan correctamente al contenedor.
 
 **Criterios de aceptación:**
-- [ ] `docker build` genera la imagen y `docker run` levanta la app
+- [x] `docker build` genera la imagen y `docker run` levanta la app
       correctamente respondiendo `/actuator/health`.
 
 ---
@@ -553,15 +553,15 @@ punto del código durante esa request, sin tener que pasarlo manualmente
 por cada método.
 
 **Tareas:**
-- [ ] Componente `TenantContext` (`ThreadLocal` o `RequestScope` bean).
-- [ ] El filtro de JWT (FASE1-07) puebla el `TenantContext` al inicio
+- [x] Componente `TenantContext` (`ThreadLocal` o `RequestScope` bean).
+- [x] El filtro de JWT (FASE1-07) puebla el `TenantContext` al inicio
       de cada request y lo limpia al final (importante: evitar fugas
       entre requests si se reutilizan hilos).
-- [ ] Test que verifica que el contexto se limpia correctamente después
+- [x] Test que verifica que el contexto se limpia correctamente después
       de cada request.
 
 **Criterios de aceptación:**
-- [ ] Cualquier componente Spring puede obtener el `tenant_id` actual
+- [x] Cualquier componente Spring puede obtener el `tenant_id` actual
       sin recibirlo como parámetro explícito.
 
 ---
