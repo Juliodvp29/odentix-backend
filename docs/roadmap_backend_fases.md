@@ -718,16 +718,23 @@ posterior.
 
 **Tareas:**
 
-- [ ] Entidad `AuditLog`: tenant_id, user_id, acción, entidad afectada,
+- [x] Entidad `AuditLog`: tenant_id, user_id, acción, entidad afectada,
       entidad_id, fecha, detalle (JSON o texto).
-- [ ] Migración Flyway correspondiente.
-- [ ] Servicio simple `AuditService.log(...)` reutilizable desde
+      (Módulo `audit/`, hereda `TenantAwareEntity`; `detail` JSONB con
+      `Map<String, Object>`; desviaciones de `schema.sql` documentadas en
+      `V4__create_audit_log.sql`: PK UUID en vez de BIGSERIAL y columna
+      `updated_at` exigida por la clase base.)
+- [x] Migración Flyway correspondiente.
+- [x] Servicio simple `AuditService.log(...)` reutilizable desde
       cualquier módulo futuro.
 
 **Criterios de aceptación:**
 
-- [ ] Se puede registrar una entrada de auditoría desde código y
+- [x] Se puede registrar una entrada de auditoría desde código y
       consultarla filtrada por tenant.
+      (Verificado con `AuditServiceIntegrationTest`: registro, lectura
+      filtrada con round-trip JSON y aislamiento cross-tenant con query
+      ingenua.)
 
 ---
 
