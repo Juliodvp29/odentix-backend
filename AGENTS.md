@@ -294,5 +294,5 @@ que quede desactualizada visiblemente a que no exista.)*
 - Despliegue en la nube: activo en Render (`https://odentix-backend.onrender.com/actuator/health`).
 - Base de datos de producción: PostgreSQL 16 administrada en Render (`odentix-postgres` en región Ohio).
 - Pipeline de CI: activo en GitHub Actions (`.github/workflows/ci.yml`) con Java 25 y Testcontainers sobre `dev` y `main`.
-- Fase 1 en curso: FASE1-01 a FASE1-09 completadas (`Tenant`, `User`, `UserRole`, `TenantAwareEntity`, `UserService`, login JWT, `JwtAuthenticationFilter`, `TenantContext` por request, filtrado automático de tenant en repositorios con `@TenantId` y `TenantIdentifierResolver`). Siguiente ticket: FASE1-10 (Test crítico de aislamiento cross-tenant).
+- Fase 1 en curso: FASE1-01 a FASE1-10 completadas (`Tenant`, `User`, `UserRole`, `TenantAwareEntity`, `UserService`, login JWT, `JwtAuthenticationFilter`, `TenantContext` por request, filtrado automático de tenant en repositorios con `@TenantId` y `TenantIdentifierResolver`, test crítico de aislamiento cross-tenant). Siguiente ticket: FASE1-11 (Autorización por rol `@PreAuthorize`).
 - Las entidades reales de negocio (pacientes, citas, etc.) comienzan en Fase 2.
