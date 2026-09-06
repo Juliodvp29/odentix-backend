@@ -1,5 +1,6 @@
 package com.julio.odentix.odentix_backend.shared.entity;
 
+import com.julio.odentix.odentix_backend.shared.context.TenantContext;
 import jakarta.persistence.Column;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -10,14 +11,20 @@ import jakarta.persistence.PreUpdate;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import org.hibernate.annotations.TenantId;
 
 /**
- * Base para toda entidad de negocio (FASE1-04).
+ * Base para toda entidad de negocio (FASE1-04, FASE1-09).
  *
  * <p>Toda tabla de negocio (no catálogos globales) debe llevar {@code tenant_id}
  * desde su primera migración, y su entidad debe heredar de esta clase: así el
  * olvido del filtro por tenant se vuelve un error de diseño visible, no un
  * detalle a recordar en cada query (defensa en profundidad, regla §5 de AGENTS.md).
+ *
+ * <p>Anotado con {@link TenantId} para que Hibernate 6/7 aplique el filtro automático
+ * de tenant tanto en queries masivas (findAll, JPQL, Criteria) como en búsquedas por
+ * ID directo (findById / entityManager.find), resolviendo el tenant a través de
+ * {@link com.julio.odentix.odentix_backend.shared.context.TenantIdentifierResolver}.
  *
  * <p>Si la entidad además necesita navegar a la clínica (ej. joins), la asociación
  * se mapea sobre la misma columna con {@code insertable = false, updatable = false}
@@ -36,6 +43,7 @@ public abstract class TenantAwareEntity {
   @GeneratedValue(strategy = GenerationType.UUID)
   private UUID id;
 
+  @TenantId
   @Column(name = "tenant_id", nullable = false, updatable = false)
   private UUID tenantId;
 
@@ -60,6 +68,9 @@ public abstract class TenantAwareEntity {
     }
     if (this.updatedAt == null) {
       this.updatedAt = now;
+    }
+    if (this.tenantId == null) {
+      this.tenantId = TenantContext.getTenantId();
     }
   }
 

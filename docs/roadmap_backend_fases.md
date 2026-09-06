@@ -1,4 +1,5 @@
 # Roadmap por Fases — Backend
+
 ## Sistema de Gestión y Productividad para Clínicas Odontológicas
 
 **Alcance de este documento:** solo backend (Java 25 LTS + Spring Boot).
@@ -10,17 +11,16 @@ backend tenga una base estable.
 
 **Cómo leer este documento:**
 
-- Las **Fases 0 y 1** están desglosadas en formato de tickets/issues de
-  GitHub (título, descripción, tareas, criterios de aceptación,
-  labels, estimación, dependencias) porque son las que vas a ejecutar
-  primero. Puedes copiar cada ticket directamente como un Issue.
-- Las **Fases 2 en adelante** se mantienen a nivel de subfase (menos
-  granular). Te recomiendo pedirme el desglose en tickets de la
-  siguiente fase justo antes de empezarla, no todas de una vez, porque
-  el detalle fino tiende a cambiar a medida que el proyecto avanza.
+- **Todas las fases (0 a 12)** están desglosadas en formato de
+  tickets/issues de GitHub (título, tipo, estimación, dependencias,
+  descripción, tareas, criterios de aceptación) — puedes copiar cada
+  ticket directamente como un Issue.
 - Se agregó una sección de **pricing y límites por plan**, ya que
   varias fases (especialmente la Fase 11) dependen directamente de qué
   límite tiene cada plan.
+- Los checkboxes marcados `[x]` reflejan avance real del proyecto, no
+  solo la plantilla — este documento se actualiza a medida que se
+  completan tickets, no es estático.
 
 ---
 
@@ -39,30 +39,30 @@ que crece a subir de plan.
 
 ## Tabla comparativa
 
-| Límite / Funcionalidad | Esencial | Profesional | Clínica |
-|---|---|---|---|
-| Sedes/consultorios | 1 | Hasta 2 | Ilimitadas |
-| Usuarios internos | Hasta 2 | Hasta 6 | Ilimitados |
-| Pacientes activos | Hasta 150 | Hasta 800 | Ilimitados |
-| Citas/mes | Ilimitadas | Ilimitadas | Ilimitadas |
-| Historia clínica y odontograma | Sí | Sí | Sí |
-| Facturación y pagos simples | Sí | Sí | Sí |
-| Notificaciones por email | Sí | Sí | Sí |
-| Conversaciones WhatsApp incluidas/mes | No incluido (add-on) | 300 | 1,000 |
-| CRM de leads | No | Sí | Sí |
-| Automatizaciones (tareas, recordatorios) | Básicas (recordatorio de cita) | Completas | Completas |
-| Cartera y planes de pago en cuotas | No (pago único) | Sí | Sí |
-| Especialistas externos | No | Hasta 2 | Ilimitados |
-| Inventario | No | Básico (sin alertas) | Completo (con alertas) |
-| Motor de oportunidades | No | Alertas básicas (2 reglas) | Completo (todas las reglas) |
-| IA administrativa (asistente/mensajes) | No | No | Sí |
-| Reportes y analítica | Básicos | Intermedios | Avanzados |
-| Soporte | Email | Email prioritario | Prioritario + onboarding asistido |
+| Límite / Funcionalidad                   | Esencial                       | Profesional                | Clínica                           |
+| ---------------------------------------- | ------------------------------ | -------------------------- | --------------------------------- |
+| Sedes/consultorios                       | 1                              | Hasta 2                    | Ilimitadas                        |
+| Usuarios internos                        | Hasta 2                        | Hasta 6                    | Ilimitados                        |
+| Pacientes activos                        | Hasta 150                      | Hasta 800                  | Ilimitados                        |
+| Citas/mes                                | Ilimitadas                     | Ilimitadas                 | Ilimitadas                        |
+| Historia clínica y odontograma           | Sí                             | Sí                         | Sí                                |
+| Facturación y pagos simples              | Sí                             | Sí                         | Sí                                |
+| Notificaciones por email                 | Sí                             | Sí                         | Sí                                |
+| Conversaciones WhatsApp incluidas/mes    | No incluido (add-on)           | 300                        | 1,000                             |
+| CRM de leads                             | No                             | Sí                         | Sí                                |
+| Automatizaciones (tareas, recordatorios) | Básicas (recordatorio de cita) | Completas                  | Completas                         |
+| Cartera y planes de pago en cuotas       | No (pago único)                | Sí                         | Sí                                |
+| Especialistas externos                   | No                             | Hasta 2                    | Ilimitados                        |
+| Inventario                               | No                             | Básico (sin alertas)       | Completo (con alertas)            |
+| Motor de oportunidades                   | No                             | Alertas básicas (2 reglas) | Completo (todas las reglas)       |
+| IA administrativa (asistente/mensajes)   | No                             | No                         | Sí                                |
+| Reportes y analítica                     | Básicos                        | Intermedios                | Avanzados                         |
+| Soporte                                  | Email                          | Email prioritario          | Prioritario + onboarding asistido |
 
-*(Los números de esta tabla son un punto de partida razonable, no una
+_(Los números de esta tabla son un punto de partida razonable, no una
 decisión cerrada — se pueden ajustar con datos reales de los primeros
 clientes, pero sirven para diseñar el feature-gating de la Fase 11
-desde ya.)*
+desde ya.)_
 
 ## Cómo se traduce esto a diseño técnico
 
@@ -139,6 +139,7 @@ Crear el proyecto base con Spring Initializr y dejarlo corriendo
 localmente sin lógica de negocio.
 
 **Tareas:**
+
 - [x] Generar proyecto con dependencias: Spring Web, Spring Data JPA,
       Spring Security, Validation, Actuator, PostgreSQL Driver, Flyway.
 - [x] Decidir Maven vs Gradle (sugerido: Maven, por ser el más común en
@@ -149,6 +150,7 @@ localmente sin lógica de negocio.
       Java/Maven/IDE.
 
 **Criterios de aceptación:**
+
 - [x] `./mvnw spring-boot:run` levanta la app sin errores.
 - [x] `GET /actuator/health` responde `200 OK` con `{"status":"UP"}`.
 
@@ -168,6 +170,7 @@ Separar configuración de `dev`, `test` y `prod` para no mezclar
 credenciales ni comportamientos entre entornos.
 
 **Tareas:**
+
 - [x] Crear `application.yml` base + `application-dev.yml`,
       `application-test.yml`, `application-prod.yml`.
 - [x] Mover valores sensibles (credenciales de BD) a variables de
@@ -176,6 +179,7 @@ credenciales ni comportamientos entre entornos.
       perfil.
 
 **Criterios de aceptación:**
+
 - [x] La app puede iniciar con `-Dspring.profiles.active=dev` sin
       errores.
 - [x] Ningún secreto real está commiteado en el repositorio.
@@ -198,6 +202,7 @@ del documento de arquitectura para el criterio (capas vs. por
 módulo/feature).
 
 **Tareas:**
+
 - [x] Elegir el criterio de organización (sugerido para tu caso, dado
       que vienes de un mundo más orientado a módulos en Angular: por
       **módulo de negocio** — `patient`, `appointment`, `auth`, etc. —
@@ -208,6 +213,7 @@ módulo/feature).
       para no tener que volver a discutirla en cada módulo nuevo.
 
 **Criterios de aceptación:**
+
 - [x] Existe un documento corto en el repo que explica la convención
       de paquetes elegida.
 
@@ -224,6 +230,7 @@ Tener una base de datos PostgreSQL reproducible en un solo comando,
 igual para vos que para cualquier otra persona que clone el repo.
 
 **Tareas:**
+
 - [x] Crear `docker-compose.yml` con servicio `postgres` (versión
       fijada, ej. `postgres:16`).
 - [x] Configurar `application-dev.yml` para apuntar a esa instancia.
@@ -231,6 +238,7 @@ igual para vos que para cualquier otra persona que clone el repo.
       (`docker compose up -d`).
 
 **Criterios de aceptación:**
+
 - [x] `docker compose up -d` levanta PostgreSQL y la app conecta sin
       configuración adicional.
 
@@ -247,12 +255,14 @@ Establecer desde ya que **todo** cambio de esquema pasa por una
 migración versionada, nunca por `ddl-auto: update`.
 
 **Tareas:**
+
 - [x] Configurar `spring.jpa.hibernate.ddl-auto=validate` (nunca
       `update` ni `create` en ningún perfil, ni siquiera `dev`).
 - [x] Crear `V1__init.sql` (puede ser una tabla mínima de prueba).
 - [x] Verificar que Flyway corre automáticamente al iniciar la app.
 
 **Criterios de aceptación:**
+
 - [x] La tabla `flyway_schema_history` existe después de iniciar la
       app y contiene el registro de `V1`.
 - [x] `ddl-auto` está en `validate` en todos los perfiles.
@@ -273,6 +283,7 @@ Configurar pruebas de integración contra una base de datos PostgreSQL
 real y desechable, no H2 ni mocks, desde el primer test.
 
 **Tareas:**
+
 - [x] Agregar dependencia de Testcontainers para PostgreSQL.
 - [x] Crear una clase base de test (`@SpringBootTest` +
       `@Testcontainers`) reutilizable para todos los tests de
@@ -281,6 +292,7 @@ real y desechable, no H2 ni mocks, desde el primer test.
       de Spring levanta correctamente con la base de Testcontainers.
 
 **Criterios de aceptación:**
+
 - [x] El test corre localmente y en el pipeline de CI sin Docker
       preinstalado manualmente (Testcontainers lo maneja).
 
@@ -300,6 +312,7 @@ Empaquetar la aplicación como imagen Docker liviana, separando el
 proceso de build del runtime.
 
 **Tareas:**
+
 - [x] Escribir `Dockerfile` multi-stage: stage 1 con Maven+JDK para
       compilar, stage 2 con JRE 25 slim solo para ejecutar el `.jar`.
 - [x] Construir la imagen localmente y correrla con `docker run`.
@@ -307,6 +320,7 @@ proceso de build del runtime.
       BD) se pasan correctamente al contenedor.
 
 **Criterios de aceptación:**
+
 - [x] `docker build` genera la imagen y `docker run` levanta la app
       correctamente respondiendo `/actuator/health`.
 
@@ -323,6 +337,7 @@ Validar que la imagen Docker corre en el proveedor elegido, antes de
 automatizar nada.
 
 **Tareas:**
+
 - [x] Crear cuenta y proyecto en Render **o** Railway (elegir uno para
       empezar).
 - [x] Crear instancia de PostgreSQL administrada en el mismo proveedor.
@@ -332,6 +347,7 @@ automatizar nada.
 - [x] Desplegar manualmente la imagen/proyecto.
 
 **Criterios de aceptación:**
+
 - [x] `GET /actuator/health` responde `UP` desde una URL pública.
 - [x] Ningún secreto está en el repositorio de GitHub.
 
@@ -348,6 +364,7 @@ Que ningún Pull Request se pueda mergear si el código no compila o si
 las pruebas fallan.
 
 **Tareas:**
+
 - [x] Crear workflow de GitHub Actions (`.github/workflows/ci.yml`)
       que se dispare en push/PR contra `dev` y `main`.
 - [x] Pasos: checkout, setup JDK 25, build, test.
@@ -355,6 +372,7 @@ las pruebas fallan.
       exigiendo que el pipeline pase antes de mergear.
 
 **Criterios de aceptación:**
+
 - [x] Un PR con un test que falla queda bloqueado automáticamente por
       GitHub.
 
@@ -385,12 +403,14 @@ todas las entidades ya preparadas.
 Crear la entidad raíz que representa a cada clínica cliente.
 
 **Tareas:**
+
 - [x] Entidad `Tenant`: id, nombre, estado (activo/suspendido/trial),
       fecha de creación.
 - [x] Migración Flyway `V2__create_tenants.sql`.
 - [x] Repositorio JPA básico (`TenantRepository`).
 
 **Criterios de aceptación:**
+
 - [x] Se puede persistir y recuperar un `Tenant` desde un test de
       integración con Testcontainers.
 
@@ -406,6 +426,7 @@ Crear la entidad raíz que representa a cada clínica cliente.
 Usuario del sistema, siempre asociado a un único tenant en esta etapa.
 
 **Tareas:**
+
 - [x] Entidad `User`: id, tenant_id (`@ManyToOne`), email, password
       (hash), nombre, estado (activo/inactivo).
 - [x] Constraint único de `email` **por tenant** (no global — dos
@@ -415,6 +436,7 @@ Usuario del sistema, siempre asociado a un único tenant en esta etapa.
 - [x] Migración Flyway correspondiente.
 
 **Criterios de aceptación:**
+
 - [x] No se puede crear dos usuarios con el mismo email dentro del
       mismo tenant (constraint de BD, no solo validación en código).
 
@@ -430,6 +452,7 @@ Usuario del sistema, siempre asociado a un único tenant en esta etapa.
 Catálogo de roles y su asignación a usuarios.
 
 **Tareas:**
+
 - [x] Definir roles como enum o tabla: `PROPIETARIO`, `ODONTOLOGO`,
       `RECEPCION`, `AUXILIAR`, `ESPECIALISTA_EXTERNO`.
 - [x] Relación `User` ↔ `Role` (puede ser un solo rol por usuario en
@@ -438,6 +461,7 @@ Catálogo de roles y su asignación a usuarios.
 - [x] Migración Flyway correspondiente.
 
 **Criterios de aceptación:**
+
 - [x] Un `User` persistido tiene un rol válido consultable.
 
 ---
@@ -454,12 +478,14 @@ negocio (no de catálogo/configuración global) debe tener `tenant_id`
 como columna obligatoria e indexada desde su primera migración.
 
 **Tareas:**
+
 - [x] Documentar la convención en `ARCHITECTURE.md`.
 - [x] Definir si se usará una clase base `TenantAwareEntity` con el
       campo `tenant_id` para que las entidades futuras hereden de ella
       (recomendado, evita olvidos).
 
 **Criterios de aceptación:**
+
 - [x] Existe la clase/convención base y está documentada, lista para
       usarse desde la Fase 2 en adelante.
 
@@ -477,6 +503,7 @@ expone como registro público todavía; los usuarios los crea el
 propietario o un proceso interno).
 
 **Tareas:**
+
 - [x] Configurar `BCryptPasswordEncoder` como bean.
 - [x] Servicio `UserService.createUser(...)` que hashea la contraseña
       antes de persistir.
@@ -486,6 +513,7 @@ propietario o un proceso interno).
       inspeccionar la BD de verdad).
 
 **Criterios de aceptación:**
+
 - [x] Inspeccionando la BD directamente, el campo password nunca es
       texto plano.
 
@@ -502,6 +530,7 @@ Autenticación por credenciales que devuelve un JWT con la información
 mínima necesaria para las siguientes fases.
 
 **Tareas:**
+
 - [x] Agregar librería JWT (ej. `jjwt`).
 - [x] Endpoint `POST /api/v1/auth/login` (email + password).
 - [x] JWT firmado que incluye: `user_id`, `tenant_id`, `role`,
@@ -511,6 +540,7 @@ mínima necesaria para las siguientes fases.
       incorrecta", por seguridad).
 
 **Criterios de aceptación:**
+
 - [x] Login válido devuelve `200` con el token.
 - [x] Login inválido devuelve `401` con mensaje genérico.
 
@@ -527,6 +557,7 @@ Configurar la cadena de filtros de Spring Security para que valide el
 JWT y rechace requests sin token válido.
 
 **Tareas:**
+
 - [x] Filtro personalizado (`OncePerRequestFilter`) que extrae y valida
       el JWT del header `Authorization: Bearer ...`.
 - [x] `SecurityFilterChain` configurado: rutas públicas (`/auth/login`,
@@ -535,6 +566,7 @@ JWT y rechace requests sin token válido.
       datos del usuario autenticado extraídos del JWT.
 
 **Criterios de aceptación:**
+
 - [x] Request sin token a `/api/v1/me` → `401`.
 - [x] Request con token válido → `200` con los datos correctos.
 - [x] Request con token expirado/manipulado → `401`.
@@ -553,6 +585,7 @@ punto del código durante esa request, sin tener que pasarlo manualmente
 por cada método.
 
 **Tareas:**
+
 - [x] Componente `TenantContext` (`ThreadLocal` o `RequestScope` bean).
 - [x] El filtro de JWT (FASE1-07) puebla el `TenantContext` al inicio
       de cada request y lo limpia al final (importante: evitar fugas
@@ -561,6 +594,7 @@ por cada método.
       de cada request.
 
 **Criterios de aceptación:**
+
 - [x] Cualquier componente Spring puede obtener el `tenant_id` actual
       sin recibirlo como parámetro explícito.
 
@@ -579,15 +613,18 @@ sin que cada desarrollador tenga que acordarse de agregar el filtro a
 mano en cada query.
 
 **Tareas:**
-- [ ] Evaluar Hibernate `@Filter`/`@FilterDef` a nivel de entidad base
-      vs. un `BaseRepository` que inyecte `tenant_id` en cada método.
-- [ ] Implementar la opción elegida sobre `TenantAwareEntity`
+
+- [x] Evaluar Hibernate `@Filter`/`@FilterDef` a nivel de entidad base
+      vs. un `BaseRepository` que inyecte `tenant_id` en cada método
+      (evaluado frente a Hibernate 6/7 `@TenantId` nativo y elegido este último por cubrir búsquedas directas por ID).
+- [x] Implementar la opción elegida sobre `TenantAwareEntity`
       (FASE1-04).
-- [ ] Activar el filtro automáticamente al abrir la sesión de
-      Hibernate, usando el `TenantContext` (FASE1-08).
+- [x] Activar el filtro automáticamente al abrir la sesión de
+      Hibernate, usando el `TenantContext` (FASE1-08) mediante `TenantIdentifierResolver`.
 
 **Criterios de aceptación:**
-- [ ] Una query "ingenua" (sin agregar `tenant_id` manualmente) sobre
+
+- [x] Una query "ingenua" (sin agregar `tenant_id` manualmente) sobre
       una entidad de negocio filtra correctamente por el tenant activo.
 
 ---
@@ -603,6 +640,7 @@ Esta es la prueba más importante de toda la Fase 1. No se avanza a la
 Fase 2 sin que este ticket esté cerrado y en verde.
 
 **Tareas:**
+
 - [ ] Crear en el test dos tenants (A y B) con datos de una misma
       entidad de negocio simple (puede ser una entidad de prueba si
       todavía no existe ninguna real).
@@ -612,6 +650,7 @@ Fase 2 sin que este ticket esté cerrado y en verde.
       siquiera que el recurso existe).
 
 **Criterios de aceptación:**
+
 - [ ] El test falla intencionalmente si alguien comenta o rompe el
       filtro de tenant (para servir como red de seguridad futura).
 - [ ] El test corre en el pipeline de CI en cada PR.
@@ -628,6 +667,7 @@ Fase 2 sin que este ticket esté cerrado y en verde.
 Restringir endpoints según el rol del usuario autenticado.
 
 **Tareas:**
+
 - [ ] Habilitar `@EnableMethodSecurity` en la configuración de
       seguridad.
 - [ ] Anotar al menos un endpoint de prueba con
@@ -635,6 +675,7 @@ Restringir endpoints según el rol del usuario autenticado.
 - [ ] Mapear el `role` del JWT a las authorities de Spring Security.
 
 **Criterios de aceptación:**
+
 - [ ] Un usuario con rol `RECEPCION` recibe `403` al llamar un endpoint
       restringido a `PROPIETARIO`.
 
@@ -651,10 +692,12 @@ Cubrir con pruebas automáticas que la restricción por rol funciona,
 igual que se hizo con el aislamiento de tenant.
 
 **Tareas:**
+
 - [ ] Test que autentica usuarios con distintos roles y verifica
       `200` vs `403` según corresponda en el endpoint de prueba.
 
 **Criterios de aceptación:**
+
 - [ ] El test corre en CI y falla si la restricción de rol se rompe.
 
 ---
@@ -670,6 +713,7 @@ Base del sistema de auditoría que se irá ampliando en cada fase
 posterior.
 
 **Tareas:**
+
 - [ ] Entidad `AuditLog`: tenant_id, user_id, acción, entidad afectada,
       entidad_id, fecha, detalle (JSON o texto).
 - [ ] Migración Flyway correspondiente.
@@ -677,6 +721,7 @@ posterior.
       cualquier módulo futuro.
 
 **Criterios de aceptación:**
+
 - [ ] Se puede registrar una entrada de auditoría desde código y
       consultarla filtrada por tenant.
 
@@ -692,10 +737,12 @@ posterior.
 Primer caso de uso real del sistema de auditoría.
 
 **Tareas:**
+
 - [ ] Llamar a `AuditService.log(...)` en login exitoso y en login
       fallido (sin registrar la contraseña, ni siquiera fallida).
 
 **Criterios de aceptación:**
+
 - [ ] Un intento de login (exitoso o fallido) genera una entrada
       consultable en `audit_log`.
 
@@ -719,59 +766,283 @@ Antes de pasar a la Fase 2, verificar:
 **Objetivo de la fase:** el primer módulo de negocio real, y el más
 transversal (casi todo lo demás depende de `Patient`).
 
-## 2.1. CRUD de pacientes
+**Labels sugeridas para todos los tickets de esta fase:** `backend`,
+`fase-2`
 
-- Entidad `Patient`: datos personales, contacto, contacto de
-  emergencia (sección 8.2, alcance reducido — sin odontograma ni
-  historia clínica todavía).
-- Endpoints REST: `GET/POST/PATCH/DELETE /api/v1/patients`.
-- Validación de entrada (Bean Validation: campos obligatorios, formato
-  de teléfono/email).
-- Paginación y búsqueda simple (por nombre/documento).
+---
 
-**Temas de Spring Boot:** `@Valid`, `Pageable`/`Page`, manejo de
-errores centralizado (`@ControllerAdvice` + `@ExceptionHandler`).
+### 🎫 FASE2-01 — Modelar entidad `Patient`
 
-**DoD:** se puede crear, listar (paginado), actualizar y eliminar
-(lógicamente, no físicamente) un paciente vía API, respetando el
-aislamiento de tenant de la Fase 1.
+**Tipo:** feature
+**Estimación:** M (2h)
+**Depende de:** FASE1-09 (filtro automático de tenant), FASE1-04 (`TenantAwareEntity`)
 
-## 2.2. Historia clínica (versión reducida)
+**Descripción:**
+Primera entidad de negocio real del proyecto. Debe heredar de
+`TenantAwareEntity` desde el día uno.
 
-- Entidad `ClinicalRecord`: motivo de consulta, antecedentes,
-  diagnóstico, evolución (texto estructurado, sin plantillas todavía).
-- Relación `Patient` 1—N `ClinicalRecord`.
-- Endpoint para agregar una entrada de evolución a un paciente.
+**Tareas:**
 
-**DoD:** se puede registrar y consultar el historial de entradas
-clínicas de un paciente específico.
+- [ ] Entidad `Patient`: datos personales, contacto, contacto de
+      emergencia (sección 8.2 del doc de arquitectura, alcance
+      reducido — sin odontograma ni historia clínica todavía).
+- [ ] Migración Flyway correspondiente, con `tenant_id` indexado.
+- [ ] Repositorio JPA básico (`PatientRepository`).
 
-## 2.3. Odontograma (modelo de datos)
+**Criterios de aceptación:**
 
-- Entidad `Odontogram` con estado por pieza dental y superficie
-  (sección 8.4). En esta fase el foco es el **modelo de datos y la
-  API**, no la parte visual (eso es frontend).
-- Separación explícita en el modelo entre: estado actual, diagnóstico,
-  plan propuesto y tratamiento realizado (tal como pide la sección 8.4
-  del documento de arquitectura) — esto es más una decisión de modelo
-  de datos que de UI, por eso va en el backend desde ya.
+- [ ] Se puede persistir y recuperar un `Patient` desde un test de
+      integración con Testcontainers.
+- [ ] El filtro automático de tenant (Hibernate Filter/RLS) aplica sin
+      configuración adicional, heredado de `TenantAwareEntity`.
 
-**DoD:** existe un endpoint que devuelve el estado del odontograma de
-un paciente estructurado de forma que el frontend pueda pintar
-cualquier representación visual sobre él sin ambigüedad.
+---
 
-## 2.4. Archivos del paciente
+### 🎫 FASE2-02 — Endpoints CRUD de pacientes
 
-- Integración con almacenamiento S3-compatible (sección 16): subida de
-  archivos/fotos asociados a un paciente.
-- PostgreSQL guarda solo metadatos y referencia (`file_id`,
-  `storage_key`), nunca el binario.
+**Tipo:** feature
+**Estimación:** M (3h)
+**Depende de:** FASE2-01
 
-**Temas de Spring Boot:** `MultipartFile`, cliente S3 (AWS SDK v2 o
-cliente compatible según el proveedor elegido para Render/Railway).
+**Descripción:**
+Exponer pacientes vía REST con validación de entrada.
 
-**DoD:** se puede subir un archivo asociado a un paciente y luego
-recuperar una URL (firmada o directa) para descargarlo.
+**Tareas:**
+
+- [ ] Endpoints: `GET /api/v1/patients/{id}`, `POST /api/v1/patients`,
+      `PATCH /api/v1/patients/{id}`, `DELETE /api/v1/patients/{id}`
+      (baja lógica vía `is_active`, no borrado físico).
+- [ ] DTOs de entrada/salida (no exponer la entidad JPA directamente).
+- [ ] Validación con Bean Validation (`@Valid`): campos obligatorios,
+      formato de teléfono/email.
+
+**Criterios de aceptación:**
+
+- [ ] Un `POST` con datos inválidos devuelve `400` con el detalle del
+      campo que falló.
+- [ ] Un `DELETE` marca `is_active = false` sin eliminar la fila.
+
+**Temas de Spring Boot:** DTOs vs. entidades, `@Valid`, `ResponseEntity`.
+
+---
+
+### 🎫 FASE2-03 — Paginación, búsqueda y manejo de errores centralizado
+
+**Tipo:** feature
+**Estimación:** M (2–3h)
+**Depende de:** FASE2-02
+
+**Descripción:**
+Completar el listado de pacientes con paginación real y búsqueda, y
+dejar listo el manejo de errores que reutilizarán todos los módulos
+siguientes.
+
+**Tareas:**
+
+- [ ] `GET /api/v1/patients` paginado (`Pageable`/`Page`) con búsqueda
+      opcional por nombre o número de documento (usa el índice trigram
+      de `schema.sql`).
+- [ ] `@ControllerAdvice` + `@ExceptionHandler` global para errores de
+      validación, "no encontrado" y errores no controlados — con un
+      formato de error consistente que reutilizarán los módulos
+      futuros.
+
+**Criterios de aceptación:**
+
+- [ ] Buscar por un fragmento del nombre devuelve resultados sin
+      distinguir mayúsculas/acentos exactos.
+- [ ] Un recurso inexistente devuelve `404` con el formato de error
+      estándar, no un stacktrace.
+
+**Temas de Spring Boot:** `Pageable`, `Specification`/query methods de
+Spring Data, `@ControllerAdvice`.
+
+---
+
+### 🎫 FASE2-04 — Tests de aislamiento cross-tenant para pacientes
+
+**Tipo:** testing
+**Estimación:** S (1–2h)
+**Depende de:** FASE2-03
+
+**Descripción:**
+Primer módulo de negocio real: aplica el patrón de prueba definido en
+`AGENTS.md` §5 antes de seguir avanzando.
+
+**Tareas:**
+
+- [ ] Test: crear pacientes en tenant A y B, verificar que un usuario
+      de A no puede leer, actualizar ni eliminar un paciente de B
+      (ni por listado ni por ID directo).
+- [ ] Test: búsqueda paginada solo devuelve resultados del tenant activo.
+
+**Criterios de aceptación:**
+
+- [ ] Ambos tests corren en CI y fallan si el aislamiento se rompe.
+
+---
+
+### 🎫 FASE2-05 — Modelar `ClinicalRecord`
+
+**Tipo:** feature
+**Estimación:** S (1–2h)
+**Depende de:** FASE2-01
+
+**Descripción:**
+Historia clínica en su versión reducida (texto estructurado, sin
+plantillas todavía).
+
+**Tareas:**
+
+- [ ] Entidad `ClinicalRecord`: motivo de consulta, antecedentes,
+      diagnóstico, evolución. Relación `Patient` 1—N `ClinicalRecord`.
+- [ ] Migración Flyway correspondiente.
+
+**Criterios de aceptación:**
+
+- [ ] Se puede persistir una entrada clínica asociada a un paciente
+      existente.
+
+---
+
+### 🎫 FASE2-06 — Endpoint de historia clínica
+
+**Tipo:** feature
+**Estimación:** S (1–2h)
+**Depende de:** FASE2-05
+
+**Descripción:**
+Registrar y consultar evolución clínica de un paciente.
+
+**Tareas:**
+
+- [ ] `POST /api/v1/patients/{id}/clinical-records` (agregar entrada).
+- [ ] `GET /api/v1/patients/{id}/clinical-records` (historial ordenado
+      por fecha descendente).
+- [ ] Test de aislamiento cross-tenant (mismo patrón de FASE2-04).
+
+**Criterios de aceptación:**
+
+- [ ] Se puede registrar y consultar el historial de entradas clínicas
+      de un paciente específico, y no el de pacientes de otro tenant.
+
+---
+
+### 🎫 FASE2-07 — Modelar `OdontogramEntry`
+
+**Tipo:** feature
+**Estimación:** M (2h)
+**Depende de:** FASE2-01
+
+**Descripción:**
+En esta fase el foco es el **modelo de datos y la API**, no la parte
+visual (eso es frontend). Separación explícita entre estado actual,
+diagnóstico, plan propuesto y tratamiento realizado (sección 8.4 del
+doc de arquitectura) — evita mezclar información clínica de distintos
+momentos en un mismo registro.
+
+**Tareas:**
+
+- [ ] Entidad `OdontogramEntry`: pieza dental (notación FDI), superficie,
+      `entry_type` (`estado_actual`/`diagnostico`/`plan_propuesto`/
+      `tratamiento_realizado`), condición, quién y cuándo lo registró.
+- [ ] Migración Flyway correspondiente.
+
+**Criterios de aceptación:**
+
+- [ ] Se puede registrar más de una entrada para la misma pieza dental
+      sin que una sobreescriba a la otra (son momentos distintos, no un
+      solo estado mutable).
+
+---
+
+### 🎫 FASE2-08 — Endpoint de odontograma
+
+**Tipo:** feature
+**Estimación:** M (2h)
+**Depende de:** FASE2-07
+
+**Descripción:**
+Exponer el odontograma de forma que el frontend pueda pintar cualquier
+representación visual sobre él sin ambigüedad.
+
+**Tareas:**
+
+- [ ] `GET /api/v1/patients/{id}/odontogram` — devuelve las entradas
+      agrupadas por pieza dental y por `entry_type`.
+- [ ] `POST /api/v1/patients/{id}/odontogram` — registrar una entrada
+      nueva.
+- [ ] Test de aislamiento cross-tenant.
+
+**Criterios de aceptación:**
+
+- [ ] La respuesta del `GET` distingue claramente estado actual de
+      diagnóstico/plan/tratamiento realizado, sin que el consumidor
+      tenga que inferirlo.
+
+---
+
+### 🎫 FASE2-09 — Integración de almacenamiento S3-compatible
+
+**Tipo:** feature / infra
+**Estimación:** M (3h, primera vez integrando storage externo)
+**Depende de:** FASE2-01
+
+**Descripción:**
+PostgreSQL guarda solo metadatos y referencia (`storage_key`), nunca el
+binario del archivo.
+
+**Tareas:**
+
+- [ ] Entidad `PatientFile`: nombre, tipo de contenido, tamaño,
+      `storage_key`, quién lo subió.
+- [ ] Cliente S3 (AWS SDK v2 o el compatible con el proveedor elegido
+      para Render/Railway) configurado por variables de entorno.
+- [ ] `POST /api/v1/patients/{id}/files` con `MultipartFile`.
+
+**Criterios de aceptación:**
+
+- [ ] Subir un archivo crea el objeto en el bucket y el registro de
+      metadatos en la misma operación (si uno falla, no debe quedar el
+      otro huérfano — usa una transacción o un mecanismo de limpieza).
+
+**Temas de Spring Boot:** `MultipartFile`, manejo de recursos externos
+dentro/fuera de una transacción JPA.
+
+---
+
+### 🎫 FASE2-10 — Endpoint de descarga y tests
+
+**Tipo:** feature
+**Estimación:** S (1–2h)
+**Depende de:** FASE2-09
+
+**Descripción:**
+Cerrar el módulo de archivos con la descarga y las pruebas de
+aislamiento.
+
+**Tareas:**
+
+- [ ] `GET /api/v1/patients/{id}/files` (listar) y una forma de obtener
+      una URL de descarga (firmada o directa, según el proveedor).
+- [ ] Test de aislamiento cross-tenant: un usuario de otro tenant no
+      puede obtener una URL de descarga de un archivo ajeno, aunque
+      adivine el `storage_key`.
+
+**Criterios de aceptación:**
+
+- [ ] Se puede subir un archivo y luego recuperar una URL válida para
+      descargarlo.
+
+---
+
+### ✅ Checklist de salida de Fase 2
+
+- [ ] FASE2-04, FASE2-06 (test), FASE2-08 (test) y FASE2-10 (test) en
+      verde en CI — todos los módulos de esta fase tienen su prueba de
+      aislamiento cross-tenant.
+- [ ] Se puede hacer una demo de punta a punta: crear paciente →
+      agregar entrada clínica → registrar odontograma → subir archivo.
 
 ---
 
@@ -780,209 +1051,792 @@ recuperar una URL (firmada o directa) para descargarlo.
 **Objetivo de la fase:** habilitar el flujo operativo diario de la
 clínica.
 
-## 3.1. Modelo de agenda
+**Labels sugeridas para todos los tickets de esta fase:** `backend`,
+`fase-3`
 
-- Entidades: `Professional`, `Appointment`, `Room`/`Resource`
-  (opcional en esta subfase, se puede simplificar al inicio).
-- `Appointment`: paciente, profesional, procedimiento (aún como texto
-  libre o catálogo simple), fecha/hora, duración, estado.
+---
 
-**DoD:** se puede crear una cita asociando paciente y profesional, con
-validación de que no haya cruce de horario para el mismo profesional.
+### 🎫 FASE3-01 — Modelar `Professional` y `Room`
 
-## 3.2. Estados de la cita y transición
+**Tipo:** feature
+**Estimación:** S (1–2h)
+**Depende de:** FASE1-09
 
-- Estados: creada → confirmada → atendida / no-show / cancelada
-  (sección 8.6).
-- Endpoints para cambiar de estado, con reglas de negocio simples
-  (ej. no se puede pasar de "cancelada" a "atendida").
+**Descripción:**
+Base de la agenda: quién atiende y, opcionalmente, en qué consultorio.
 
-**Temas de Spring Boot:** modelado de máquinas de estado simples
-(enum + validación en el service layer, sin sobre-ingeniería con
-librerías de state machine todavía).
+**Tareas:**
 
-**DoD:** las transiciones inválidas de estado devuelven error `400`
-con mensaje claro.
+- [ ] Entidad `Professional`: nombre, especialidad, licencia,
+      `is_external` (para diferenciar especialistas externos más
+      adelante en la Fase 7), vínculo opcional a `User`.
+- [ ] Entidad `Room` (opcional en esta subfase, se puede simplificar).
+- [ ] Migraciones Flyway correspondientes.
 
-## 3.3. Valor económico de la cita
+**Criterios de aceptación:**
 
-- Campo de valor estimado en `Appointment` (sección 8.5, "agenda
-  inteligente" — aquí solo el dato, la lógica de riesgo/priorización
-  llega en la Fase 9).
+- [ ] Se puede persistir un `Professional` y asociarlo opcionalmente a
+      un `User` existente.
 
-**DoD:** el valor estimado de la cita es consultable y se puede sumar
-por rango de fechas (insumo para reportes futuros).
+---
 
-## 3.4. Lista de espera y reasignación
+### 🎫 FASE3-02 — Modelar `Appointment` y evitar doble-agendamiento
 
-- Entidad `WaitlistEntry`: paciente interesado en un horario/tipo de
-  procedimiento.
-- Endpoint que, al cancelarse una cita, devuelve pacientes compatibles
-  en lista de espera (lógica simple por ahora: mismo tipo de
-  procedimiento y disponibilidad declarada).
+**Tipo:** feature
+**Estimación:** L (4h — incluye la restricción de solapamiento)
+**Depende de:** FASE3-01, FASE2-01
 
-**DoD:** al cancelar una cita marcada como de alto valor, la API
-devuelve al menos la lista de candidatos compatibles (el envío de
-mensajes automático llega en la Fase 8).
+**Descripción:**
+La cita es la entidad más consultada de todo el sistema. Esta vez la
+integridad de "no solapar" se garantiza en la propia base de datos, no
+solo en el código Java.
+
+**Tareas:**
+
+- [ ] Entidad `Appointment`: paciente, profesional, procedimiento
+      (catálogo simple o texto libre por ahora), fecha/hora de inicio y
+      fin, estado, notas.
+- [ ] Migración Flyway con una restricción `EXCLUDE USING gist` (ver
+      `schema.sql`) que impida que un mismo profesional tenga dos citas
+      activas solapadas.
+- [ ] `POST /api/v1/appointments` con manejo del error de la
+      restricción (traducirlo a un `409 Conflict` claro, no un `500`).
+
+**Criterios de aceptación:**
+
+- [ ] Crear dos citas solapadas para el mismo profesional devuelve
+      `409`, no una excepción sin manejar.
+
+**Temas de Spring Boot:** traducir una violación de constraint de
+PostgreSQL (`DataIntegrityViolationException`) a una respuesta HTTP
+significativa.
+
+---
+
+### 🎫 FASE3-03 — Endpoints de consulta de agenda
+
+**Tipo:** feature
+**Estimación:** M (2h)
+**Depende de:** FASE3-02
+
+**Descripción:**
+Consultar la agenda es tan importante como crearla.
+
+**Tareas:**
+
+- [ ] `GET /api/v1/appointments` con filtros por rango de fechas y,
+      opcionalmente, por profesional.
+- [ ] Test de aislamiento cross-tenant.
+
+**Criterios de aceptación:**
+
+- [ ] Filtrar por un rango de fechas devuelve solo las citas de ese
+      rango, ordenadas por hora de inicio.
+
+---
+
+### 🎫 FASE3-04 — Estados de la cita y transiciones válidas
+
+**Tipo:** feature
+**Estimación:** M (2h)
+**Depende de:** FASE3-02
+
+**Descripción:**
+Estados: `programada` → `confirmada` → `atendida` / `no_show` /
+`cancelada` (sección 8.6 del doc de arquitectura).
+
+**Tareas:**
+
+- [ ] Endpoint de cambio de estado (`PATCH /api/v1/appointments/{id}/status`).
+- [ ] Reglas de transición válida en el service layer (ej. no se puede
+      pasar de `cancelada` a `atendida`).
+- [ ] Test de transiciones inválidas.
+
+**Criterios de aceptación:**
+
+- [ ] Las transiciones inválidas de estado devuelven `400` con un
+      mensaje claro sobre qué transición se intentó y por qué no es
+      válida.
+
+**Temas de Spring Boot:** modelado de máquinas de estado simples (enum
+
+- validación en el service layer, sin librerías de state machine
+  todavía).
+
+---
+
+### 🎫 FASE3-05 — Valor económico de la cita
+
+**Tipo:** feature
+**Estimación:** S (1h)
+**Depende de:** FASE3-02
+
+**Descripción:**
+Insumo directo para reportes futuros y para el motor de oportunidades
+de la Fase 9 (agenda inteligente, sección 8.5 — aquí solo el dato, la
+lógica de riesgo/priorización llega después).
+
+**Tareas:**
+
+- [ ] Campo `estimated_value_cop` en `Appointment` (ya existe en
+      `schema.sql`, confirmar que el DTO lo expone).
+- [ ] Endpoint de agregación: suma de valor estimado por rango de
+      fechas.
+
+**Criterios de aceptación:**
+
+- [ ] El endpoint de agregación devuelve un total coherente con la
+      suma manual de las citas del rango.
+
+---
+
+### 🎫 FASE3-06 — Modelar `WaitlistEntry`
+
+**Tipo:** feature
+**Estimación:** S (1h)
+**Depende de:** FASE2-01
+
+**Descripción:**
+Lista de espera de pacientes interesados en un horario/tipo de
+procedimiento.
+
+**Tareas:**
+
+- [ ] Entidad `WaitlistEntry`: paciente, procedimiento de interés,
+      rango de fechas deseado, estado.
+- [ ] `POST /api/v1/waitlist` para registrar un interesado.
+
+**Criterios de aceptación:**
+
+- [ ] Se puede registrar un paciente en lista de espera para un tipo de
+      procedimiento y rango de fechas.
+
+---
+
+### 🎫 FASE3-07 — Recuperación de espacio al cancelar una cita
+
+**Tipo:** feature
+**Estimación:** M (2h)
+**Depende de:** FASE3-04, FASE3-06
+
+**Descripción:**
+Al cancelarse una cita de alto valor, sugerir candidatos compatibles de
+la lista de espera (el envío automático del mensaje llega en la
+Fase 8, aquí solo la lógica de "quién calza").
+
+**Tareas:**
+
+- [ ] Al transicionar una cita a `cancelada`, calcular candidatos
+      compatibles de `WaitlistEntry` (mismo tipo de procedimiento y
+      disponibilidad declarada que se solapa con el horario liberado).
+- [ ] Endpoint que devuelve esos candidatos para la cita cancelada.
+
+**Criterios de aceptación:**
+
+- [ ] Cancelar una cita marcada como de alto valor devuelve al menos
+      la lista de candidatos compatibles, si existen.
+
+---
+
+### ✅ Checklist de salida de Fase 3
+
+- [ ] Restricción `EXCLUDE` de solapamiento verificada con un test real
+      (no solo revisada visualmente).
+- [ ] Se puede hacer una demo: crear cita → confirmar → cancelar → ver
+      candidatos de lista de espera sugeridos.
 
 ---
 
 # FASE 4 — Planes de tratamiento y facturación básica
 
-## 4.1. Planes de tratamiento
+**Labels sugeridas para todos los tickets de esta fase:** `backend`,
+`fase-4`
 
-- Entidad `TreatmentPlan`: diagnóstico, procedimientos, piezas
-  involucradas, precio, profesional, estados (borrador → presentado →
-  en decisión → aceptado → en ejecución → completado / rechazado /
-  pospuesto / abandonado — sección 8.9).
+---
 
-**DoD:** se puede crear un plan de tratamiento y avanzarlo por sus
-estados vía API, con las mismas reglas de transición válida que en la
-Fase 3.2.
+### 🎫 FASE4-01 — Modelar `TreatmentPlan`
 
-## 4.2. Facturación simple
+**Tipo:** feature
+**Estimación:** M (2h)
+**Depende de:** FASE2-01, FASE3-01
 
-- Entidades: `Invoice`, `Payment` (sección 8.11, alcance reducido: sin
-  facturación electrónica todavía, eso depende de normativa y
-  proveedor externo — se deja como integración futura, sección 30).
-- Relación entre `TreatmentPlan`/`Appointment` y los pagos asociados.
+**Descripción:**
+Entidad central del negocio odontológico: qué se le propone a un
+paciente y en qué estado va esa propuesta.
 
-**DoD:** se puede generar una factura simple asociada a un tratamiento
-y registrar pagos parciales contra ella.
+**Tareas:**
 
-## 4.3. Cierre de la Fase 4 — checkpoint del plan Esencial
+- [ ] Entidad `TreatmentPlan`: diagnóstico, precio total, paciente,
+      profesional, estado (`borrador` → `presentado` → `en_decision` →
+      `aceptado` → `en_ejecucion` → `completado` / `rechazado` /
+      `pospuesto` / `abandonado` — sección 8.9).
+- [ ] Entidad `TreatmentPlanItem` (procedimientos/piezas involucradas).
+- [ ] Migraciones Flyway correspondientes.
 
+**Criterios de aceptación:**
+
+- [ ] Se puede crear un plan de tratamiento con varios ítems asociados.
+
+---
+
+### 🎫 FASE4-02 — Endpoints y transiciones de `TreatmentPlan`
+
+**Tipo:** feature
+**Estimación:** M (2–3h)
+**Depende de:** FASE4-01
+
+**Descripción:**
+Mismo patrón de máquina de estados que las citas (FASE3-04), aplicado
+aquí.
+
+**Tareas:**
+
+- [ ] CRUD de `TreatmentPlan` + ítems.
+- [ ] Endpoint de cambio de estado con las mismas reglas de transición
+      válida que en la Fase 3.2.
+- [ ] Test de transiciones inválidas y de aislamiento cross-tenant.
+
+**Criterios de aceptación:**
+
+- [ ] Se puede crear un plan de tratamiento y avanzarlo por sus
+      estados vía API.
+
+---
+
+### 🎫 FASE4-03 — Modelar facturación (`Invoice`, `InvoiceItem`, `Payment`)
+
+**Tipo:** feature
+**Estimación:** M (2h)
+**Depende de:** FASE4-01
+
+**Descripción:**
+Facturación simple, sin facturación electrónica todavía (eso depende
+de normativa y un proveedor externo — integración futura, sección 30
+del doc de arquitectura).
+
+**Tareas:**
+
+- [ ] Entidades `Invoice`, `InvoiceItem`, `Payment` (ver `schema.sql`
+      para la referencia exacta de columnas y constraints).
+- [ ] Relación `Invoice` → `TreatmentPlan` (opcional, puede facturarse
+      sin un plan asociado).
+- [ ] Migraciones Flyway correspondientes.
+
+**Criterios de aceptación:**
+
+- [ ] Se puede persistir una factura con ítems y su total coincide con
+      la suma de los ítems.
+
+---
+
+### 🎫 FASE4-04 — Endpoints de facturación y pagos
+
+**Tipo:** feature
+**Estimación:** M (2–3h)
+**Depende de:** FASE4-03
+
+**Descripción:**
+Generar facturas y registrar pagos contra ellas.
+
+**Tareas:**
+
+- [ ] `POST /api/v1/invoices` (generar factura, opcionalmente desde un
+      `TreatmentPlan`).
+- [ ] `POST /api/v1/invoices/{id}/payments` (registrar pago parcial o
+      total).
+- [ ] Lógica que actualiza `status` de la factura (`pendiente` →
+      `parcial` → `pagada`) según los pagos acumulados.
+- [ ] Test de aislamiento cross-tenant.
+
+**Criterios de aceptación:**
+
+- [ ] Registrar pagos parciales hasta cubrir el total cambia el estado
+      de la factura a `pagada` automáticamente.
+
+---
+
+### 🎫 FASE4-05 — Checkpoint del plan Esencial
+
+**Tipo:** chore / validación
+**Estimación:** S (medio día de revisión, no de código)
+**Depende de:** FASE2 completa, FASE3 completa, FASE4-04
+
+**Descripción:**
 En este punto, el backend ya cubre lo mínimo necesario para el plan
 **Esencial**: pacientes, historia clínica base, agenda, tratamientos y
 facturación simple. Es un buen momento para una pausa de validación
 antes de seguir construyendo funcionalidades de planes superiores.
 
+**Tareas:**
+
+- [ ] Demo de punta a punta: crear paciente → agendar cita → crear plan
+      de tratamiento → aceptarlo → facturar → registrar pago.
+- [ ] Revisar que los límites del plan Esencial (`max_patients`,
+      `max_users`, etc. de `plan_limits`) tengan sentido con datos
+      reales de esta demo, aunque el feature-gating recién se
+      implemente en la Fase 11.
+
+**Criterios de aceptación:**
+
+- [ ] La demo completa corre sin intervención manual en la base de
+      datos (todo vía API).
+
 ---
 
 # FASE 5 — CRM de leads
 
-## 5.1. Modelo de leads
+**Labels sugeridas para todos los tickets de esta fase:** `backend`,
+`fase-5`
 
-- Entidad `Lead`: nombre, contacto, fuente, campaña, procedimiento de
-  interés, valor potencial, estado, responsable asignado (sección
-  8.7).
-- Pipeline de estados: nuevo → contactado → calificado → cita
-  propuesta → cita agendada → cita asistida → tratamiento propuesto →
-  tratamiento aceptado.
+---
 
-**DoD:** se puede registrar un lead manualmente y moverlo por el
-pipeline vía API.
+### 🎫 FASE5-01 — Modelar `Lead` y su pipeline
 
-## 5.2. Conversión de lead a paciente/cita
+**Tipo:** feature
+**Estimación:** M (2h)
+**Depende de:** FASE1-09
 
-- Endpoint que convierte un `Lead` calificado en un `Patient` +
-  `Appointment`, evitando duplicar datos.
+**Descripción:**
+Pipeline: `nuevo` → `contactado` → `calificado` → `cita_propuesta` →
+`cita_agendada` → `cita_asistida` → `tratamiento_propuesto` →
+`tratamiento_aceptado` (o `perdido` en cualquier punto).
 
-**DoD:** convertir un lead crea correctamente el paciente y la cita
-asociada, y el lead queda enlazado a ese paciente (trazabilidad de
-origen).
+**Tareas:**
 
-## 5.3. Métricas de conversión (backend)
+- [ ] Entidad `Lead`: nombre, contacto, fuente, campaña, procedimiento
+      de interés, valor potencial, estado, responsable asignado
+      (sección 8.7).
+- [ ] Entidad `LeadActivity` (historial de contactos: llamada,
+      WhatsApp, email, nota).
+- [ ] Migraciones Flyway correspondientes.
 
-- Endpoints de agregación: conversión por fuente, por campaña, tiempo
-  promedio de respuesta a leads (sección 5.4 del doc de producto).
+**Criterios de aceptación:**
 
-**DoD:** existen endpoints que devuelven estos indicadores para un
-rango de fechas dado (el frontend los graficará después).
+- [ ] Se puede registrar un lead y agregarle actividades de contacto.
+
+---
+
+### 🎫 FASE5-02 — Endpoints CRUD y cambio de estado de leads
+
+**Tipo:** feature
+**Estimación:** M (2h)
+**Depende de:** FASE5-01
+
+**Tareas:**
+
+- [ ] CRUD de `Lead` + endpoint de registro de `LeadActivity`.
+- [ ] Endpoint de cambio de estado, sin restricciones de transición
+      estrictas (a diferencia de citas/tratamientos, un lead sí puede
+      "retroceder" en el pipeline en casos reales).
+- [ ] Test de aislamiento cross-tenant.
+
+**Criterios de aceptación:**
+
+- [ ] Se puede registrar un lead manualmente y moverlo por el pipeline
+      vía API.
+
+---
+
+### 🎫 FASE5-03 — Conversión de lead a paciente/cita
+
+**Tipo:** feature
+**Estimación:** M (2–3h)
+**Depende de:** FASE5-02, FASE2-01, FASE3-02
+
+**Descripción:**
+Evitar duplicar datos entre `Lead` y `Patient` al convertir.
+
+**Tareas:**
+
+- [ ] `POST /api/v1/leads/{id}/convert` — crea `Patient` (+
+      opcionalmente `Appointment`) a partir de los datos del lead.
+- [ ] El lead queda enlazado al paciente resultante
+      (`converted_patient_id`) para trazabilidad de origen.
+- [ ] Test: convertir un lead no crea un paciente duplicado si se
+      llama dos veces por error (idempotencia razonable).
+
+**Criterios de aceptación:**
+
+- [ ] Convertir un lead crea correctamente el paciente y la cita
+      asociada, y el lead queda enlazado a ese paciente.
+
+---
+
+### 🎫 FASE5-04 — Métricas de conversión
+
+**Tipo:** feature
+**Estimación:** M (2h)
+**Depende de:** FASE5-03
+
+**Descripción:**
+Insumo para el dashboard de CRM (sección 5.4 del doc de producto) — el
+frontend graficará esto después, aquí solo los endpoints de datos.
+
+**Tareas:**
+
+- [ ] Endpoint de conversión por fuente y por campaña (cuántos leads
+      llegaron vs. cuántos se convirtieron).
+- [ ] Endpoint de tiempo promedio de primera respuesta a un lead.
+
+**Criterios de aceptación:**
+
+- [ ] Los endpoints devuelven estos indicadores para un rango de fechas
+      dado, filtrados correctamente por tenant.
 
 ---
 
 # FASE 6 — Cartera y pagos por etapas
 
-## 6.1. Planes de pago
+**Labels sugeridas para todos los tickets de esta fase:** `backend`,
+`fase-6`
 
-- Entidad `PaymentPlan` con cuotas (`Installment`), asociada a un
-  `TreatmentPlan`.
+---
 
-**DoD:** se puede definir un plan de pago en cuotas y ver el estado de
-cada cuota (pendiente, pagada, vencida).
+### 🎫 FASE6-01 — Modelar `PaymentPlan` e `Installment`
 
-## 6.2. Cartera y vencimientos
+**Tipo:** feature
+**Estimación:** M (2h)
+**Depende de:** FASE4-01
 
-- Job programado (Spring Scheduling) que recalcula diariamente qué
-  cuotas están vencidas y actualiza el dashboard de cartera (sección
-  8.12).
+**Tareas:**
 
-**Temas de Spring Boot:** `@Scheduled`, consideraciones de
-concurrencia si en el futuro hay múltiples instancias corriendo el
-mismo job (relevante para cuando se escale más allá de una sola
-instancia).
+- [ ] Entidad `PaymentPlan` (asociada a un `TreatmentPlan`), entidad
+      `Installment` (cuotas con número, monto, fecha de vencimiento,
+      estado).
+- [ ] Migraciones Flyway correspondientes.
 
-**DoD:** existe un endpoint que devuelve cartera total, vencida, por
-vencer y al día, coherente con los datos de `PaymentPlan`.
+**Criterios de aceptación:**
+
+- [ ] Se puede definir un plan de pago en cuotas y ver el estado de
+      cada cuota (`pendiente`, `pagada`, `vencida`).
+
+---
+
+### 🎫 FASE6-02 — Endpoints de planes de pago
+
+**Tipo:** feature
+**Estimación:** M (2h)
+**Depende de:** FASE6-01
+
+**Tareas:**
+
+- [ ] `POST /api/v1/treatment-plans/{id}/payment-plan` (crear plan de
+      pago en N cuotas).
+- [ ] `POST /api/v1/installments/{id}/pay` (marcar cuota como pagada,
+      idealmente generando el `Payment`/`Invoice` correspondiente en
+      vez de solo cambiar el estado).
+- [ ] Test de aislamiento cross-tenant.
+
+**Criterios de aceptación:**
+
+- [ ] Pagar una cuota la marca como `pagada` y queda reflejada en el
+      dashboard de cartera (FASE6-04).
+
+---
+
+### 🎫 FASE6-03 — Job de cuotas vencidas
+
+**Tipo:** feature
+**Estimación:** S (1–2h)
+**Depende de:** FASE6-01
+
+**Descripción:**
+La función `mark_overdue_installments()` ya existe en `schema.sql`;
+aquí se conecta a un scheduler de Spring.
+
+**Tareas:**
+
+- [ ] Job diario con `@Scheduled` que invoca la lógica de marcar cuotas
+      vencidas (puede llamar la función SQL directamente o
+      reimplementar la misma regla en Java — mantente consistente con
+      lo que ya existe en la base para no duplicar lógica divergente).
+- [ ] Log o métrica de cuántas cuotas se marcaron vencidas en cada
+      corrida, útil para depurar en producción.
+
+**Criterios de aceptación:**
+
+- [ ] Una cuota con `due_date` en el pasado y estado `pendiente`
+      cambia a `vencida` después de correr el job.
+
+**Temas de Spring Boot:** `@Scheduled`, consideraciones de concurrencia
+si en el futuro hay múltiples instancias corriendo el mismo job
+(relevante recién cuando se escale más allá de una sola instancia).
+
+---
+
+### 🎫 FASE6-04 — Dashboard de cartera
+
+**Tipo:** feature
+**Estimación:** S (1–2h)
+**Depende de:** FASE6-03
+
+**Tareas:**
+
+- [ ] `GET /api/v1/portfolio/summary` — cartera total, vencida, por
+      vencer y al día.
+
+**Criterios de aceptación:**
+
+- [ ] El endpoint devuelve totales coherentes con los datos de
+      `Installment` en ese momento.
 
 ---
 
 # FASE 7 — Especialistas externos e inventario
 
-## 7.1. Especialistas y liquidaciones
+**Labels sugeridas para todos los tickets de esta fase:** `backend`,
+`fase-7`
 
-- Entidad `Specialist`, relación con `Appointment`/`TreatmentPlan`,
-  porcentaje de honorarios, cálculo de producción y liquidación
-  (sección 8.13).
+---
 
-**DoD:** se puede calcular cuánto se le debe liquidar a un especialista
-en un periodo dado, a partir de los tratamientos/citas asociadas.
+### 🎫 FASE7-01 — Modelar `Specialist` y liquidaciones
 
-## 7.2. Inventario
+**Tipo:** feature
+**Estimación:** M (2h)
+**Depende de:** FASE3-01
 
-- Entidades: `InventoryItem`, `StockMovement` (sección 8.14).
-- Alertas simples de inventario crítico (umbral configurable).
+**Descripción:**
+Extensión financiera de `Professional` para especialistas externos
+(sección 8.13 del doc de arquitectura).
 
-**DoD:** al registrar un consumo de inventario, el stock se actualiza y
-se puede consultar qué ítems están por debajo del umbral.
+**Tareas:**
+
+- [ ] Entidad `Specialist` (1—1 con `Professional`, porcentaje de
+      honorarios). Reutiliza el trigger `check_specialist_is_external`
+      de `schema.sql` — no reimplementes esa validación en Java como
+      único mecanismo, es defensa en profundidad igual que con
+      multi-tenancy.
+- [ ] Entidad `SpecialistSettlement` (liquidación por periodo).
+- [ ] Migraciones Flyway correspondientes.
+
+**Criterios de aceptación:**
+
+- [ ] Intentar crear un `Specialist` sobre un `Professional` con
+      `is_external = false` falla (ya sea por el trigger de BD o por
+      validación de aplicación — ambas deben estar presentes).
+
+---
+
+### 🎫 FASE7-02 — Cálculo y endpoint de liquidaciones
+
+**Tipo:** feature
+**Estimación:** M (2–3h)
+**Depende de:** FASE7-01, FASE4-04
+
+**Tareas:**
+
+- [ ] Lógica de cálculo de producción bruta de un especialista en un
+      periodo (a partir de tratamientos/citas asociadas ya facturadas).
+- [ ] `POST /api/v1/specialists/{id}/settlements` (generar liquidación
+      para un periodo).
+- [ ] Test de aislamiento cross-tenant.
+
+**Criterios de aceptación:**
+
+- [ ] Se puede calcular cuánto se le debe liquidar a un especialista en
+      un periodo dado, a partir de los tratamientos/citas asociadas.
+
+---
+
+### 🎫 FASE7-03 — Modelar inventario
+
+**Tipo:** feature
+**Estimación:** M (2h)
+**Depende de:** FASE1-09
+
+**Descripción:**
+El trigger `apply_stock_movement` de `schema.sql` ya aplica los
+movimientos automáticamente al stock — aquí solo la capa Java.
+
+**Tareas:**
+
+- [ ] Entidades `InventoryItem`, `StockMovement`.
+- [ ] Migraciones Flyway correspondientes (reutilizando las de
+      `schema.sql` si ya están escritas como referencia).
+
+**Criterios de aceptación:**
+
+- [ ] Insertar un `StockMovement` actualiza automáticamente la
+      cantidad del `InventoryItem` (verificado por el trigger, no por
+      lógica Java redundante).
+
+---
+
+### 🎫 FASE7-04 — Endpoints de inventario y alertas
+
+**Tipo:** feature
+**Estimación:** M (2h)
+**Depende de:** FASE7-03
+
+**Tareas:**
+
+- [ ] CRUD de `InventoryItem`, endpoint de registro de
+      `StockMovement`.
+- [ ] `GET /api/v1/inventory/critical` — ítems con `quantity <=
+    min_threshold` (usa el índice parcial ya definido en
+      `schema.sql`).
+- [ ] Test: un movimiento que dejaría el stock en negativo debe
+      fallar (verificado por el `CHECK` de la base, capturado y
+      traducido a un `409`/`400` claro en la API).
+
+**Criterios de aceptación:**
+
+- [ ] Al registrar un consumo de inventario, el stock se actualiza y
+      se puede consultar qué ítems están por debajo del umbral.
 
 ---
 
 # FASE 8 — Automatizaciones, notificaciones y tareas
 
-## 8.1. Motor de tareas internas
+**Labels sugeridas para todos los tickets de esta fase:** `backend`,
+`fase-8`
 
-- Entidad `Task`: asociada a paciente/lead/cita, responsable, fecha
-  límite, estado.
+---
 
-**DoD:** el sistema puede crear tareas automáticamente a partir de
-reglas simples (ej. "cita sin confirmar a 24h" crea una tarea para
-recepción).
+### 🎫 FASE8-01 — Modelar `Task` y CRUD básico
 
-## 8.2. Notificaciones
+**Tipo:** feature
+**Estimación:** S (1–2h)
+**Depende de:** FASE1-09
 
-- Servicio de notificaciones desacoplado (interfaz + adaptadores),
-  para no acoplar el dominio a un proveedor concreto desde el inicio
-  (sección 30 del doc de arquitectura).
-- Primer adaptador: email (más simple y sin costos de aprobación,
-  antes de integrar WhatsApp).
+**Tareas:**
+
+- [ ] Entidad `Task`: título, descripción, referencia polimórfica
+      (`related_entity_type`/`related_entity_id`), responsable, fecha
+      límite, prioridad, estado.
+- [ ] CRUD básico de tareas + endpoint de "mis tareas" (filtrado por
+      `assigned_to` = usuario autenticado).
+
+**Criterios de aceptación:**
+
+- [ ] Se puede crear, asignar y completar una tarea manualmente.
+
+---
+
+### 🎫 FASE8-02 — Reglas automáticas de creación de tareas
+
+**Tipo:** feature
+**Estimación:** M (2h)
+**Depende de:** FASE8-01, FASE3-04
+
+**Tareas:**
+
+- [ ] Regla: cita sin confirmar a 24h de su horario crea
+      automáticamente una tarea para recepción (job programado o
+      evento al momento de crear la cita, lo que resulte más simple de
+      mantener).
+
+**Criterios de aceptación:**
+
+- [ ] El sistema puede crear tareas automáticamente a partir de esta
+      regla, sin intervención manual.
+
+---
+
+### 🎫 FASE8-03 — Interfaz de notificaciones + adaptador de email
+
+**Tipo:** feature / arquitectura
+**Estimación:** M (2–3h)
+**Depende de:** FASE1-09
+
+**Descripción:**
+Servicio de notificaciones desacoplado (interfaz + adaptadores), para
+no acoplar el dominio a un proveedor concreto desde el inicio (sección
+30 del doc de arquitectura). Primer adaptador: email (más simple y sin
+costos de aprobación, antes de integrar WhatsApp).
+
+**Tareas:**
+
+- [ ] Interfaz `NotificationSender` (o similar) con un método de envío
+      genérico por canal.
+- [ ] Adaptador de email (usando el proveedor SMTP/API que se decida).
+- [ ] Entidad `Notification` para registrar cada intento (canal,
+      destinatario, estado, error si falló).
+- [ ] `@ConditionalOnProperty` para poder activar/desactivar
+      adaptadores por configuración.
+
+**Criterios de aceptación:**
+
+- [ ] Se puede disparar una notificación de confirmación de cita por
+      email de forma automática, y queda registrada en `Notification`
+      con su resultado.
 
 **Temas de Spring Boot:** patrón de interfaz + implementación
-intercambiable, `@ConditionalOnProperty` para activar/desactivar
-adaptadores por configuración.
+intercambiable, `@ConditionalOnProperty`.
 
-**DoD:** se puede disparar una notificación de confirmación de cita por
-email de forma automática.
+---
 
-## 8.3. Integración WhatsApp (cuando el proceso de aprobación de Meta
-     esté listo)
+### 🎫 FASE8-04 — Disparo de notificaciones desde eventos de negocio
 
-- Segundo adaptador de notificaciones sobre WhatsApp Business API.
-- Registro de conversaciones (sección 8.8).
+**Tipo:** feature
+**Estimación:** S (1–2h)
+**Depende de:** FASE8-03, FASE3-04
 
-**DoD:** se puede enviar y registrar un mensaje de confirmación por
-WhatsApp, con manejo de fallos que no bloquee el flujo (mismo principio
-de resiliencia que se definió para la IA en el documento de
-arquitectura).
+**Tareas:**
 
-## 8.4. Automatización de recuperación de citas
+- [ ] Al crear/confirmar una cita, disparar la notificación
+      correspondiente vía el servicio de FASE8-03.
+- [ ] Test: un fallo del adaptador de email no debe impedir que la
+      cita se cree/confirme (el fallo se registra en `Notification`,
+      no revierte la operación de negocio).
 
-- Al cancelarse una cita, disparar automáticamente contacto con la
-  lista de espera compatible (conecta con la Fase 3.4).
+**Criterios de aceptación:**
 
-**DoD:** una cancelación de cita de alto valor genera automáticamente
-una tarea o notificación de recuperación, sin intervención manual.
+- [ ] Confirmar una cita dispara una notificación, y si el envío falla,
+      la confirmación de la cita igual queda guardada.
+
+---
+
+### 🎫 FASE8-05 — Adaptador WhatsApp Business API
+
+**Tipo:** feature / integración externa
+**Estimación:** L (bloqueado por el proceso de aprobación de Meta,
+que puede tardar semanas — planifica esta ticket sabiendo que el
+trabajo de código en sí es más corto que la espera administrativa)
+**Depende de:** FASE8-03
+
+**Descripción:**
+Segundo adaptador de notificaciones. Recuerda la nota de costos de la
+sección 8.8 del doc de arquitectura: son conversaciones facturadas por
+Meta, no un canal gratuito.
+
+**Tareas:**
+
+- [ ] Adaptador `NotificationSender` para WhatsApp Business API.
+- [ ] Timeout corto + fallback (si WhatsApp falla, no bloquear el flujo
+      que lo originó — mismo principio de resiliencia que se aplicará
+      a la IA en la Fase 10).
+- [ ] Registro de conversaciones en `Notification`.
+
+**Criterios de aceptación:**
+
+- [ ] Se puede enviar y registrar un mensaje de confirmación por
+      WhatsApp.
+- [ ] Simular una caída del proveedor de WhatsApp no bloquea el flujo
+      de negocio que disparó la notificación (test explícito de esto).
+
+---
+
+### 🎫 FASE8-06 — Automatización de recuperación de espacio
+
+**Tipo:** feature
+**Estimación:** M (2h)
+**Depende de:** FASE3-07, FASE8-03
+
+**Descripción:**
+Conecta la detección de candidatos de la Fase 3.7 con el envío real de
+la notificación.
+
+**Tareas:**
+
+- [ ] Al cancelarse una cita de alto valor y existir candidatos
+      compatibles en lista de espera, disparar automáticamente una
+      tarea (FASE8-01) o notificación (FASE8-03) de recuperación.
+
+**Criterios de aceptación:**
+
+- [ ] Una cancelación de cita de alto valor genera automáticamente una
+      tarea o notificación de recuperación, sin intervención manual.
 
 ---
 
@@ -993,69 +1847,197 @@ una tarea o notificación de recuperación, sin intervención manual.
 módulos base sólidos — no se puede detectar oportunidades sobre datos
 que no existen todavía.
 
-## 9.1. Reglas de detección
+**Labels sugeridas para todos los tickets de esta fase:** `backend`,
+`fase-9`
 
-- Job programado que recorre: leads sin respuesta, tratamientos sin
-  seguimiento, citas de alto riesgo, espacios disponibles, pacientes
-  inactivos, saldos vencidos, inventario crítico.
-- Cada regla genera una entidad `Opportunity` con tipo, prioridad y
-  valor estimado.
+---
 
-**DoD:** existe al menos una regla completa funcionando de punta a
-punta (sugerido: "tratamiento sin seguimiento", por ser la más simple
-de validar con datos ya existentes de la Fase 4 y 5).
+### 🎫 FASE9-01 — Modelar `Opportunity` y primera regla de detección
 
-## 9.2. Acción recomendada
+**Tipo:** feature
+**Estimación:** M (3h)
+**Depende de:** FASE4-02
 
-- Cada `Opportunity` incluye una acción sugerida (mensaje propuesto o
-  tarea), no solo el dato bruto (principio de la sección 5.2 del doc
-  de producto: "detectar → entender → proponer → ejecutar").
+**Descripción:**
+Empezar por la regla más simple de validar con datos ya existentes:
+"tratamiento sin seguimiento" (usa el índice
+`idx_treatment_plans_followup` ya definido en `schema.sql`).
 
-**DoD:** una oportunidad detectada trae asociada al menos una acción
-ejecutable directamente vía API (ej. "enviar este mensaje" o "crear
-esta tarea").
+**Tareas:**
 
-## 9.3. Métrica de valor recuperado
+- [ ] Entidad `Opportunity`: tipo, referencia polimórfica, valor
+      estimado, prioridad, estado.
+- [ ] Job programado que detecta `TreatmentPlan` en estado
+      `presentado`/`en_decision` sin contacto reciente y genera una
+      `Opportunity` de tipo `tratamiento_sin_seguimiento`.
 
-- Cálculo de la métrica de la sección 10 del doc de arquitectura, con
-  reglas transparentes de atribución (qué cuenta como "recuperado").
+**Criterios de aceptación:**
 
-**DoD:** existe un endpoint que devuelve el valor recuperado por
-categoría en un periodo, con la regla de cálculo documentada en el
-código (no solo en este documento).
+- [ ] Existe al menos una regla completa funcionando de punta a punta.
+- [ ] Correr el job dos veces seguidas no duplica la misma oportunidad
+      ya abierta para el mismo tratamiento.
+
+---
+
+### 🎫 FASE9-02 — Ampliar reglas de detección
+
+**Tipo:** feature
+**Estimación:** L (se puede dividir en sub-tickets por regla si
+prefieres ir una por una)
+**Depende de:** FASE9-01, FASE5-02, FASE3-04, FASE6-04, FASE7-04
+
+**Descripción:**
+Cada regla usa datos que ya existen de fases anteriores — no se
+inventa nada nuevo, solo se conecta.
+
+**Tareas:**
+
+- [ ] Regla "lead sin respuesta" (usa `idx_leads_unresponded`).
+- [ ] Regla "cita de alto riesgo" (usa `risk_level` de `Appointment`).
+- [ ] Regla "espacio disponible" (conecta con la lógica de la Fase 3.7).
+- [ ] Regla "paciente inactivo" (sin citas/tratamientos en X tiempo).
+- [ ] Regla "saldo vencido" (usa el dashboard de cartera de la Fase 6).
+- [ ] Regla "inventario crítico" (usa `idx_inventory_items_critical`).
+
+**Criterios de aceptación:**
+
+- [ ] Cada regla implementada tiene al menos un test que genera el
+      escenario y verifica que la `Opportunity` correspondiente se crea.
+
+---
+
+### 🎫 FASE9-03 — Acción recomendada por oportunidad
+
+**Tipo:** feature
+**Estimación:** M (2–3h)
+**Depende de:** FASE9-01, FASE8-03
+
+**Descripción:**
+Principio de la sección 5.2 del doc de producto: "detectar → entender
+→ proponer → ejecutar" — no basta con mostrar el dato bruto.
+
+**Tareas:**
+
+- [ ] Entidad `OpportunityAction` (mensaje sugerido o tarea sugerida).
+- [ ] Cada regla de FASE9-01/02 genera también su acción sugerida
+      correspondiente.
+- [ ] `POST /api/v1/opportunities/{id}/actions/{actionId}/execute` —
+      ejecuta la acción (envía el mensaje vía FASE8-03 o crea la tarea
+      vía FASE8-01).
+
+**Criterios de aceptación:**
+
+- [ ] Una oportunidad detectada trae asociada al menos una acción
+      ejecutable directamente vía API.
+
+---
+
+### 🎫 FASE9-04 — Métrica de valor recuperado
+
+**Tipo:** feature
+**Estimación:** M (2h)
+**Depende de:** FASE9-03
+
+**Descripción:**
+Sección 10 del doc de arquitectura. La regla de qué cuenta como
+"recuperado" debe quedar documentada en el propio código, no solo aquí.
+
+**Tareas:**
+
+- [ ] Definir y documentar (en un comentario/Javadoc, no solo en este
+      roadmap) el criterio de atribución: por ejemplo, una oportunidad
+      cuenta como "recuperada" si se resuelve y el evento de negocio
+      asociado ocurre dentro de una ventana de tiempo razonable después
+      de ejecutar la acción.
+- [ ] `GET /api/v1/opportunities/recovered-value` — valor recuperado
+      por categoría en un periodo.
+
+**Criterios de aceptación:**
+
+- [ ] Existe un endpoint que devuelve el valor recuperado por categoría
+      en un periodo, con la regla de cálculo documentada en el código.
 
 ---
 
 # FASE 10 — IA administrativa
 
-## 10.1. Asistente administrativo (preguntas simples)
+**Labels sugeridas para todos los tickets de esta fase:** `backend`,
+`fase-10`
 
-- Endpoint que recibe una pregunta en lenguaje natural y la resuelve
-  consultando datos ya expuestos por endpoints existentes (sección
-  8.18), usando un proveedor de LLM (recomendado: Groq, como ya
-  vienes evaluando para Venti Shop, por costo).
+---
 
-**DoD:** preguntas como "¿qué tratamientos están pendientes de
-seguimiento?" devuelven una respuesta correcta basada en datos reales
-del tenant.
+### 🎫 FASE10-01 — Asistente administrativo (preguntas simples)
 
-## 10.2. Generación asistida de mensajes
+**Tipo:** feature / integración externa
+**Estimación:** M (3h)
+**Depende de:** FASE9-04 (para tener datos ricos que consultar)
 
-- Endpoint que, dado un contexto (ej. cita sin confirmar), genera un
-  mensaje sugerido de confirmación.
+**Descripción:**
+El endpoint resuelve la pregunta consultando datos ya expuestos por
+endpoints existentes, usando un proveedor de LLM (recomendado: Groq,
+por costo — mismo proveedor que se evaluó para Venti Shop).
 
-**DoD:** el mensaje generado queda como sugerencia editable, nunca se
-envía automáticamente sin pasar por el flujo de notificaciones de la
-Fase 8 con confirmación humana cuando aplique.
+**Tareas:**
 
-## 10.3. Resiliencia de IA
+- [ ] Cliente HTTP hacia el proveedor de LLM elegido, configurado por
+      variable de entorno (API key nunca hardcodeada).
+- [ ] `POST /api/v1/assistant/ask` — recibe una pregunta en lenguaje
+      natural, arma el contexto a partir de datos del tenant activo, y
+      devuelve la respuesta del proveedor.
 
-- Implementar el principio ya definido en el doc de arquitectura:
-  timeout corto, fallback a plantilla fija si el proveedor de IA falla,
-  y registro del fallo.
+**Criterios de aceptación:**
 
-**DoD:** si se apaga la clave de API de IA, el sistema sigue operando
-con plantillas fijas sin romper ningún flujo.
+- [ ] Preguntas como "¿qué tratamientos están pendientes de
+      seguimiento?" devuelven una respuesta correcta basada en datos
+      reales del tenant, nunca de otro tenant.
+
+---
+
+### 🎫 FASE10-02 — Generación asistida de mensajes
+
+**Tipo:** feature
+**Estimación:** S (1–2h)
+**Depende de:** FASE10-01, FASE8-03
+
+**Tareas:**
+
+- [ ] `POST /api/v1/assistant/suggest-message` — dado un contexto (ej.
+      cita sin confirmar), genera un mensaje sugerido.
+- [ ] El mensaje generado queda como sugerencia editable — nunca se
+      envía automáticamente sin pasar por el flujo de notificaciones de
+      la Fase 8 con confirmación humana cuando aplique.
+
+**Criterios de aceptación:**
+
+- [ ] El endpoint devuelve el mensaje sugerido sin efectos secundarios
+      (no envía nada por sí solo).
+
+---
+
+### 🎫 FASE10-03 — Resiliencia de IA
+
+**Tipo:** feature / hardening
+**Estimación:** M (2h)
+**Depende de:** FASE10-01
+
+**Descripción:**
+Mismo principio que ya aplicaste a WhatsApp en FASE8-05: timeout corto,
+fallback a plantilla fija si el proveedor de IA falla, y registro del
+fallo.
+
+**Tareas:**
+
+- [ ] Timeout corto configurado en el cliente HTTP del proveedor de IA.
+- [ ] Fallback a una plantilla fija cuando el proveedor no responde o
+      responde con error.
+- [ ] Registro del fallo (log estructurado o tabla, según lo que ya
+      exista para WhatsApp).
+
+**Criterios de aceptación:**
+
+- [ ] Si se apaga la clave de API de IA, el sistema sigue operando con
+      plantillas fijas sin romper ningún flujo (test explícito
+      simulando la caída del proveedor).
 
 ---
 
@@ -1065,75 +2047,274 @@ con plantillas fijas sin romper ningún flujo.
 el control de qué funcionalidades ve cada plan (Esencial, Profesional,
 Clínica).
 
-## 11.1. Modelo de planes y feature flags
+**Labels sugeridas para todos los tickets de esta fase:** `backend`,
+`fase-11`, `billing`
 
-- Entidad `Plan` (Esencial/Profesional/Clínica) y `TenantSubscription`.
-- Tablas `plan_features` (booleanos por módulo) y `plan_limits`
-  (numéricos, con `-1`/`null` como convención de "ilimitado"), según
-  el diseño definido en la sección "Pricing y límites por plan" al
-  inicio de este documento, con los valores iniciales de esa tabla.
-- Mecanismo de feature-gating por plan (ej. `@PreAuthorize` extendido o
-  un filtro que valide si el tenant tiene acceso a un módulo antes de
-  ejecutar el endpoint).
-- Contador de uso mensual para límites que se consumen (ej.
-  conversaciones de WhatsApp), reseteable al inicio de cada ciclo de
-  facturación.
+---
 
-**DoD:** un tenant en plan Esencial recibe `403` al intentar usar un
-endpoint exclusivo de Profesional/Clínica (ej. CRM de leads), y un
-tenant que alcanza su límite numérico (ej. 150 pacientes) recibe un
-error claro al intentar crear el recurso 151.
+### 🎫 FASE11-01 — Entidades de planes y suscripción
 
-## 11.2. Integración de pasarela de pagos para el cobro de suscripción
+**Tipo:** feature
+**Estimación:** S (1–2h, las tablas ya existen en `schema.sql`)
+**Depende de:** FASE1-01
 
-- Integración con pasarela (a definir: Wompi, Stripe, etc.) para cobro
-  recurrente mensual/anual.
-- Webhook de confirmación de pago que activa/suspende el acceso del
-  tenant.
+**Descripción:**
+Las tablas `plans`, `plan_features`, `plan_limits` y
+`tenant_subscriptions` ya están definidas y sembradas en `schema.sql`
+— aquí se crea la capa de entidades JPA que las mapea.
 
-**DoD:** un pago exitoso activa el tenant; un pago fallido/vencido
-suspende el acceso según la política definida (con periodo de gracia a
-definir).
+**Tareas:**
 
-## 11.3. Descuento por facturación anual
+- [ ] Entidades `Plan`, `PlanFeature`, `PlanLimit`,
+      `TenantSubscription` mapeadas 1:1 a las tablas existentes (no
+      generar nuevas migraciones si `schema.sql` ya las tiene — verifica
+      primero qué migraciones Flyway ya existen en el repo).
 
-- Soporte de ciclo de facturación anual con el descuento definido en el
-  documento de pricing.
+**Criterios de aceptación:**
 
-**DoD:** un tenant puede elegir entre ciclo mensual o anual al momento
-de suscribirse, y el monto cobrado refleja el descuento correcto.
+- [ ] Se puede leer, para un tenant dado, su plan activo, sus features
+      habilitadas y sus límites numéricos.
+
+---
+
+### 🎫 FASE11-02 — Feature-gating por plan
+
+**Tipo:** feature / arquitectura
+**Estimación:** L (4h)
+**Depende de:** FASE11-01
+
+**Descripción:**
+Mecanismo de feature-gating por plan, siguiendo el diseño de la
+sección "Pricing y límites por plan" del roadmap.
+
+**Tareas:**
+
+- [ ] Anotación o aspecto (`@RequiresFeature("crm_leads")` o similar)
+      aplicable a endpoints, que valida contra `plan_features` del
+      tenant activo antes de ejecutar el método.
+- [ ] Aplicar la anotación a los endpoints ya existentes que
+      correspondan (CRM de leads, cartera, especialistas, inventario,
+      motor de oportunidades, IA).
+
+**Criterios de aceptación:**
+
+- [ ] Un tenant en plan Esencial recibe `403` al intentar usar un
+      endpoint exclusivo de Profesional/Clínica (ej. CRM de leads).
+
+**Temas de Spring Boot:** AOP (`@Aspect`), anotaciones personalizadas,
+`HandlerInterceptor` como alternativa si prefieres no usar AOP.
+
+---
+
+### 🎫 FASE11-03 — Límites numéricos y contador de uso mensual
+
+**Tipo:** feature
+**Estimación:** M (3h)
+**Depende de:** FASE11-02
+
+**Tareas:**
+
+- [ ] Validación de límites numéricos (`max_patients`, `max_users`,
+      etc.) antes de crear el recurso correspondiente.
+- [ ] Contador de uso mensual para límites que se consumen (ej.
+      conversaciones de WhatsApp), reseteable al inicio de cada ciclo
+      de facturación.
+
+**Criterios de aceptación:**
+
+- [ ] Un tenant que alcanza su límite numérico (ej. 150 pacientes)
+      recibe un error claro al intentar crear el recurso 151.
+
+---
+
+### 🎫 FASE11-04 — Integración de pasarela de pagos
+
+**Tipo:** feature / integración externa
+**Estimación:** L (a definir con más precisión una vez se elija la
+pasarela — Wompi, Stripe, etc.)
+**Depende de:** FASE11-01
+
+**Tareas:**
+
+- [ ] Integración con la pasarela elegida para cobro recurrente
+      mensual/anual.
+- [ ] Webhook de confirmación de pago que activa/suspende el acceso
+      del tenant.
+
+**Criterios de aceptación:**
+
+- [ ] Un pago exitoso activa el tenant; un pago fallido/vencido
+      suspende el acceso según la política definida (con periodo de
+      gracia a definir).
+
+---
+
+### 🎫 FASE11-05 — Ciclo de facturación anual
+
+**Tipo:** feature
+**Estimación:** S (1–2h)
+**Depende de:** FASE11-04
+
+**Tareas:**
+
+- [ ] Soporte de ciclo de facturación anual con el descuento ya
+      definido en `plans.annual_price_cop`.
+- [ ] Endpoint/flujo para que un tenant elija entre mensual o anual al
+      suscribirse.
+
+**Criterios de aceptación:**
+
+- [ ] Un tenant puede elegir entre ciclo mensual o anual al momento de
+      suscribirse, y el monto cobrado refleja el descuento correcto.
+
+---
+
+### ✅ Checklist de salida de Fase 11
+
+- [ ] El propio SaaS puede cobrar y gestionar sus planes de punta a
+      punta: suscribirse, ser cobrado, y ver su acceso ajustado según
+      el estado del pago.
 
 ---
 
 # FASE 12 — Endurecimiento, observabilidad y preparación para producción
 
-## 12.1. Seguridad
+**Labels sugeridas para todos los tickets de esta fase:** `backend`,
+`fase-12`, `production-readiness`
 
-- Rate limiting (sección 18), revisión de protección contra inyección,
-  CSRF/XSS según corresponda a una API REST pura.
-- Gestión segura de secretos (variables de entorno del proveedor,
-  nunca hardcodeadas).
+---
 
-## 12.2. Observabilidad
+### 🎫 FASE12-01 — Rate limiting y revisión de seguridad
 
-- Spring Actuator + OpenTelemetry, integración con Sentry para errores.
-- Logs estructurados por tenant para poder depurar sin exponer datos
-  entre clínicas.
+**Tipo:** hardening
+**Estimación:** M (2–3h)
+**Depende de:** Fase 1 completa
 
-## 12.3. CI/CD completo
+**Tareas:**
 
-- Pipeline de GitHub Actions que compila, corre pruebas y despliega
-  automáticamente a Render/Railway en merges a `main`.
+- [ ] Rate limiting básico (por IP y/o por tenant) en los endpoints
+      públicos y de autenticación.
+- [ ] Revisión de protección contra inyección (ya mitigado en gran
+      parte por usar JPA/queries parametrizadas — auditar cualquier
+      query nativa escrita a mano).
+- [ ] Revisión de CSRF/XSS según corresponda a una API REST pura
+      (normalmente no aplica CSRF si no hay sesiones basadas en
+      cookies, pero verifícalo explícitamente, no lo asumas).
 
-## 12.4. Backups y recuperación
+**Criterios de aceptación:**
 
-- Backups automáticos de PostgreSQL (según lo que ofrezca el proveedor
-  elegido) y prueba real de restauración al menos una vez antes de
-  tener el primer cliente pagando.
+- [ ] Superar el límite de rate limiting en el endpoint de login
+      devuelve `429`, no deja intentar indefinidamente.
 
-**DoD de toda la fase:** se puede perder la base de datos de
-producción y restaurarla desde backup en un tiempo conocido, sin
-intervención manual compleja.
+---
+
+### 🎫 FASE12-02 — Gestión segura de secretos en producción
+
+**Tipo:** hardening / infra
+**Estimación:** S (1–2h)
+**Depende de:** FASE0-08
+
+**Tareas:**
+
+- [ ] Auditoría de que ningún secreto (API keys de IA, WhatsApp,
+      pasarela de pago, credenciales de BD) esté hardcodeado en el
+      código o en archivos versionados.
+- [ ] Confirmar que el rol de base de datos de producción no tiene
+      `BYPASSRLS` (ver sección 16 de `schema.sql`).
+
+**Criterios de aceptación:**
+
+- [ ] Un `grep` de patrones de secretos comunes sobre el repo no
+      encuentra coincidencias.
+
+---
+
+### 🎫 FASE12-03 — Observabilidad
+
+**Tipo:** feature / infra
+**Estimación:** M (3h)
+**Depende de:** FASE0-08
+
+**Tareas:**
+
+- [ ] Spring Actuator ampliado (más allá de `/health`) + OpenTelemetry.
+- [ ] Integración con Sentry (o equivalente) para captura de errores.
+
+**Criterios de aceptación:**
+
+- [ ] Un error no controlado en producción genera una alerta/registro
+      visible en Sentry, no solo en logs locales.
+
+---
+
+### 🎫 FASE12-04 — Logs estructurados por tenant
+
+**Tipo:** hardening
+**Estimación:** S (1–2h)
+**Depende de:** FASE12-03
+
+**Descripción:**
+Poder depurar sin exponer datos entre clínicas.
+
+**Tareas:**
+
+- [ ] Formato de log estructurado (JSON) que incluya `tenant_id` como
+      campo, nunca datos sensibles del paciente en texto plano.
+
+**Criterios de aceptación:**
+
+- [ ] Se puede filtrar los logs de producción por `tenant_id` para
+      depurar un caso puntual sin exponer datos de otras clínicas.
+
+---
+
+### 🎫 FASE12-05 — CI/CD completo
+
+**Tipo:** infra
+**Estimación:** M (2–3h)
+**Depende de:** FASE0-09
+
+**Tareas:**
+
+- [ ] Ampliar el pipeline de GitHub Actions para que despliegue
+      automáticamente a Render/Railway en merges a `main` (más allá
+      del build+test que ya existe desde la Fase 0).
+
+**Criterios de aceptación:**
+
+- [ ] Un merge a `main` que pasa los tests despliega automáticamente
+      sin intervención manual.
+
+---
+
+### 🎫 FASE12-06 — Backups y prueba de restauración
+
+**Tipo:** infra / validación
+**Estimación:** M (medio día, incluye la prueba real de restauración)
+**Depende de:** FASE0-08
+
+**Tareas:**
+
+- [ ] Confirmar que el proveedor elegido (Render/Railway) tiene
+      backups automáticos habilitados para la instancia de PostgreSQL.
+- [ ] Ejecutar una prueba real de restauración (no solo leer la
+      documentación del proveedor) antes de tener el primer cliente
+      pagando.
+
+**Criterios de aceptación:**
+
+- [ ] Se puede perder la base de datos de producción y restaurarla
+      desde backup en un tiempo conocido, sin intervención manual
+      compleja — verificado con una prueba real, no solo en teoría.
+
+---
+
+### ✅ Checklist de salida de Fase 12
+
+- [ ] FASE12-06 ejecutada realmente (no solo planeada) antes de
+      aceptar el primer cliente pagando.
+- [ ] Backend listo para producción: seguridad, observabilidad, CI/CD
+      y backups verificados.
 
 ---
 

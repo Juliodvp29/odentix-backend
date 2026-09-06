@@ -6,3 +6,7 @@ spring:
     url: ${DB_URL_TEST:jdbc:postgresql://localhost:5434/odentix}
     username: ${DB_USERNAME:odentix}
     password: ${DB_PASSWORD:odentix}
+  flyway:
+    locations:
+      - classpath:db/migration
+      - classpath:db/test-migration
