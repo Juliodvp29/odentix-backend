@@ -34,3 +34,8 @@ management:
   endpoint:
     health:
       show-details: never
+
+jwt:
+  # Clave HMAC-SHA256 (al menos 256 bits = 32 caracteres). En prod se sobreescribe con JWT_SECRET.
+  secret: ${JWT_SECRET:odentix_super_secret_jwt_key_for_development_purposes_only_123456}
+  expiration-minutes: ${JWT_EXPIRATION_MINUTES:1440}
