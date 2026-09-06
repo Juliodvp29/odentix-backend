@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: odentix-backend
+  datasource:
+    # Valores por defecto SOLO para desarrollo local (docker-compose.yml).
+    # En prod se sobreescriben con variables de entorno sin default (ver application-prod.yml).
+    url: ${DB_URL:jdbc:postgresql://localhost:5434/odentix}
+    username: ${DB_USERNAME:odentix}
+    password: ${DB_PASSWORD:odentix}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    # AGENTS.md §6: siempre validate, en todos los perfiles, sin excepción.
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+server:
+  # AGENTS.md §12: 8081 en local porque el 8080 lo ocupa AgentService.exe.
+  # No generalizar a otros entornos sin confirmarlo.
+  port: 8081
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never

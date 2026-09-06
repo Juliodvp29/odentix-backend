@@ -1,0 +1,8 @@
+spring:
+  datasource:
+    # La URL se sobreescribe en los tests de integración con el contenedor
+    # de Testcontainers vía @DynamicPropertySource (ver AbstractIntegrationTest).
+    # Este default local solo aplica si un test levanta contexto sin la base.
+    url: ${DB_URL_TEST:jdbc:postgresql://localhost:5434/odentix}
+    username: ${DB_USERNAME:odentix}
+    password: ${DB_PASSWORD:odentix}

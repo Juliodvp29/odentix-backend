@@ -1,0 +1,24 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: odentix-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-odentix}
+      POSTGRES_USER: ${POSTGRES_USER:-odentix}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-odentix}
+    # Puerto host 5434: el 5432 y el 5433 (IPv4) los ocupan Postgres nativos
+    # de la máquina de desarrollo (servicios postgresql-x64-17/18). Ver README.
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-odentix} -d $${POSTGRES_DB:-odentix}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  pgdata:

@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    # En prod NO hay defaults: la plataforma (Render/Railway) inyecta estas variables.
+    # Si falta alguna, la app debe fallar al arrancar antes que conectarse a una BD equivocada.
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    show-sql: false
+
+server:
+  # En prod el proveedor asigna el puerto vía $PORT.
+  port: ${PORT:8080}
