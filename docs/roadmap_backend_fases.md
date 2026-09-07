@@ -807,17 +807,17 @@ Primera entidad de negocio real del proyecto. Debe heredar de
 
 **Tareas:**
 
-- [ ] Entidad `Patient`: datos personales, contacto, contacto de
+- [x] Entidad `Patient`: datos personales, contacto, contacto de
       emergencia (sección 8.2 del doc de arquitectura, alcance
       reducido — sin odontograma ni historia clínica todavía).
-- [ ] Migración Flyway correspondiente, con `tenant_id` indexado.
-- [ ] Repositorio JPA básico (`PatientRepository`).
+- [x] Migración Flyway correspondiente, con `tenant_id` indexado.
+- [x] Repositorio JPA básico (`PatientRepository`).
 
 **Criterios de aceptación:**
 
-- [ ] Se puede persistir y recuperar un `Patient` desde un test de
+- [x] Se puede persistir y recuperar un `Patient` desde un test de
       integración con Testcontainers.
-- [ ] El filtro automático de tenant (Hibernate Filter/RLS) aplica sin
+- [x] El filtro automático de tenant (Hibernate Filter/RLS) aplica sin
       configuración adicional, heredado de `TenantAwareEntity`.
 
 ---
@@ -833,18 +833,18 @@ Exponer pacientes vía REST con validación de entrada.
 
 **Tareas:**
 
-- [ ] Endpoints: `GET /api/v1/patients/{id}`, `POST /api/v1/patients`,
+- [x] Endpoints: `GET /api/v1/patients/{id}`, `POST /api/v1/patients`,
       `PATCH /api/v1/patients/{id}`, `DELETE /api/v1/patients/{id}`
       (baja lógica vía `is_active`, no borrado físico).
-- [ ] DTOs de entrada/salida (no exponer la entidad JPA directamente).
-- [ ] Validación con Bean Validation (`@Valid`): campos obligatorios,
+- [x] DTOs de entrada/salida (no exponer la entidad JPA directamente).
+- [x] Validación con Bean Validation (`@Valid`): campos obligatorios,
       formato de teléfono/email.
 
 **Criterios de aceptación:**
 
-- [ ] Un `POST` con datos inválidos devuelve `400` con el detalle del
+- [x] Un `POST` con datos inválidos devuelve `400` con el detalle del
       campo que falló.
-- [ ] Un `DELETE` marca `is_active = false` sin eliminar la fila.
+- [x] Un `DELETE` marca `is_active = false` sin eliminar la fila.
 
 **Temas de Spring Boot:** DTOs vs. entidades, `@Valid`, `ResponseEntity`.
 
