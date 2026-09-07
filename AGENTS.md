@@ -102,6 +102,7 @@ com.julio.odentix.odentix_backend/
 ├── shared/           # TenantAwareEntity, TenantContext, excepciones comunes
 ├── tenant/
 ├── auth/
+├── audit/            # AuditLog, AuditService (append-only, desde FASE1-13)
 ├── patient/
 ├── appointment/
 ├── treatmentplan/
@@ -270,6 +271,12 @@ hecho.
    abajo). Nunca hagas commit de código que no compila o con pruebas en
    rojo, y nunca hagas commit sin que Julio haya visto el resultado
    final de los pasos 3 y 4.
+6. **Actualizar `ARCHITECTURE.md` al cerrar cada fase.** Cuando todos los
+   tickets de una fase estén en verde: documentar lo construido (nuevos
+   endpoints con ejemplos de uso, entidades y migraciones, decisiones
+   técnicas y desviaciones del roadmap/`schema.sql`) y tachar el checklist
+   de salida en `roadmap_backend_fases.md`. Sin esta actualización la fase
+   no se considera cerrada.
 
 Este ciclo (plan → aprobación → ejecución → pruebas → commit) se repite
 en cada fase y en cada ajuste dentro de una fase, no solo una vez al
@@ -294,5 +301,6 @@ que quede desactualizada visiblemente a que no exista.)*
 - Despliegue en la nube: activo en Render (`https://odentix-backend.onrender.com/actuator/health`).
 - Base de datos de producción: PostgreSQL 16 administrada en Render (`odentix-postgres` en región Ohio).
 - Pipeline de CI: activo en GitHub Actions (`.github/workflows/ci.yml`) con Java 25 y Testcontainers sobre `dev` y `main`.
-- Fase 1 en curso: FASE1-01 a FASE1-11 completadas (`Tenant`, `User`, `UserRole`, `TenantAwareEntity`, `UserService`, login JWT, `JwtAuthenticationFilter`, `TenantContext` por request, filtrado automático de tenant en repositorios con `@TenantId` y `TenantIdentifierResolver`, test crítico de aislamiento cross-tenant, autorización por rol con `@PreAuthorize`, test de autorización por rol con `RoleAuthorizationIntegrationTest` 5/5 en verde). Siguiente ticket: FASE1-13 (tabla y entidad de auditoría `audit_log`).
+- Fase 1 completada: FASE1-01 a FASE1-14 en verde (`Tenant`, `User`, `UserRole`, `TenantAwareEntity`, `UserService`, login JWT, `JwtAuthenticationFilter`, `TenantContext` por request, filtrado automático de tenant en repositorios con `@TenantId` y `TenantIdentifierResolver`, test crítico de aislamiento cross-tenant, autorización por rol con `@PreAuthorize`, test de autorización por rol con `RoleAuthorizationIntegrationTest` 5/5 en verde, base de auditoría `audit_log` con `AuditService` reutilizable y `AuditServiceIntegrationTest` en verde). Checklist de salida verificado: FASE1-10 5/5 y FASE1-12 5/5 en `clean verify` (lo que corre CI), `TenantAwareEntity` lista. Decisión tomada en FASE1-14: fallos sin tenant atribuible no se auditan (ver roadmap).
+- Siguiente fase: **Fase 2 — Pacientes e historia clínica base** (empezando por 2.1: CRUD de pacientes con `Patient` extendiendo `TenantAwareEntity` desde su primera migración).
 - Las entidades reales de negocio (pacientes, citas, etc.) comienzan en Fase 2.

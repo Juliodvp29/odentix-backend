@@ -1,52 +1,351 @@
-# Arquitectura — convención de paquetes (FASE0-03)
+# Arquitectura técnica — odentix-backend
 
-Decisión tomada: organización **por módulo de negocio**, no por capa técnica.
+> Documento vivo de arquitectura y decisiones del backend SaaS para clínicas
+> odontológicas (multi-tenant: cada clínica es un `tenant`).
+> **Estado:** documenta Fase 0 y Fase 1. Al cerrar cada fase este archivo debe
+> actualizarse (regla en `AGENTS.md` §11: sin esa actualización la fase no se
+> considera cerrada).
+>
+> Fuentes normativas: `docs/documentacion_sistema_gestion_odontologica_v1.1.md`
+> (producto), `docs/roadmap_backend_fases.md` (tickets y DoD),
+> `docs/schema.sql` (referencia de esquema). Todo lo aquí afirmado sale del
+> código y las migraciones reales, no de los documentos de diseño.
+
+---
+
+## 1. Visión general
+
+Monolito modular en Java: un solo desplegable, organizado por módulo de
+negocio (no por capa técnica). No hay microservicios, colas ni Kubernetes por
+decisión explícita: no se introduce infraestructura antes de que la escala la
+justifique. El frontend Angular es un proyecto separado; no hay contrato de
+API congelado todavía.
+
+### Stack
+
+| Pieza | Versión / decisión |
+|---|---|
+| Java | 25 (LTS; nunca versiones no-LTS) |
+| Spring Boot | 4.1.1 (ver §2: paquetes de autoconfiguración reorganizados) |
+| Build | Maven (wrapper `./mvnw` incluido) |
+| Base de datos | PostgreSQL 16+ (nunca H2 ni embebidas, ni en tests) |
+| Migraciones | Flyway, `ddl-auto` siempre en `validate` |
+| Auth | Spring Security + JWT propio (JJWT 0.12.6, HMAC-SHA256) |
+| Tests integración | Testcontainers 2.x sobre `postgres:16` |
+| Despliegue | Docker multi-stage + Render; CI en GitHub Actions |
+
+### Convenciones globales
+
+- Sin Lombok: getters/setters/constructores explícitos (decisión de FASE0-01
+  mientras se aprende el framework; revisar `pom.xml` antes de asumirlo).
+- Código y comentarios en español, consistente con el archivo que se edita.
+- `snake_case` en BD, tablas en plural, UUID como PK (`gen_random_uuid()`),
+  `TIMESTAMPTZ` (nunca `TIMESTAMP`), montos `NUMERIC(12,2)` con sufijo `_cop`,
+  `updated_at` gestionado por el trigger `set_updated_at()` (nunca desde Java).
+
+---
+
+## 2. Nota sobre Spring Boot 4.1.1
+
+En esta versión los paquetes de autoconfiguración se reorganizaron respecto a
+3.x, y casi todo tutorial/Stack Overflow usa los paquetes viejos. **Antes de
+escribir cualquier import de autoconfiguración, verificar el paquete real**
+(paquetes ya confirmados en este proyecto):
+
+- `org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration`
+- `org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration`
+- `org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration`
+
+Lo mismo aplica a dependencias vecinas: Testcontainers 2.x renombró sus
+artefactos con prefijo (`testcontainers-postgresql`,
+`testcontainers-junit-jupiter`; los paquetes Java `org.testcontainers.*` no
+cambiaron). La versión del BOM la fija el parent (`testcontainers.version`).
+
+---
+
+## 3. Estructura de paquetes
+
+Decisión FASE0-03: organización **por módulo de negocio** (familiar para quien
+viene de Angular modular), cada uno con sus subcapas internas.
 
 ```
 com.julio.odentix.odentix_backend/
-├── shared/          # transversal: TenantAwareEntity, TenantContext, excepciones
-├── tenant/          # clínica cliente (raíz del multi-tenancy)
-├── auth/            # User, Role, login JWT
-├── patient/         # Fase 2
-├── appointment/     # Fase 3
-├── treatmentplan/   # Fase 4
-├── billing/         # Fase 4
-├── crm/             # Fase 5
-└── inventory/       # Fase 7
+├── shared/      # transversal: entity/, context/, excepciones comunes
+│   ├── entity/  # TenantAwareEntity (base de todo lo de negocio)
+│   └── context/ # TenantContext, TenantIdentifierResolver
+├── tenant/      # clínica cliente (raíz del multi-tenancy)
+├── auth/        # User, UserRole, login JWT, filtro, UserService
+├── audit/       # AuditLog, AuditAction, AuditService (append-only)
+├── patient/     # Fase 2
+├── appointment/ # Fase 3
+├── treatmentplan/ # Fase 4
+├── billing/     # Fase 4
+├── crm/         # Fase 5
+└── inventory/   # Fase 7
 ```
 
 Reglas:
 
-1. Cada módulo tiene sus subcapas internas: `controller`, `service`, `repository`,
-   `entity`, `dto`. No existen paquetes top-level `controllers/`, `services/`, etc.
-2. `shared` es lo único importable desde cualquier módulo. Entre módulos de negocio
-   las dependencias van hacia `tenant`/`patient`, nunca al revés sin justificarlo.
-3. Módulo nuevo = mismo patrón, sin pedir permiso. Cambiar el patrón requiere
-   discusión explícita (decisión documentada porque Julio viene de Angular modular).
-4. Sin Lombok por ahora (FASE0-01): getters/setters explícitos mientras se aprende
-   el framework. Verificar `pom.xml` antes de asumirlo.
+1. Cada módulo tiene sus subcapas (`controller`, `service`, `repository`,
+   `entity`, `dto`) **dentro** de su paquete. No hay paquetes top-level por
+   capa. Módulo nuevo = mismo patrón, sin pedir permiso.
+2. `shared` es lo único importable desde cualquier módulo. Entre módulos de
+   negocio las dependencias apuntan hacia `tenant`/`patient`, nunca al revés
+   sin justificarlo.
+3. Cambiar este patrón requiere discusión explícita.
 
 ---
 
-# Convención `tenant_id` en tablas de negocio (FASE1-04)
+## 4. Configuración por entorno
 
-Regla: toda tabla de negocio lleva `tenant_id UUID NOT NULL` desde su primera
-migración, y su entidad hereda de `shared.entity.TenantAwareEntity` (aporta
-`id`, `tenant_id`, `created_at`, `updated_at`). Defensa en profundidad
-(AGENTS.md §5): el filtro de aplicación (Fase 1.9) + RLS en Postgres son dos
-capas independientes, ninguna sustituye a la otra.
+Perfiles `dev` / `test` / `prod` (`application.yml` base + uno por perfil).
+Secretos solo por variables de entorno con sintaxis `${VAR:default}`; en el
+repo solo hay defaults locales sin valor productivo.
 
-Checklist de cada migración que cree una tabla de negocio:
+| Variable | Default local (dev/test) | Prod |
+|---|---|---|
+| `DB_URL` | `jdbc:postgresql://localhost:5434/odentix` | sin default (obligatoria) |
+| `DB_USERNAME` / `DB_PASSWORD` | `odentix` / `odentix` | sin default (obligatorias) |
+| `PORT` | `8081` fijo en local | `${PORT:8080}` (Render inyecta `$PORT`) |
+| `JWT_SECRET` | clave de desarrollo en `application.yml` | **obligatoria**: `JWT_SECRET` real (≥32 caracteres) |
+| `JWT_EXPIRATION_MINUTES` | `1440` (24 h) | `1440` salvo que se configure |
 
-1. Columna `tenant_id UUID NOT NULL REFERENCES tenants(id)` + índice.
-2. RLS activado con la política `tenant_isolation` sobre `current_tenant_id()`
-   (mismo patrón de `docs/schema.sql`).
-3. La entidad hereda de `TenantAwareEntity`; si necesita navegar a `Tenant`,
-   la asociación usa `insertable = false, updatable = false`.
-4. El repositorio filtra por tenant en cada query (`findByTenantId...`), aunque
-   exista filtro automático.
-5. Test cross-tenant obligatorio (AGENTS.md §5.4).
+Particularidades de la máquina de desarrollo (no generalizar):
 
-Excepciones: `tenants` (es la raíz, no pertenece a ningún tenant), `users`
-(modela el tenant vía asociación desde FASE1-02) y catálogos globales
-(`plans`, `plan_features`, `plan_limits` en Fase 11).
+- App en `8081` porque el `8080` lo ocupa `AgentService.exe`.
+- Postgres de Docker en `5434` porque los puertos `5432` y `5433` (IPv4) los
+  ocupan servicios nativos `postgresql-x64-17/18`.
+
+Comandos:
+
+```bash
+docker compose up -d                                   # Postgres local
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev  # app en :8081
+./mvnw test                                            # integración (Testcontainers)
+./mvnw clean verify                                    # lo que corre el CI
+```
+
+> Tras borrar o renombrar recursos (`application.properties` → YAML, etc.),
+> correr con `clean`: los builds incrementales no eliminan salidas obsoletas
+> de `target/` y un archivo viejo puede seguir activo en el classpath.
+
+---
+
+## 5. Base de datos y migraciones
+
+- `ddl-auto: validate` en todos los perfiles, sin excepción.
+- Todo cambio de esquema va en una migración Flyway nueva (`V{n}__...sql`);
+  nunca se edita una aplicada ni se toca `schema.sql` esperando que aplique solo.
+- Antes de crear una tabla, revisar su referencia en `docs/schema.sql`.
+
+| Migración | Contenido |
+|---|---|
+| `V1__init` | Función `set_updated_at()` + tabla temporal `migration_probe` (verificar el mecanismo; se elimina en Fase 1) |
+| `V2__create_tenants` | Extensiones `pgcrypto`/`citext`, función `current_tenant_id()`, tipo `tenant_status`, tabla `tenants`, índice, trigger `updated_at`, RLS (`tenant_self_isolation`) |
+| `V3__create_users` | Tipo `user_role`, tabla `users` (email `CITEXT`, unique `(tenant_id, email)`), índice `(tenant_id, role)`, trigger, RLS |
+| `V4__create_audit_log` | Tipo `audit_action`, tabla `audit_log`, índices, trigger, RLS (ver §8 por 2 desviaciones documentadas) |
+
+Patrón RLS en cada tabla de negocio (defensa en profundidad, §6):
+
+```sql
+ALTER TABLE <tabla> ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON <tabla>
+  USING (tenant_id = current_tenant_id() OR current_tenant_id() IS NULL)
+  WITH CHECK (tenant_id = current_tenant_id() OR current_tenant_id() IS NULL);
+```
+
+El rol de BD de producción no debe tener `BYPASSRLS`. Nunca se desactiva RLS
+ni el filtro de tenant "para probar más rápido": si algo es difícil de probar
+con aislamiento, el problema es del test.
+
+---
+
+## 6. Multi-tenancy
+
+El peor bug posible es filtrar datos entre clínicas. Tres capas
+independientes, ninguna sustituye a otra:
+
+1. **Filtro automático de aplicación (FASE1-09).** `TenantAwareEntity`
+   (`shared/entity`) aporta `id` UUID, `tenant_id` (`@TenantId` de Hibernate,
+   no-nulo e inmutable), `createdAt/updatedAt`. Hibernate filtra y asigna el
+   tenant automáticamente en queries y en `findById`, resolviéndolo vía
+   `TenantIdentifierResolver` → `TenantContext`.
+2. **Convención en repositorios (defensa en profundidad).** Cada query
+   filtra por tenant aunque exista el filtro automático
+   (`findByTenantId...`, nunca JPQL/nativa sin `tenant_id`).
+3. **RLS en PostgreSQL** (patrón §5).
+
+### `TenantContext` (FASE1-08)
+
+`ThreadLocal<UUID>` estático (`setTenantId` / `getTenantId` /
+`getRequiredTenantId` / `clear`). Lo puebla el filtro JWT al inicio de cada
+request y lo limpia en `finally` (hilos de Tomcat se reutilizan; sin limpieza
+habría fuga entre requests). Sin tenant (arranque, tareas de sistema),
+`TenantIdentifierResolver` usa el sentinel nil-UUID como sesión raíz.
+
+### Convención `tenant_id` (FASE1-04)
+
+Toda entidad de negocio nueva hereda `TenantAwareEntity` desde su primera
+migración. Checklist por tabla: columna `tenant_id UUID NOT NULL REFERENCES
+tenants(id)` + índice + RLS + entidad heredada (+ asociación a `Tenant` con
+`insertable/updatable = false` si necesita navegar) + repo filtrado + **test
+cross-tenant obligatorio** (datos en A, actuar como B, verificar invisibilidad;
+`404` antes que `403` para ni confirmar existencia).
+
+Excepciones intencionales: `tenants` (es la raíz), `users` (tenant vía
+asociación desde FASE1-02) y catálogos globales (`plans`, `plan_features`,
+`plan_limits` en Fase 11).
+
+---
+
+## 7. Autenticación y autorización (Fase 1)
+
+### Modelo
+
+- `Tenant`: id, `name`, `tax_id` (NIT), `status` (`trial`/`active`/`suspended`/
+  `cancelled`), `timezone` (`America/Bogota`).
+- `User`: pertenece a un único `Tenant` (`@ManyToOne` obligatorio), `email`
+  (`CITEXT`, único **por tenant**, no global), `password_hash` (BCrypt, nunca
+  texto plano), `fullName`, `role`, `is_active`, `lastLoginAt`.
+- `UserRole` (enum en minúsculas, espejo del tipo PG `user_role`):
+  `propietario`, `odontologo`, `recepcion`, `auxiliar`,
+  `especialista_externo`. Un rol por usuario en esta fase.
+- `UserService.createUser(...)` (interno, sin registro público): valida datos,
+  exige tenant existente, rechaza email duplicado por tenant, hashea con
+  `BCryptPasswordEncoder` y guarda activo.
+
+### Login — `POST /api/v1/auth/login` (público)
+
+```bash
+curl -X POST http://localhost:8081/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"admin@clinica.com","password":"Secreta123"}'
+# 200 → {"accessToken":"...","tokenType":"Bearer","expiresInSeconds":86400,
+#        "user":{"email":"...","role":"propietario","tenantId":"..."}}
+# Credenciales inválidas → 401 {"error":"Credenciales inválidas"} (genérico a
+# propósito: no distingue usuario inexistente de clave errónea, anti-enumeración)
+```
+
+`tenantId` opcional en el request: solo se usa para desambiguar si el mismo
+email existiera en varias clínicas. Usuario inactivo → 401 genérico.
+
+### JWT
+
+- HMAC-SHA256 (`JwtService`, JJWT), expiración configurable (default 24 h).
+- Claims: `sub` = user_id, `tenant_id`, `email`, `role`.
+- `JwtAuthenticationFilter` (`OncePerRequestFilter`, antes de
+  `UsernamePasswordAuthenticationFilter`): valida `Authorization: Bearer ...`,
+  puebla `SecurityContext` (principal `AuthenticatedUser` + authority
+  `ROLE_<ROL>`) y `TenantContext` (limpieza en `finally`).
+
+### Reglas de acceso (`SecurityConfig`, stateless, sin sesiones, CSRF off en API)
+
+- Públicas: `/actuator/health`, `/actuator/info`, `/api/v1/auth/login`.
+- Todo lo demás exige autenticación; `@EnableMethodSecurity` permite
+  `@PreAuthorize("hasRole('PROPIETARIO')")` (rol en mayúsculas = enum en
+  mayúsculas; `UserRole` en minúsculas se mapea con `toUpperCase()`).
+- Errores probados: sin token → 401 `{"error":"No autorizado"}`; rol
+  insuficiente → 403 `{"error":"Acceso denegado","message":"..."}`.
+
+### `GET /api/v1/me` (protegida)
+
+Devuelve el perfil del usuario del token (`@AuthenticationPrincipal`):
+sin token → 401; token válido → 200 con sus datos.
+
+---
+
+## 8. Auditoría
+
+Tabla `audit_log` (append-only: se escribe y se lee filtrada por tenant;
+nunca update/delete): `tenant_id` (FK `CASCADE`), `user_id` (FK `SET NULL`,
+anulable), `action` (`audit_action`), `entity_name`, `entity_id` (anulable),
+`detail` JSONB (anulable), timestamps. Índices `(tenant_id, created_at)` y
+`(tenant_id, entity_name, entity_id)` + RLS.
+
+Desviaciones de `schema.sql` (documentadas en `V4`): PK UUID en vez de
+`BIGSERIAL` (para heredar `TenantAwareEntity` y su filtro automático) y
+columna `updated_at` (la exige el mapeo base; nunca se actualiza por API; el
+`toString` omite `detail` por si trae datos sensibles).
+
+`AuditService.log(tenantId, userId, action, entityName, entityId, detail)`
+(`Map<String,Object>` → JSONB): valida obligatorios, corre en
+`REQUIRES_NEW` para que el rollback del flujo que audita (ej. login fallido)
+no borre la entrada.
+
+Auditoría de login (FASE1-14): `login_success` (con usuario) y `login_failed`
+cuando el tenant es atribuible (usuario encontrado, o `tenantId` del request
+aunque el email no exista → `userId` null). Decisión: **sin tenant atribuible
+no se registra nada** (inventarlo violaría el aislamiento; `tenant_id` es NOT
+NULL). Detalle solo con el email: nunca contraseñas.
+
+---
+
+## 9. Testing
+
+- Integración contra PostgreSQL real vía `AbstractIntegrationTest`
+  (`@SpringBootTest` + `@Testcontainers`, contenedor `postgres:16` estático
+  compartido, `@DynamicPropertySource`). Nunca H2 ni mocks de BD.
+- Web con MockMvc (`@AutoConfigureMockMvc`); controladores solo-de-test viven
+  en `src/test` (no se despliegan).
+- Exigido por endpoint/repositorio de negocio: caso normal + **cross-tenant**
+  + autorización por rol si aplica. DoD = prueba automatizada, no "probado a
+  mano".
+- Lección registrada: la BD de Testcontainers se comparte entre métodos, así
+  que los datos de prueba que deban ser únicos (emails para login) se generan
+  únicos por método; si no, el resultado depende del orden de ejecución.
+
+---
+
+## 10. Observabilidad y despliegue
+
+- Actuator: `health` e `info` expuestos (health con `show-details: never`).
+- `Dockerfile` multi-stage (`maven:3.9-eclipse-temurin-25` → running
+  `eclipse-temurin:25-jre`; tags verificados, no asumidos) + `.dockerignore`;
+  perfil `prod` por defecto vía `SPRING_PROFILES_ACTIVE`, puerto `$PORT`.
+- Producción en Render (app + Postgres 16 administrado); CI en GitHub Actions
+  (`clean verify` en push/PR a `dev` y `main`; Testcontainers levanta su BD).
+
+---
+
+## 11. Registro de decisiones y desviaciones
+
+| # | Decisión / desviación | Por qué |
+|---|---|---|
+| FASE0-01 | Sin Lombok, código explícito | Aprender el framework sin magia oculta |
+| FASE0-03 | Paquetes por módulo de negocio | Familiar (Angular modular); cada módulo con sus subcapas |
+| FASE0-05 | `ddl-auto: validate` siempre | El esquema solo cambia vía Flyway versionado |
+| FASE0-06 | Testcontainers 2.x: artefactos `testcontainers-*` | El BOM 2.x los renombró (verificado en el POM local, no asumido) |
+| FASE0 | `clean` tras borrar/renombrar recursos | `target/` conserva archivos obsoletos que siguen activos en el classpath |
+| FASE0 | PG Docker en `5434` | Nativos `postgresql-x64-17/18` ocupan 5432 y 5433-IPv4 en dev |
+| FASE1-04 | `TenantAwareEntity` + `@TenantId` | El olvido del filtro se vuelve error de diseño, no de memoria |
+| FASE1-05 | Test de integración en vez de unitario | AGENTS.md §7 manda: solo la BD real prueba que el hash se guarda |
+| FASE1-13 | `audit_log` con PK UUID + `updated_at` | Heredar el filtro automático pesa más que calcar `schema.sql` |
+| FASE1-13 | `AuditService.log` en `REQUIRES_NEW` | Sin esto, el rollback del login fallido borraría su auditoría |
+| FASE1-14 | Fallos sin tenant no se auditan | Inventar tenant viola aislamiento; `tenant_id` es NOT NULL |
+
+---
+
+## 12. Historial por fase
+
+### Fase 0 — Fundamentos (completada)
+
+Proyecto Spring Boot corriendo, perfiles `dev/test/prod` con secretos por
+entorno, estructura por módulos documentada, Postgres reproducible
+(`docker compose up -d`), Flyway desde V1 con `validate`, Testcontainers con
+clase base reutilizable, imagen Docker multi-stage verificada (`build` + `run`
++ `/actuator/health`), despliegue manual en Render y CI que bloquea PRs en
+rojo. DoD: `GET /actuator/health` → `UP` en local, contenedor y nube.
+
+### Fase 1 — Identidad, autenticación y multi-tenancy (completada, FASE1-01–14)
+
+`Tenant` + `User`/`UserRole` (email único por tenant) + `TenantAwareEntity` y
+filtro automático `@TenantId`/`TenantIdentifierResolver` + `TenantContext`
+por request + `UserService` con BCrypt + login JWT (`/api/v1/auth/login`,
+`/api/v1/me`) + autorización `@PreAuthorize` + auditoría `audit_log`.
+Checklist de salida verificado: FASE1-10 5/5 y FASE1-12 5/5 en `clean verify`
+(lo que corre el CI), base lista para Fase 2.
+
+### Fase 2 — (siguiente)
+
+Pacientes e historia clínica base. Primera entidad real de negocio (`Patient`
+extendiendo `TenantAwareEntity` desde su primera migración).

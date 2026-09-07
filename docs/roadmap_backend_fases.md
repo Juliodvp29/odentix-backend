@@ -718,16 +718,23 @@ posterior.
 
 **Tareas:**
 
-- [ ] Entidad `AuditLog`: tenant_id, user_id, acción, entidad afectada,
+- [x] Entidad `AuditLog`: tenant_id, user_id, acción, entidad afectada,
       entidad_id, fecha, detalle (JSON o texto).
-- [ ] Migración Flyway correspondiente.
-- [ ] Servicio simple `AuditService.log(...)` reutilizable desde
+      (Módulo `audit/`, hereda `TenantAwareEntity`; `detail` JSONB con
+      `Map<String, Object>`; desviaciones de `schema.sql` documentadas en
+      `V4__create_audit_log.sql`: PK UUID en vez de BIGSERIAL y columna
+      `updated_at` exigida por la clase base.)
+- [x] Migración Flyway correspondiente.
+- [x] Servicio simple `AuditService.log(...)` reutilizable desde
       cualquier módulo futuro.
 
 **Criterios de aceptación:**
 
-- [ ] Se puede registrar una entrada de auditoría desde código y
+- [x] Se puede registrar una entrada de auditoría desde código y
       consultarla filtrada por tenant.
+      (Verificado con `AuditServiceIntegrationTest`: registro, lectura
+      filtrada con round-trip JSON y aislamiento cross-tenant con query
+      ingenua.)
 
 ---
 
@@ -742,13 +749,21 @@ Primer caso de uso real del sistema de auditoría.
 
 **Tareas:**
 
-- [ ] Llamar a `AuditService.log(...)` en login exitoso y en login
+- [x] Llamar a `AuditService.log(...)` en login exitoso y en login
       fallido (sin registrar la contraseña, ni siquiera fallida).
+      (`AuthService` registra `login_success` con usuario y `login_failed`
+      cuando el tenant es atribuible; detalle solo con el email.)
+- [x] `AuditService.log` con `REQUIRES_NEW` para que el rollback del login
+      fallido no borre la propia entrada de auditoría.
 
 **Criterios de aceptación:**
 
-- [ ] Un intento de login (exitoso o fallido) genera una entrada
+- [x] Un intento de login (exitoso o fallido) genera una entrada
       consultable en `audit_log`.
+      (Verificado con `LoginAuditIntegrationTest` 4/4. Excepción
+      documentada: sin tenant atribuible —email inexistente sin `tenantId`
+      o colisión sin desambiguar— no se registra nada, porque inventar un
+      tenant violaría el aislamiento y `tenant_id` es NOT NULL.)
 
 ---
 
@@ -756,12 +771,17 @@ Primer caso de uso real del sistema de auditoría.
 
 Antes de pasar a la Fase 2, verificar:
 
-- [ ] FASE1-10 (test de aislamiento cross-tenant) está en verde y
+- [x] FASE1-10 (test de aislamiento cross-tenant) está en verde y
       corre en CI.
+      (`CrossTenantIsolationIntegrationTest` 5/5 en verde con `clean verify`,
+      que es lo que corre el workflow de CI en cada push/PR a `dev`/`main`.)
 - [x] FASE1-12 (test de autorización por rol) está en verde y corre en
       CI.
-- [ ] La convención `TenantAwareEntity` (FASE1-04) está lista para que
+- [x] La convención `TenantAwareEntity` (FASE1-04) está lista para que
       las entidades de la Fase 2 la usen desde su primera migración.
+      (Clase base + `TenantAwareEntityTest` + sección en `ARCHITECTURE.md`
+      + uso real probado con tabla y filtro automático en los tests de
+      FASE1-09/10.)
 
 ---
 
