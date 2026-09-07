@@ -807,17 +807,17 @@ Primera entidad de negocio real del proyecto. Debe heredar de
 
 **Tareas:**
 
-- [ ] Entidad `Patient`: datos personales, contacto, contacto de
+- [x] Entidad `Patient`: datos personales, contacto, contacto de
       emergencia (sección 8.2 del doc de arquitectura, alcance
       reducido — sin odontograma ni historia clínica todavía).
-- [ ] Migración Flyway correspondiente, con `tenant_id` indexado.
-- [ ] Repositorio JPA básico (`PatientRepository`).
+- [x] Migración Flyway correspondiente, con `tenant_id` indexado.
+- [x] Repositorio JPA básico (`PatientRepository`).
 
 **Criterios de aceptación:**
 
-- [ ] Se puede persistir y recuperar un `Patient` desde un test de
+- [x] Se puede persistir y recuperar un `Patient` desde un test de
       integración con Testcontainers.
-- [ ] El filtro automático de tenant (Hibernate Filter/RLS) aplica sin
+- [x] El filtro automático de tenant (Hibernate Filter/RLS) aplica sin
       configuración adicional, heredado de `TenantAwareEntity`.
 
 ---
