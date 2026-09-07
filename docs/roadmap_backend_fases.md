@@ -833,18 +833,18 @@ Exponer pacientes vía REST con validación de entrada.
 
 **Tareas:**
 
-- [ ] Endpoints: `GET /api/v1/patients/{id}`, `POST /api/v1/patients`,
+- [x] Endpoints: `GET /api/v1/patients/{id}`, `POST /api/v1/patients`,
       `PATCH /api/v1/patients/{id}`, `DELETE /api/v1/patients/{id}`
       (baja lógica vía `is_active`, no borrado físico).
-- [ ] DTOs de entrada/salida (no exponer la entidad JPA directamente).
-- [ ] Validación con Bean Validation (`@Valid`): campos obligatorios,
+- [x] DTOs de entrada/salida (no exponer la entidad JPA directamente).
+- [x] Validación con Bean Validation (`@Valid`): campos obligatorios,
       formato de teléfono/email.
 
 **Criterios de aceptación:**
 
-- [ ] Un `POST` con datos inválidos devuelve `400` con el detalle del
+- [x] Un `POST` con datos inválidos devuelve `400` con el detalle del
       campo que falló.
-- [ ] Un `DELETE` marca `is_active = false` sin eliminar la fila.
+- [x] Un `DELETE` marca `is_active = false` sin eliminar la fila.
 
 **Temas de Spring Boot:** DTOs vs. entidades, `@Valid`, `ResponseEntity`.
 
