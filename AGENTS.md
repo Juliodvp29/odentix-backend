@@ -102,6 +102,7 @@ com.julio.odentix.odentix_backend/
 ├── shared/           # TenantAwareEntity, TenantContext, excepciones comunes
 ├── tenant/
 ├── auth/
+├── audit/            # AuditLog, AuditService (append-only, desde FASE1-13)
 ├── patient/
 ├── appointment/
 ├── treatmentplan/
@@ -270,6 +271,12 @@ hecho.
    abajo). Nunca hagas commit de código que no compila o con pruebas en
    rojo, y nunca hagas commit sin que Julio haya visto el resultado
    final de los pasos 3 y 4.
+6. **Actualizar `ARCHITECTURE.md` al cerrar cada fase.** Cuando todos los
+   tickets de una fase estén en verde: documentar lo construido (nuevos
+   endpoints con ejemplos de uso, entidades y migraciones, decisiones
+   técnicas y desviaciones del roadmap/`schema.sql`) y tachar el checklist
+   de salida en `roadmap_backend_fases.md`. Sin esta actualización la fase
+   no se considera cerrada.
 
 Este ciclo (plan → aprobación → ejecución → pruebas → commit) se repite
 en cada fase y en cada ajuste dentro de una fase, no solo una vez al
