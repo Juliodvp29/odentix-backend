@@ -771,12 +771,17 @@ Primer caso de uso real del sistema de auditoría.
 
 Antes de pasar a la Fase 2, verificar:
 
-- [ ] FASE1-10 (test de aislamiento cross-tenant) está en verde y
+- [x] FASE1-10 (test de aislamiento cross-tenant) está en verde y
       corre en CI.
+      (`CrossTenantIsolationIntegrationTest` 5/5 en verde con `clean verify`,
+      que es lo que corre el workflow de CI en cada push/PR a `dev`/`main`.)
 - [x] FASE1-12 (test de autorización por rol) está en verde y corre en
       CI.
-- [ ] La convención `TenantAwareEntity` (FASE1-04) está lista para que
+- [x] La convención `TenantAwareEntity` (FASE1-04) está lista para que
       las entidades de la Fase 2 la usen desde su primera migración.
+      (Clase base + `TenantAwareEntityTest` + sección en `ARCHITECTURE.md`
+      + uso real probado con tabla y filtro automático en los tests de
+      FASE1-09/10.)
 
 ---
 
