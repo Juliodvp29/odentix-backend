@@ -895,14 +895,16 @@ Primer módulo de negocio real: aplica el patrón de prueba definido en
 
 **Tareas:**
 
-- [ ] Test: crear pacientes en tenant A y B, verificar que un usuario
+- [x] Test: crear pacientes en tenant A y B, verificar que un usuario
       de A no puede leer, actualizar ni eliminar un paciente de B
       (ni por listado ni por ID directo).
-- [ ] Test: búsqueda paginada solo devuelve resultados del tenant activo.
+      (Cubierto por `PatientCrossTenantIsolationIntegrationTest` 6/6 en verde).
+- [x] Test: búsqueda paginada solo devuelve resultados del tenant activo.
 
 **Criterios de aceptación:**
 
-- [ ] Ambos tests corren en CI y fallan si el aislamiento se rompe.
+- [x] Ambos tests corren en CI y fallan si el aislamiento se rompe.
+      (Verificado con `./mvnw clean verify`: 70/70 tests en verde).
 
 ---
 
