@@ -863,19 +863,19 @@ siguientes.
 
 **Tareas:**
 
-- [ ] `GET /api/v1/patients` paginado (`Pageable`/`Page`) con búsqueda
+- [x] `GET /api/v1/patients` paginado (`Pageable`/`Page`) con búsqueda
       opcional por nombre o número de documento (usa el índice trigram
-      de `schema.sql`).
-- [ ] `@ControllerAdvice` + `@ExceptionHandler` global para errores de
-      validación, "no encontrado" y errores no controlados — con un
-      formato de error consistente que reutilizarán los módulos
-      futuros.
+      y la extensión `unaccent` con función `immutable_unaccent`).
+- [x] `@ControllerAdvice` (`@RestControllerAdvice`) global para errores de
+      validación, "no encontrado" (`ResourceNotFoundException`), conflictos (`409`),
+      acceso denegado (`403`) y errores no controlados — con formato estructurado
+      estándar `ApiErrorResponse`.
 
 **Criterios de aceptación:**
 
-- [ ] Buscar por un fragmento del nombre devuelve resultados sin
+- [x] Buscar por un fragmento del nombre devuelve resultados sin
       distinguir mayúsculas/acentos exactos.
-- [ ] Un recurso inexistente devuelve `404` con el formato de error
+- [x] Un recurso inexistente devuelve `404` con el formato de error
       estándar, no un stacktrace.
 
 **Temas de Spring Boot:** `Pageable`, `Specification`/query methods de
