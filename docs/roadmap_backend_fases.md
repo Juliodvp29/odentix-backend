@@ -863,19 +863,19 @@ siguientes.
 
 **Tareas:**
 
-- [ ] `GET /api/v1/patients` paginado (`Pageable`/`Page`) con búsqueda
+- [x] `GET /api/v1/patients` paginado (`Pageable`/`Page`) con búsqueda
       opcional por nombre o número de documento (usa el índice trigram
-      de `schema.sql`).
-- [ ] `@ControllerAdvice` + `@ExceptionHandler` global para errores de
-      validación, "no encontrado" y errores no controlados — con un
-      formato de error consistente que reutilizarán los módulos
-      futuros.
+      y la extensión `unaccent` con función `immutable_unaccent`).
+- [x] `@ControllerAdvice` (`@RestControllerAdvice`) global para errores de
+      validación, "no encontrado" (`ResourceNotFoundException`), conflictos (`409`),
+      acceso denegado (`403`) y errores no controlados — con formato estructurado
+      estándar `ApiErrorResponse`.
 
 **Criterios de aceptación:**
 
-- [ ] Buscar por un fragmento del nombre devuelve resultados sin
+- [x] Buscar por un fragmento del nombre devuelve resultados sin
       distinguir mayúsculas/acentos exactos.
-- [ ] Un recurso inexistente devuelve `404` con el formato de error
+- [x] Un recurso inexistente devuelve `404` con el formato de error
       estándar, no un stacktrace.
 
 **Temas de Spring Boot:** `Pageable`, `Specification`/query methods de
@@ -895,14 +895,16 @@ Primer módulo de negocio real: aplica el patrón de prueba definido en
 
 **Tareas:**
 
-- [ ] Test: crear pacientes en tenant A y B, verificar que un usuario
+- [x] Test: crear pacientes en tenant A y B, verificar que un usuario
       de A no puede leer, actualizar ni eliminar un paciente de B
       (ni por listado ni por ID directo).
-- [ ] Test: búsqueda paginada solo devuelve resultados del tenant activo.
+      (Cubierto por `PatientCrossTenantIsolationIntegrationTest` 6/6 en verde).
+- [x] Test: búsqueda paginada solo devuelve resultados del tenant activo.
 
 **Criterios de aceptación:**
 
-- [ ] Ambos tests corren en CI y fallan si el aislamiento se rompe.
+- [x] Ambos tests corren en CI y fallan si el aislamiento se rompe.
+      (Verificado con `./mvnw clean verify`: 70/70 tests en verde).
 
 ---
 
@@ -918,13 +920,13 @@ plantillas todavía).
 
 **Tareas:**
 
-- [ ] Entidad `ClinicalRecord`: motivo de consulta, antecedentes,
+- [x] Entidad `ClinicalRecord`: motivo de consulta, antecedentes,
       diagnóstico, evolución. Relación `Patient` 1—N `ClinicalRecord`.
-- [ ] Migración Flyway correspondiente.
+- [x] Migración Flyway correspondiente.
 
 **Criterios de aceptación:**
 
-- [ ] Se puede persistir una entrada clínica asociada a un paciente
+- [x] Se puede persistir una entrada clínica asociada a un paciente
       existente.
 
 ---

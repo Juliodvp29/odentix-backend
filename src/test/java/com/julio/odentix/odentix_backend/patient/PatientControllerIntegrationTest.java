@@ -263,4 +263,113 @@ class PatientControllerIntegrationTest extends AbstractIntegrationTest {
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.error").exists());
   }
+
+  @Test
+  @DisplayName("GET /api/v1/patients paginado → 200 con Page estructurado")
+  void listarPacientesPaginadoDevuelve200ConEstructuraPage() throws Exception {
+    crearPaciente(tokenA);
+    crearPaciente(tokenA);
+
+    mockMvc.perform(get("/api/v1/patients?page=0&size=10")
+            .header("Authorization", "Bearer " + tokenA))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content").isArray())
+        .andExpect(jsonPath("$.totalElements").value(2))
+        .andExpect(jsonPath("$.size").value(10))
+        .andExpect(jsonPath("$.number").value(0))
+        .andExpect(jsonPath("$.content[0].id").exists())
+        .andExpect(jsonPath("$.content[0].tenantId").value(tenantA.getId().toString()));
+  }
+
+  @Test
+  @DisplayName("Búsqueda por fragmento de nombre ignora mayúsculas y acentos (FASE2-03)")
+  void busquedaInsensibleAMayusculasYAcentos() throws Exception {
+    Map<String, Object> pacienteConAcentos = pacienteValido();
+    pacienteConAcentos.put("firstName", "María José");
+    pacienteConAcentos.put("lastName", "Gómez Pérez");
+    pacienteConAcentos.put("documentNumber", "DOC-ACENTOS-1");
+
+    mockMvc.perform(post("/api/v1/patients")
+            .header("Authorization", "Bearer " + tokenA)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(pacienteConAcentos)))
+        .andExpect(status().isCreated());
+
+    // 1. Buscar "maria" en minúsculas y sin tilde → encuentra "María"
+    mockMvc.perform(get("/api/v1/patients?query=maria")
+            .header("Authorization", "Bearer " + tokenA))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalElements").value(1))
+        .andExpect(jsonPath("$.content[0].firstName").value("María José"));
+
+    // 2. Buscar "GOMEZ" en mayúsculas y sin tilde → encuentra "Gómez"
+    mockMvc.perform(get("/api/v1/patients?query=GOMEZ")
+            .header("Authorization", "Bearer " + tokenA))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalElements").value(1))
+        .andExpect(jsonPath("$.content[0].lastName").value("Gómez Pérez"));
+
+    // 3. Buscar "perez" sin tilde → encuentra "Pérez"
+    mockMvc.perform(get("/api/v1/patients?query=perez")
+            .header("Authorization", "Bearer " + tokenA))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalElements").value(1))
+        .andExpect(jsonPath("$.content[0].lastName").value("Gómez Pérez"));
+
+    // 4. Buscar "jose" sin tilde → encuentra "José"
+    mockMvc.perform(get("/api/v1/patients?query=jose")
+            .header("Authorization", "Bearer " + tokenA))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalElements").value(1));
+  }
+
+  @Test
+  @DisplayName("Búsqueda por número de documento encuentra el paciente exacto")
+  void busquedaPorDocumento() throws Exception {
+    Map<String, Object> paciente = pacienteValido();
+    String docNumber = "CC-9988776655";
+    paciente.put("documentNumber", docNumber);
+
+    mockMvc.perform(post("/api/v1/patients")
+            .header("Authorization", "Bearer " + tokenA)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(paciente)))
+        .andExpect(status().isCreated());
+
+    mockMvc.perform(get("/api/v1/patients?query=9988776655")
+            .header("Authorization", "Bearer " + tokenA))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalElements").value(1))
+        .andExpect(jsonPath("$.content[0].documentNumber").value(docNumber));
+  }
+
+  @Test
+  @DisplayName("Búsqueda no incluye pacientes dados de baja (is_active = false)")
+  void busquedaNoIncluyePacientesInactivos() throws Exception {
+    String id = crearPaciente(tokenA);
+
+    mockMvc.perform(delete("/api/v1/patients/" + id)
+            .header("Authorization", "Bearer " + tokenA))
+        .andExpect(status().isNoContent());
+
+    mockMvc.perform(get("/api/v1/patients?query=María")
+            .header("Authorization", "Bearer " + tokenA))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalElements").value(0));
+  }
+
+  @Test
+  @DisplayName("Recurso inexistente → 404 con formato estándar ApiErrorResponse, sin stacktrace (FASE2-03)")
+  void recursoInexistenteDevuelve404ConFormatoEstandar() throws Exception {
+    UUID inexistentId = UUID.randomUUID();
+
+    mockMvc.perform(get("/api/v1/patients/" + inexistentId)
+            .header("Authorization", "Bearer " + tokenA))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.timestamp").exists())
+        .andExpect(jsonPath("$.status").value(404))
+        .andExpect(jsonPath("$.error").value("Not Found"))
+        .andExpect(jsonPath("$.message").value("Paciente no encontrado"))
+        .andExpect(jsonPath("$.path").value("/api/v1/patients/" + inexistentId));
+  }
 }

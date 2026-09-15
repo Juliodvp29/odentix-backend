@@ -6,14 +6,15 @@ import com.julio.odentix.odentix_backend.patient.dto.UpdatePatientRequest;
 import com.julio.odentix.odentix_backend.patient.entity.Patient;
 import com.julio.odentix.odentix_backend.patient.repository.PatientRepository;
 import com.julio.odentix.odentix_backend.shared.context.TenantContext;
+import com.julio.odentix.odentix_backend.shared.exception.ResourceNotFoundException;
 import java.util.UUID;
-import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Lógica de pacientes (FASE2-02).
+ * Lógica de pacientes (FASE2-02 / FASE2-03).
  *
  * <p>El tenant siempre sale del {@code TenantContext} del usuario
  * autenticado, nunca del request: así un tenant no puede leer ni modificar
@@ -53,6 +54,20 @@ public class PatientService {
   @Transactional(readOnly = true)
   public PatientResponse getById(UUID id) {
     return PatientResponse.fromEntity(findActiveOrThrow(id));
+  }
+
+  @Transactional(readOnly = true)
+  public Page<PatientResponse> search(String query, Pageable pageable) {
+    UUID tenantId = TenantContext.getRequiredTenantId();
+
+    Page<Patient> page;
+    if (query == null || query.trim().isEmpty()) {
+      page = patientRepository.findAllByTenantIdAndIsActiveTrue(tenantId, pageable);
+    } else {
+      page = patientRepository.search(tenantId, query.trim(), pageable);
+    }
+
+    return page.map(PatientResponse::fromEntity);
   }
 
   @Transactional
@@ -106,6 +121,6 @@ public class PatientService {
     // (defensa en profundidad, regla §5.2 de AGENTS.md).
     return patientRepository.findByIdAndTenantId(id, tenantId)
         .filter(Patient::isActive)
-        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Paciente no encontrado"));
+        .orElseThrow(() -> new ResourceNotFoundException("Paciente no encontrado"));
   }
 }
