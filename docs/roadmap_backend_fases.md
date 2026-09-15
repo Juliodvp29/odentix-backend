@@ -920,13 +920,13 @@ plantillas todavía).
 
 **Tareas:**
 
-- [ ] Entidad `ClinicalRecord`: motivo de consulta, antecedentes,
+- [x] Entidad `ClinicalRecord`: motivo de consulta, antecedentes,
       diagnóstico, evolución. Relación `Patient` 1—N `ClinicalRecord`.
-- [ ] Migración Flyway correspondiente.
+- [x] Migración Flyway correspondiente.
 
 **Criterios de aceptación:**
 
-- [ ] Se puede persistir una entrada clínica asociada a un paciente
+- [x] Se puede persistir una entrada clínica asociada a un paciente
       existente.
 
 ---

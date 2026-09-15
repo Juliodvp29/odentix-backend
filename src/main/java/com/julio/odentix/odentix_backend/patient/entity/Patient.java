@@ -1,10 +1,14 @@
 package com.julio.odentix.odentix_backend.patient.entity;
 
 import com.julio.odentix.odentix_backend.shared.entity.TenantAwareEntity;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -55,6 +59,11 @@ public class Patient extends TenantAwareEntity {
 
   @Column(name = "emergency_contact_phone")
   private String emergencyContactPhone;
+
+  // Relación bidireccional con ClinicalRecord (FASE2-05): la historia
+  // clínica del paciente se gestiona desde esta entidad vía cascada.
+  @OneToMany(mappedBy = "patient", cascade = CascadeType.ALL, orphanRemoval = true)
+  private List<ClinicalRecord> clinicalRecords = new ArrayList<>();
 
   // Baja lógica (FASE2-02): DELETE marca false, nunca borra la fila.
   @Column(name = "is_active", nullable = false)
@@ -157,6 +166,19 @@ public class Patient extends TenantAwareEntity {
 
   public void setActive(boolean active) {
     isActive = active;
+  }
+
+  public List<ClinicalRecord> getClinicalRecords() {
+    return clinicalRecords;
+  }
+
+  public void setClinicalRecords(List<ClinicalRecord> clinicalRecords) {
+    this.clinicalRecords = clinicalRecords;
+  }
+
+  public void addClinicalRecord(ClinicalRecord clinicalRecord) {
+    this.clinicalRecords.add(clinicalRecord);
+    clinicalRecord.setPatient(this);
   }
 
   @Override
