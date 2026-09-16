@@ -1,11 +1,15 @@
 package com.julio.odentix.odentix_backend.patient.controller;
 
+import com.julio.odentix.odentix_backend.patient.dto.ClinicalRecordResponse;
+import com.julio.odentix.odentix_backend.patient.dto.CreateClinicalRecordRequest;
 import com.julio.odentix.odentix_backend.patient.dto.CreatePatientRequest;
 import com.julio.odentix.odentix_backend.patient.dto.PatientResponse;
 import com.julio.odentix.odentix_backend.patient.dto.UpdatePatientRequest;
+import com.julio.odentix.odentix_backend.patient.service.ClinicalRecordService;
 import com.julio.odentix.odentix_backend.patient.service.PatientService;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -34,9 +38,27 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 public class PatientController {
 
   private final PatientService patientService;
+  private final ClinicalRecordService clinicalRecordService;
 
-  public PatientController(PatientService patientService) {
+  public PatientController(PatientService patientService, ClinicalRecordService clinicalRecordService) {
     this.patientService = patientService;
+    this.clinicalRecordService = clinicalRecordService;
+  }
+
+  @PostMapping("/{id}/clinical-records")
+  public ResponseEntity<ClinicalRecordResponse> addClinicalRecord(
+      @PathVariable UUID id, @Valid @RequestBody CreateClinicalRecordRequest request) {
+    ClinicalRecordResponse created = clinicalRecordService.addEntry(id, request);
+    URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+        .path("/{recordId}")
+        .buildAndExpand(created.getId())
+        .toUri();
+    return ResponseEntity.created(location).body(created);
+  }
+
+  @GetMapping("/{id}/clinical-records")
+  public ResponseEntity<List<ClinicalRecordResponse>> listClinicalRecords(@PathVariable UUID id) {
+    return ResponseEntity.ok(clinicalRecordService.listByPatient(id));
   }
 
   @PostMapping

@@ -942,15 +942,17 @@ Registrar y consultar evolución clínica de un paciente.
 
 **Tareas:**
 
-- [ ] `POST /api/v1/patients/{id}/clinical-records` (agregar entrada).
-- [ ] `GET /api/v1/patients/{id}/clinical-records` (historial ordenado
+- [x] `POST /api/v1/patients/{id}/clinical-records` (agregar entrada).
+- [x] `GET /api/v1/patients/{id}/clinical-records` (historial ordenado
       por fecha descendente).
-- [ ] Test de aislamiento cross-tenant (mismo patrón de FASE2-04).
+- [x] Test de aislamiento cross-tenant (mismo patrón de FASE2-04).
 
 **Criterios de aceptación:**
 
-- [ ] Se puede registrar y consultar el historial de entradas clínicas
+- [x] Se puede registrar y consultar el historial de entradas clínicas
       de un paciente específico, y no el de pacientes de otro tenant.
+      (Verificado con `ClinicalRecordIntegrationTest`: 5/5 en verde;
+      `./mvnw.cmd clean verify`: 78/78 pruebas sin fallos).
 
 ---
 
