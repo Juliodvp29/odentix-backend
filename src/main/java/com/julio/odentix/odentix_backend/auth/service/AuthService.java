@@ -35,6 +35,7 @@ public class AuthService {
   private final PasswordEncoder passwordEncoder;
   private final JwtService jwtService;
   private final RefreshTokenService refreshTokenService;
+  private final LoginRateLimitService loginRateLimitService;
   private final AuditService auditService;
 
   public AuthService(
@@ -42,11 +43,13 @@ public class AuthService {
       PasswordEncoder passwordEncoder,
       JwtService jwtService,
       RefreshTokenService refreshTokenService,
+      LoginRateLimitService loginRateLimitService,
       AuditService auditService) {
     this.userRepository = userRepository;
     this.passwordEncoder = passwordEncoder;
     this.jwtService = jwtService;
     this.refreshTokenService = refreshTokenService;
+    this.loginRateLimitService = loginRateLimitService;
     this.auditService = auditService;
   }
 
@@ -57,13 +60,31 @@ public class AuthService {
    */
   @Transactional
   public LoginResponse login(LoginRequest request) {
+    return login(request, null);
+  }
+
+  /**
+   * Autentica las credenciales provistas aplicando control de frecuencia por IP y bloqueo temporal por email.
+   */
+  @Transactional
+  public LoginResponse login(LoginRequest request, String clientIp) {
+    // 1. Verificar rate limit de la dirección IP
+    loginRateLimitService.checkIpRateLimit(clientIp);
+
+    // 2. Verificar bloqueo temporal de la cuenta/email
+    loginRateLimitService.checkEmailLockout(request.getEmail());
+
     User user = buscarCandidato(request);
 
     if (user == null || !user.isActive()
         || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+      loginRateLimitService.recordFailedAttempt(request.getEmail());
       registrarFallo(request, user);
       throw new BadCredentialsException("Credenciales inválidas");
     }
+
+    // Registro de éxito: resetear contador de fallos para este email
+    loginRateLimitService.recordSuccessfulLogin(request.getEmail());
 
     // Registro de auditoría básica: actualizar fecha del último login
     user.setLastLoginAt(Instant.now());

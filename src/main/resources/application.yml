@@ -54,3 +54,11 @@ storage:
     secret-key: ${AWS_SECRET_ACCESS_KEY:}
     path-style-access-enabled: ${AWS_S3_PATH_STYLE_ACCESS:false}
 
+security:
+  rate-limit:
+    login:
+      max-requests-per-minute: ${LOGIN_RATE_LIMIT_IP_MAX:10}
+      max-failed-attempts: ${LOGIN_RATE_LIMIT_EMAIL_MAX_ATTEMPTS:5}
+      lockout-duration-minutes: ${LOGIN_RATE_LIMIT_LOCKOUT_MINUTES:15}
+
+

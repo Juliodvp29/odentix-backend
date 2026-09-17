@@ -242,6 +242,11 @@ curl -X POST http://localhost:8081/api/v1/auth/login \
 `tenantId` opcional en el request: solo se usa para desambiguar si el mismo
 email existiera en varias clínicas. Usuario inactivo → 401 genérico.
 
+**Protección contra fuerza bruta y DoS (Rate Limiting en memoria):**
+- **Rate limiting por IP:** Máximo 10 peticiones/minuto por IP hacia `/api/v1/auth/login` (configurable vía `LOGIN_RATE_LIMIT_IP_MAX`). Soporta proxies (`X-Forwarded-For` o `getRemoteAddr`). Al excederlo → `429 Too Many Requests` con cabecera `Retry-After: <segundos>` antes de ejecutar BCrypt ni consultar la base de datos.
+- **Bloqueo temporal por cuenta/email:** Máximo 5 intentos fallidos consecutivos en una ventana de 15 minutos (configurable vía `LOGIN_RATE_LIMIT_EMAIL_MAX_ATTEMPTS`). Al 5to fallo, la cuenta queda bloqueada por 15 minutos (`LOGIN_RATE_LIMIT_LOCKOUT_MINUTES`). Intentos posteriores durante el bloqueo reciben `429 Too Many Requests` con cabecera `Retry-After` sin gastar CPU en BCrypt. Un login exitoso resetea el contador de fallos.
+- `LoginRateLimitService` limpia automáticamente entradas vencidas cada 5 minutos (`@Scheduled`).
+
 ### Renovación de sesión — `POST /api/v1/auth/refresh` (público)
 
 Rota el refresh token de forma atómica: invalida el token anterior y emite
@@ -412,10 +417,9 @@ Implementadas antes de iniciar Fase 3 (agenda y citas):
   el tenant. Desactivar un usuario tiene efecto inmediato sin esperar a que
   expire el JWT. El rol también se lee de BD en cada request (sincronización
   en tiempo real).
-- **108/108 pruebas en verde** tras las mejoras: `AuthRefreshIntegrationTest`
-  (5 casos: rotación exitosa, reúso de token revocado, token inexistente, token
-  expirado, usuario inactivo en refresh, logout) + `JwtSecurityIntegrationTest`
-  ampliado (desactivación instantánea y sincronización de rol).
+- **Rate limiting y protección contra fuerza bruta en login (`LoginRateLimitService`):**
+  defensa en profundidad sin dependencias pesadas: (1) límite de 10 peticiones/minuto por IP a `/api/v1/auth/login` con HTTP 429 y `Retry-After`; (2) bloqueo temporal de 15 minutos al acumular 5 fallos consecutivos por email, rechazando solicitudes con HTTP 429 sin ejecutar el costoso cálculo de BCrypt; (3) reseteo de contador tras login exitoso; (4) limpieza periódica de registros vencidos cada 5 minutos.
+- **Pruebas en verde tras mejoras de auth:** `LoginRateLimitIntegrationTest` (4/4), `AuthRefreshIntegrationTest` (5/5) y `JwtSecurityIntegrationTest` (6/6).
 
 ### Fase 2 — Pacientes e historia clínica base (completada, FASE2-01–10)
 
@@ -432,7 +436,7 @@ Módulo `patient`:
   - Baja lógica (`DELETE /{id}`): acción destructiva reservada exclusivamente a `PROPIETARIO`.
   - Gestión demográfica (`POST /patients`, `PATCH /patients/{id}`): `PROPIETARIO`, `RECEPCION`, `ODONTOLOGO`, `AUXILIAR`.
   - 11 pruebas de autorización en `PatientRoleAuthorizationIntegrationTest` (11/11 en verde).
-- Total de pruebas del proyecto: **119/119 pruebas en verde** en `./mvnw.cmd clean verify`.
+- Total de pruebas del proyecto: **123/123 pruebas en verde** en `./mvnw.cmd clean verify`.
 
 ### Fase 3 — (siguiente)
 

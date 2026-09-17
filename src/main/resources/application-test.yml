@@ -10,3 +10,12 @@ spring:
     locations:
       - classpath:db/migration
       - classpath:db/test-migration
+
+security:
+  rate-limit:
+    login:
+      # Límites holgados en tests generales para no estrangular la suite completa
+      max-requests-per-minute: 5000
+      max-failed-attempts: 500
+      lockout-duration-minutes: 15
+
