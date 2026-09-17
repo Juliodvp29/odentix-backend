@@ -89,11 +89,17 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(DataIntegrityViolationException.class)
   public ResponseEntity<ApiErrorResponse> handleDataIntegrity(
       DataIntegrityViolationException ex, HttpServletRequest request) {
-    // Conflicto de unicidad (ej. documento duplicado en el mismo tenant).
+    String message = "Ya existe un registro con esos datos o se violó una restricción de integridad";
+
+    String detail = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ex.getMessage();
+    if (detail != null && detail.contains("no_overlapping_appointments")) {
+      message = "El profesional ya cuenta con una cita programada que se solapa con el horario seleccionado";
+    }
+
     ApiErrorResponse error = new ApiErrorResponse(
         HttpStatus.CONFLICT.value(),
         HttpStatus.CONFLICT.getReasonPhrase(),
-        "Ya existe un registro con esos datos o se violó una restricción de integridad",
+        message,
         request.getRequestURI());
     return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
   }

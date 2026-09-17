@@ -1139,19 +1139,22 @@ solo en el código Java.
 
 **Tareas:**
 
-- [ ] Entidad `Appointment`: paciente, profesional, procedimiento
+- [x] Entidad `Appointment`: paciente, profesional, procedimiento
       (catálogo simple o texto libre por ahora), fecha/hora de inicio y
       fin, estado, notas.
-- [ ] Migración Flyway con una restricción `EXCLUDE USING gist` (ver
+- [x] Migración Flyway con una restricción `EXCLUDE USING gist` (ver
       `schema.sql`) que impida que un mismo profesional tenga dos citas
-      activas solapadas.
-- [ ] `POST /api/v1/appointments` con manejo del error de la
+      activas solapadas (`V12__create_appointments.sql`).
+- [x] `POST /api/v1/appointments` con manejo del error de la
       restricción (traducirlo a un `409 Conflict` claro, no un `500`).
 
 **Criterios de aceptación:**
 
-- [ ] Crear dos citas solapadas para el mismo profesional devuelve
+- [x] Crear dos citas solapadas para el mismo profesional devuelve
       `409`, no una excepción sin manejar.
+      (Verificado con `AppointmentIntegrationTest` 7/7 en verde: solapamiento
+      devuelve 409 Conflict con mensaje traducido, citas contiguas permitidas,
+      horarios cancelados reutilizables; suite global 140/140 en `clean verify`).
 
 **Temas de Spring Boot:** traducir una violación de constraint de
 PostgreSQL (`DataIntegrityViolationException`) a una respuesta HTTP
