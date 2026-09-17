@@ -7,6 +7,7 @@ import com.julio.odentix.odentix_backend.patient.dto.CreateOdontogramEntryReques
 import com.julio.odentix.odentix_backend.patient.dto.CreatePatientRequest;
 import com.julio.odentix.odentix_backend.patient.dto.OdontogramEntryResponse;
 import com.julio.odentix.odentix_backend.patient.dto.OdontogramResponse;
+import com.julio.odentix.odentix_backend.patient.dto.PatientFileDownloadResponse;
 import com.julio.odentix.odentix_backend.patient.dto.PatientFileResponse;
 import com.julio.odentix.odentix_backend.patient.dto.PatientResponse;
 import com.julio.odentix.odentix_backend.patient.dto.UpdatePatientRequest;
@@ -38,7 +39,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 /**
- * CRUD de pacientes con paginación, búsqueda y manejo centralizado de errores (FASE2-02 / FASE2-03 / FASE2-09).
+ * CRUD de pacientes con paginación, búsqueda y manejo centralizado de errores (FASE2-02 / FASE2-03 / FASE2-09 / FASE2-10).
  *
  * <p>Sin restricción por rol: cualquier usuario autenticado opera sobre los pacientes de su propio tenant.
  * Los errores son gestionados de forma transversal por {@link com.julio.odentix.odentix_backend.shared.exception.GlobalExceptionHandler}.
@@ -74,6 +75,17 @@ public class PatientController {
         .buildAndExpand(created.getId())
         .toUri();
     return ResponseEntity.created(location).body(created);
+  }
+
+  @GetMapping("/{id}/files")
+  public ResponseEntity<List<PatientFileResponse>> listFiles(@PathVariable UUID id) {
+    return ResponseEntity.ok(patientFileService.listByPatient(id));
+  }
+
+  @GetMapping("/{id}/files/{fileId}/download-url")
+  public ResponseEntity<PatientFileDownloadResponse> getFileDownloadUrl(
+      @PathVariable UUID id, @PathVariable UUID fileId) {
+    return ResponseEntity.ok(patientFileService.getDownloadUrl(id, fileId));
   }
 
   @PostMapping("/{id}/clinical-records")

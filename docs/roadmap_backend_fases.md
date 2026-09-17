@@ -1058,26 +1058,32 @@ aislamiento.
 
 **Tareas:**
 
-- [ ] `GET /api/v1/patients/{id}/files` (listar) y una forma de obtener
+- [x] `GET /api/v1/patients/{id}/files` (listar) y una forma de obtener
       una URL de descarga (firmada o directa, según el proveedor).
-- [ ] Test de aislamiento cross-tenant: un usuario de otro tenant no
+- [x] Test de aislamiento cross-tenant: un usuario de otro tenant no
       puede obtener una URL de descarga de un archivo ajeno, aunque
       adivine el `storage_key`.
 
 **Criterios de aceptación:**
 
-- [ ] Se puede subir un archivo y luego recuperar una URL válida para
+- [x] Se puede subir un archivo y luego recuperar una URL válida para
       descargarlo.
+      (Verificado con `PatientFileUploadIntegrationTest`: 10/10 en verde;
+      `./mvnw.cmd clean verify`: 99/99 pruebas sin fallos).
 
 ---
 
 ### ✅ Checklist de salida de Fase 2
 
-- [ ] FASE2-04, FASE2-06 (test), FASE2-08 (test) y FASE2-10 (test) en
+- [x] FASE2-04, FASE2-06 (test), FASE2-08 (test) y FASE2-10 (test) en
       verde en CI — todos los módulos de esta fase tienen su prueba de
       aislamiento cross-tenant.
-- [ ] Se puede hacer una demo de punta a punta: crear paciente →
-      agregar entrada clínica → registrar odontograma → subir archivo.
+      (Verificado con `clean verify`: 99/99 tests en verde, incluyendo
+      `PatientCrossTenantIsolationIntegrationTest`, `ClinicalRecordIntegrationTest`,
+      `OdontogramIntegrationTest` y `PatientFileUploadIntegrationTest`).
+- [x] Se puede hacer una demo de punta a punta: crear paciente →
+      agregar entrada clínica → registrar odontograma → subir archivo → listar y obtener URL de descarga.
+      (Flujo cubierto integralmente por la suite de integración de pacientes).
 
 ---
 

@@ -322,6 +322,11 @@ NULL). Detalle solo con el email: nunca contraseñas.
 | FASE1-13 | `audit_log` con PK UUID + `updated_at` | Heredar el filtro automático pesa más que calcar `schema.sql` |
 | FASE1-13 | `AuditService.log` en `REQUIRES_NEW` | Sin esto, el rollback del login fallido borraría su auditoría |
 | FASE1-14 | Fallos sin tenant no se auditan | Inventar tenant viola aislamiento; `tenant_id` es NOT NULL |
+| FASE2-02 | Baja lógica con `is_active` en `Patient` | Preservar historial clínico sin borrado físico destructivo |
+| FASE2-03 | Búsqueda insensible a tildes/mayúsculas | Extensión `unaccent` y función indexable `immutable_unaccent` con trigramas |
+| FASE2-07 | Entradas de odontograma append-only | Cada entrada es un momento clínico; varias entradas coexisten en la misma pieza |
+| FASE2-09 | Compensación en subida de archivos S3 | Si el guardado en BD falla tras subir a S3, se elimina el objeto para evitar huérfanos |
+| FASE2-10 | URLs prefirmadas temporales con S3Presigner | Descarga directa desde storage/CDN sin saturar ancho de banda del backend (15 min) |
 
 ---
 
@@ -345,7 +350,16 @@ por request + `UserService` con BCrypt + login JWT (`/api/v1/auth/login`,
 Checklist de salida verificado: FASE1-10 5/5 y FASE1-12 5/5 en `clean verify`
 (lo que corre el CI), base lista para Fase 2.
 
-### Fase 2 — (siguiente)
+### Fase 2 — Pacientes e historia clínica base (completada, FASE2-01–10)
 
-Pacientes e historia clínica base. Primera entidad real de negocio (`Patient`
-extendiendo `TenantAwareEntity` desde su primera migración).
+Módulo `patient`:
+- `Patient` (FASE2-01/02/03): CRUD, baja lógica con `is_active`, paginación y búsqueda insensible a acentos/mayúsculas con PostgreSQL `pg_trgm` y `immutable_unaccent()`.
+- Manejo de excepciones centralizado con `GlobalExceptionHandler` y `ApiErrorResponse`.
+- `ClinicalRecord` (FASE2-05/06): modelo de historia clínica y endpoints (`POST /{id}/clinical-records`, `GET /{id}/clinical-records`).
+- `OdontogramEntry` (FASE2-07/08): modelo de odontograma no destructivo, validación de notación FDI (11 a 48), 4 tipos de entrada y endpoints (`POST /{id}/odontogram`, `GET /{id}/odontogram` agrupado por pieza y tipo).
+- Almacenamiento S3 y archivos (FASE2-09/10): `PatientFile` con Flyway `V9`, cliente S3 SDK v2 (`software.amazon.awssdk:s3`), subida multipart `POST /{id}/files` con compensación automática de borrado en S3 si falla la base de datos, listado `GET /{id}/files` y generación de URLs prefirmadas temporales (15 min) `GET /{id}/files/{fileId}/download-url` con `S3Presigner`.
+- Pruebas cross-tenant obligatorias en todos los componentes con 99/99 pruebas en verde en `./mvnw.cmd clean verify`.
+
+### Fase 3 — (siguiente)
+
+Agenda y citas. Modelado de `Professional` y `Room` (FASE3-01), prevención de solapamiento de citas con `EXCLUDE USING gist` en PostgreSQL (FASE3-02) y endpoints de consulta y gestión de agenda (FASE3-03/04).

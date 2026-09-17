@@ -1,9 +1,10 @@
 package com.julio.odentix.odentix_backend.shared.storage;
 
 import java.io.InputStream;
+import java.time.Duration;
 
 /**
- * Contrato de servicio de almacenamiento de archivos (FASE2-09).
+ * Contrato de servicio de almacenamiento de archivos (FASE2-09 / FASE2-10).
  * Desacopla la lógica de negocio del proveedor de almacenamiento subyacente (S3, MinIO, R2, etc.).
  */
 public interface FileStorageService {
@@ -25,4 +26,14 @@ public interface FileStorageService {
    * @param key clave única del objeto
    */
   void delete(String key);
+
+  /**
+   * Genera una URL prefirmada temporal para descargar el archivo directamente (FASE2-10).
+   *
+   * @param key clave única del objeto en el almacenamiento
+   * @param duration tiempo de validez de la URL firmada
+   * @return URL de descarga prefirmada
+   */
+  String generatePresignedUrl(String key, Duration duration);
 }
+

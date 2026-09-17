@@ -9,6 +9,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -228,5 +229,107 @@ class PatientFileUploadIntegrationTest extends AbstractIntegrationTest {
             .header("Authorization", "Bearer " + tokenA))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.message").value("El archivo no puede estar vacío"));
+  }
+
+  @Test
+  @DisplayName("Lista los archivos asociados a un paciente ordenados por fecha de creación (FASE2-10)")
+  void shouldListFilesForPatient() throws Exception {
+    TenantContext.setTenantId(tenantA.getId());
+    try {
+      PatientFile file1 = new PatientFile(
+          tenantA.getId(), patientA, "tenants/a/patients/p/1.png", "radiografia1.png", "image/png", 100L, userA.getId());
+      patientFileRepository.save(file1);
+
+      PatientFile file2 = new PatientFile(
+          tenantA.getId(), patientA, "tenants/a/patients/p/2.pdf", "consentimiento.pdf", "application/pdf", 200L, userA.getId());
+      patientFileRepository.save(file2);
+    } finally {
+      TenantContext.clear();
+    }
+
+    mockMvc.perform(get("/api/v1/patients/{id}/files", patientA.getId())
+            .header("Authorization", "Bearer " + tokenA))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(2))
+        .andExpect(jsonPath("$[0].fileName").isNotEmpty())
+        .andExpect(jsonPath("$[1].fileName").isNotEmpty());
+  }
+
+  @Test
+  @DisplayName("Obtiene URL de descarga prefirmada exitosamente (FASE2-10)")
+  void shouldGetDownloadUrlSuccessfully() throws Exception {
+    PatientFile file;
+    TenantContext.setTenantId(tenantA.getId());
+    try {
+      file = new PatientFile(
+          tenantA.getId(), patientA, "tenants/a/patients/p/rx.png", "rx.png", "image/png", 1500L, userA.getId());
+      file = patientFileRepository.save(file);
+    } finally {
+      TenantContext.clear();
+    }
+
+    String mockPresignedUrl = "https://odentix-bucket.s3.us-east-1.amazonaws.com/tenants/a/patients/p/rx.png?signed=true";
+    when(fileStorageService.generatePresignedUrl(eq(file.getStorageKey()), any(java.time.Duration.class)))
+        .thenReturn(mockPresignedUrl);
+
+    mockMvc.perform(get("/api/v1/patients/{id}/files/{fileId}/download-url", patientA.getId(), file.getId())
+            .header("Authorization", "Bearer " + tokenA))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.fileId").value(file.getId().toString()))
+        .andExpect(jsonPath("$.fileName").value("rx.png"))
+        .andExpect(jsonPath("$.downloadUrl").value(mockPresignedUrl))
+        .andExpect(jsonPath("$.expiresAt").isNotEmpty());
+  }
+
+  @Test
+  @DisplayName("Aislamiento cross-tenant: usuario de Tenant B no puede listar archivos de paciente de Tenant A (404)")
+  void shouldRejectCrossTenantListWith404() throws Exception {
+    mockMvc.perform(get("/api/v1/patients/{id}/files", patientA.getId())
+            .header("Authorization", "Bearer " + tokenB))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.message").value("Paciente no encontrado"));
+  }
+
+  @Test
+  @DisplayName("Aislamiento cross-tenant: usuario de Tenant B no puede obtener URL de descarga de archivo de Tenant A (404)")
+  void shouldRejectCrossTenantDownloadUrlWith404() throws Exception {
+    PatientFile file;
+    TenantContext.setTenantId(tenantA.getId());
+    try {
+      file = new PatientFile(
+          tenantA.getId(), patientA, "tenants/a/patients/p/topsecret.pdf", "topsecret.pdf", "application/pdf", 1000L, userA.getId());
+      file = patientFileRepository.save(file);
+    } finally {
+      TenantContext.clear();
+    }
+
+    mockMvc.perform(get("/api/v1/patients/{id}/files/{fileId}/download-url", patientA.getId(), file.getId())
+            .header("Authorization", "Bearer " + tokenB))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.message").value("Paciente no encontrado"));
+  }
+
+  @Test
+  @DisplayName("Rechaza obtener URL si el archivo no pertenece al paciente indicado (404)")
+  void shouldRejectDownloadUrlIfFileBelongsToAnotherPatient() throws Exception {
+    Patient otherPatient;
+    PatientFile fileForFirstPatient;
+    TenantContext.setTenantId(tenantA.getId());
+    try {
+      otherPatient = new Patient(tenantA.getId(), "Pedro", "Navaja");
+      otherPatient = patientRepository.save(otherPatient);
+
+      fileForFirstPatient = new PatientFile(
+          tenantA.getId(), patientA, "tenants/a/patients/p/first.pdf", "first.pdf", "application/pdf", 100L, userA.getId());
+      fileForFirstPatient = patientFileRepository.save(fileForFirstPatient);
+    } finally {
+      TenantContext.clear();
+    }
+
+    // Intentar acceder al archivo del paciente A a través de la ruta del paciente B (mismo tenant)
+    mockMvc.perform(get("/api/v1/patients/{id}/files/{fileId}/download-url", otherPatient.getId(), fileForFirstPatient.getId())
+            .header("Authorization", "Bearer " + tokenA))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.message").value("Archivo no encontrado"));
   }
 }

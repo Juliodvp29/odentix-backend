@@ -44,4 +44,32 @@ public class S3StorageConfig {
 
     return builder.build();
   }
+
+  @Bean
+  @ConditionalOnMissingBean
+  public software.amazon.awssdk.services.s3.presigner.S3Presigner s3Presigner(S3StorageProperties properties) {
+    software.amazon.awssdk.services.s3.presigner.S3Presigner.Builder builder =
+        software.amazon.awssdk.services.s3.presigner.S3Presigner.builder()
+            .region(Region.of(properties.getRegion()));
+
+    if (properties.getEndpoint() != null && !properties.getEndpoint().isBlank()) {
+      builder.endpointOverride(URI.create(properties.getEndpoint()));
+    }
+
+    if (properties.getAccessKey() != null && !properties.getAccessKey().isBlank()
+        && properties.getSecretKey() != null && !properties.getSecretKey().isBlank()) {
+      builder.credentialsProvider(StaticCredentialsProvider.create(
+          AwsBasicCredentials.create(properties.getAccessKey(), properties.getSecretKey())));
+    } else {
+      builder.credentialsProvider(DefaultCredentialsProvider.create());
+    }
+
+    if (properties.isPathStyleAccessEnabled()) {
+      builder.serviceConfiguration(S3Configuration.builder()
+          .pathStyleAccessEnabled(true)
+          .build());
+    }
+
+    return builder.build();
+  }
 }

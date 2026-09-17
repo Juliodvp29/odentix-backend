@@ -22,10 +22,15 @@ public class S3FileStorageService implements FileStorageService {
   private static final Logger log = LoggerFactory.getLogger(S3FileStorageService.class);
 
   private final S3Client s3Client;
+  private final software.amazon.awssdk.services.s3.presigner.S3Presigner s3Presigner;
   private final S3StorageProperties properties;
 
-  public S3FileStorageService(S3Client s3Client, S3StorageProperties properties) {
+  public S3FileStorageService(
+      S3Client s3Client,
+      software.amazon.awssdk.services.s3.presigner.S3Presigner s3Presigner,
+      S3StorageProperties properties) {
     this.s3Client = s3Client;
+    this.s3Presigner = s3Presigner;
     this.properties = properties;
   }
 
@@ -62,6 +67,30 @@ public class S3FileStorageService implements FileStorageService {
     } catch (SdkException e) {
       log.warn("Fallo al eliminar archivo de S3 con key={}: {}", key, e.getMessage());
       // Silencioso para permitir compensaciones en caso de error
+    }
+  }
+
+  @Override
+  public String generatePresignedUrl(String key, java.time.Duration duration) {
+    try {
+      software.amazon.awssdk.services.s3.model.GetObjectRequest getObjectRequest =
+          software.amazon.awssdk.services.s3.model.GetObjectRequest.builder()
+              .bucket(properties.getBucket())
+              .key(key)
+              .build();
+
+      software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest presignRequest =
+          software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest.builder()
+              .signatureDuration(duration)
+              .getObjectRequest(getObjectRequest)
+              .build();
+
+      software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest presigned =
+          s3Presigner.presignGetObject(presignRequest);
+      return presigned.url().toString();
+    } catch (SdkException e) {
+      log.error("Error al generar URL prefirmada de S3 para key={}: {}", key, e.getMessage());
+      throw new StorageException("Error al generar URL de descarga: " + e.getMessage(), e);
     }
   }
 }

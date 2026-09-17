@@ -92,6 +92,37 @@ public class PatientFileService {
     }
   }
 
+  @org.springframework.transaction.annotation.Transactional(readOnly = true)
+  public java.util.List<PatientFileResponse> listByPatient(UUID patientId) {
+    // 1. Validar que el paciente exista, esté activo y pertenezca al tenant actual (404 si no)
+    patientService.findActiveEntity(patientId);
+
+    return patientFileRepository.findByPatientIdOrderByCreatedAtDesc(patientId).stream()
+        .map(PatientFileResponse::fromEntity)
+        .toList();
+  }
+
+  @org.springframework.transaction.annotation.Transactional(readOnly = true)
+  public com.julio.odentix.odentix_backend.patient.dto.PatientFileDownloadResponse getDownloadUrl(
+      UUID patientId, UUID fileId) {
+    // 1. Validar que el paciente exista, esté activo y pertenezca al tenant actual (404 si no)
+    patientService.findActiveEntity(patientId);
+    UUID tenantId = TenantContext.getRequiredTenantId();
+
+    // 2. Validar que el archivo exista en el tenant y pertenezca exactamente a este paciente
+    PatientFile file = patientFileRepository.findById(fileId)
+        .filter(f -> f.getPatient().getId().equals(patientId) && f.getTenantId().equals(tenantId))
+        .orElseThrow(() -> new com.julio.odentix.odentix_backend.shared.exception.ResourceNotFoundException("Archivo no encontrado"));
+
+    // 3. Generar URL prefirmada válida por 15 minutos
+    java.time.Duration duration = java.time.Duration.ofMinutes(15);
+    String presignedUrl = fileStorageService.generatePresignedUrl(file.getStorageKey(), duration);
+    java.time.Instant expiresAt = java.time.Instant.now().plus(duration);
+
+    return new com.julio.odentix.odentix_backend.patient.dto.PatientFileDownloadResponse(
+        file.getId(), file.getFileName(), presignedUrl, expiresAt);
+  }
+
   private String sanitizeFilename(String filename) {
     if (filename == null || filename.isBlank()) {
       return "archivo";
