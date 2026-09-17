@@ -1026,17 +1026,20 @@ binario del archivo.
 
 **Tareas:**
 
-- [ ] Entidad `PatientFile`: nombre, tipo de contenido, tamaño,
+- [x] Entidad `PatientFile`: nombre, tipo de contenido, tamaño,
       `storage_key`, quién lo subió.
-- [ ] Cliente S3 (AWS SDK v2 o el compatible con el proveedor elegido
+- [x] Cliente S3 (AWS SDK v2 o el compatible con el proveedor elegido
       para Render/Railway) configurado por variables de entorno.
-- [ ] `POST /api/v1/patients/{id}/files` con `MultipartFile`.
+- [x] `POST /api/v1/patients/{id}/files` con `MultipartFile`.
 
 **Criterios de aceptación:**
 
-- [ ] Subir un archivo crea el objeto en el bucket y el registro de
+- [x] Subir un archivo crea el objeto en el bucket y el registro de
       metadatos en la misma operación (si uno falla, no debe quedar el
       otro huérfano — usa una transacción o un mecanismo de limpieza).
+      (Verificado con `PatientFileUploadIntegrationTest`: 5/5 en verde y
+      `PatientFileRepositoryIntegrationTest`: 2/2 en verde;
+      `./mvnw.cmd clean verify`: 94/94 pruebas sin fallos).
 
 **Temas de Spring Boot:** `MultipartFile`, manejo de recursos externos
 dentro/fuera de una transacción JPA.

@@ -131,6 +131,19 @@ public class GlobalExceptionHandler {
     return ResponseEntity.badRequest().body(error);
   }
 
+  @ExceptionHandler(com.julio.odentix.odentix_backend.shared.storage.exception.StorageException.class)
+  public ResponseEntity<ApiErrorResponse> handleStorageException(
+      com.julio.odentix.odentix_backend.shared.storage.exception.StorageException ex,
+      HttpServletRequest request) {
+    log.error("Error de almacenamiento en {}: {}", request.getRequestURI(), ex.getMessage(), ex);
+    ApiErrorResponse error = new ApiErrorResponse(
+        HttpStatus.INTERNAL_SERVER_ERROR.value(),
+        HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
+        "Error en el almacenamiento de archivos",
+        request.getRequestURI());
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+  }
+
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ApiErrorResponse> handleUncaughtException(
       Exception ex, HttpServletRequest request) {
