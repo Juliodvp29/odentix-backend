@@ -1108,16 +1108,21 @@ Base de la agenda: quién atiende y, opcionalmente, en qué consultorio.
 
 **Tareas:**
 
-- [ ] Entidad `Professional`: nombre, especialidad, licencia,
+- [x] Entidad `Professional`: nombre, especialidad, licencia,
       `is_external` (para diferenciar especialistas externos más
       adelante en la Fase 7), vínculo opcional a `User`.
-- [ ] Entidad `Room` (opcional en esta subfase, se puede simplificar).
-- [ ] Migraciones Flyway correspondientes.
+- [x] Entidad `Room` (opcional en esta subfase, se puede simplificar).
+- [x] Migraciones Flyway correspondientes (`V11__create_professionals_and_rooms.sql`,
+      incluyendo constraints de FK diferidas en V7 y V8:
+      `clinical_records.professional_id` y `odontogram_entries.recorded_by`).
 
 **Criterios de aceptación:**
 
-- [ ] Se puede persistir un `Professional` y asociarlo opcionalmente a
+- [x] Se puede persistir un `Professional` y asociarlo opcionalmente a
       un `User` existente.
+      (Verificado con `ProfessionalRepositoryIntegrationTest` 5/5 y
+      `RoomRepositoryIntegrationTest` 4/4 en verde; suite global 133/133 en
+      `clean verify`).
 
 ---
 
