@@ -29,6 +29,7 @@
 	<properties>
 		<java.version>25</java.version>
 		<jjwt.version>0.12.6</jjwt.version>
+		<aws.sdk.version>2.30.34</aws.sdk.version>
 	</properties>
 	<!-- FASE0-06: el parent fija la versión del BOM (testcontainers-bom);
 	     importarlo versiona todos los org.testcontainers:* sin fijar cada uno. -->
@@ -41,9 +42,22 @@
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
+			<!-- FASE2-09: BOM de AWS SDK v2 para fijar versiones de componentes S3 -->
+			<dependency>
+				<groupId>software.amazon.awssdk</groupId>
+				<artifactId>bom</artifactId>
+				<version>${aws.sdk.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
 		</dependencies>
 	</dependencyManagement>
 	<dependencies>
+		<!-- FASE2-09: AWS SDK v2 S3 para almacenamiento de archivos compatible con S3 -->
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>s3</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>

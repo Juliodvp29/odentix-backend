@@ -22,6 +22,7 @@ un dato".
 
 Documentos de referencia en la raíz del repo (léelos antes de tocar algo
 que no entiendas del todo):
+
 - `docs/documentacion_sistema_gestion_odontologica_v1.1.md  ` — arquitectura y producto.
 - `docs/roadmap_backend_fases.md` — roadmap por fases y tickets.
 - `docs/schema.sql` — esquema de base de datos de referencia.
@@ -53,11 +54,11 @@ tarea actual, simplemente sigue las reglas de este `AGENTS.md`.
   **Antes de escribir cualquier import o referencia a una clase de
   autoconfiguración de Spring Boot, verifica el nombre real del paquete**
   (ejemplos ya confirmados en este proyecto):
-    - `org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration`
-    - `org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration`
-    - `org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration`
-      Si no estás seguro del paquete de una clase de autoconfiguración en
-      4.1.1, dilo explícitamente en vez de asumir el paquete de Spring Boot 3.
+  - `org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration`
+  - `org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration`
+  - `org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration`
+    Si no estás seguro del paquete de una clase de autoconfiguración en
+    4.1.1, dilo explícitamente en vez de asumir el paquete de Spring Boot 3.
 - **Maven** (no Gradle).
 - **PostgreSQL 16+** — nunca H2 ni ninguna base embebida, ni siquiera para
   pruebas rápidas (ver sección de testing).
@@ -115,7 +116,7 @@ com.julio.odentix.odentix_backend/
 Cada módulo se organiza internamente por sub-capas (`controller`,
 `service`, `repository`, `entity`, `dto`) **dentro de su propio paquete**,
 no como paquetes top-level compartidos. Si vas a crear un módulo nuevo,
-sigue este mismo patrón sin pedir permiso; si vas a *cambiar* el patrón,
+sigue este mismo patrón sin pedir permiso; si vas a _cambiar_ el patrón,
 pregunta primero — es una decisión ya tomada y documentada.
 
 ---
@@ -284,7 +285,7 @@ principio del proyecto.
 
 ### Convención de commits
 
-Mensajes en español, formato corto: `[FASE0-01] Configurar proyecto base
+Mensajes en ingles, formato corto: `[FASE0-01] Configurar proyecto base
 Spring Boot`. Si el cambio no corresponde a un ticket del roadmap (un
 ajuste menor, un fix), usa una descripción igual de clara sin el prefijo
 de ticket.
@@ -293,14 +294,14 @@ de ticket.
 
 ## 12. Estado actual del proyecto / notas vivas
 
-*(Actualiza esta sección a medida que el proyecto avanza — es más útil
-que quede desactualizada visiblemente a que no exista.)*
+_(Actualiza esta sección a medida que el proyecto avanza — es más útil
+que quede desactualizada visiblemente a que no exista.)_
 
 - Fase completada: **Fase 0 — Fundamentos y esqueleto del proyecto** (todos los tickets FASE0-01 a FASE0-09 completados).
-- Siguiente fase: **Fase 1 — Identidad, autenticación y multi-tenancy** (empezando por FASE1-01: modelar entidad `Tenant`).
 - Despliegue en la nube: activo en Render (`https://odentix-backend.onrender.com/actuator/health`).
 - Base de datos de producción: PostgreSQL 16 administrada en Render (`odentix-postgres` en región Ohio).
 - Pipeline de CI: activo en GitHub Actions (`.github/workflows/ci.yml`) con Java 25 y Testcontainers sobre `dev` y `main`.
 - Fase 1 completada: FASE1-01 a FASE1-14 en verde (`Tenant`, `User`, `UserRole`, `TenantAwareEntity`, `UserService`, login JWT, `JwtAuthenticationFilter`, `TenantContext` por request, filtrado automático de tenant en repositorios con `@TenantId` y `TenantIdentifierResolver`, test crítico de aislamiento cross-tenant, autorización por rol con `@PreAuthorize`, test de autorización por rol con `RoleAuthorizationIntegrationTest` 5/5 en verde, base de auditoría `audit_log` con `AuditService` reutilizable y `AuditServiceIntegrationTest` en verde). Checklist de salida verificado: FASE1-10 5/5 y FASE1-12 5/5 en `clean verify` (lo que corre CI), `TenantAwareEntity` lista. Decisión tomada en FASE1-14: fallos sin tenant atribuible no se auditan (ver roadmap).
-- Siguiente fase: **Fase 2 — Pacientes e historia clínica base** (empezando por 2.1: CRUD de pacientes con `Patient` extendiendo `TenantAwareEntity` desde su primera migración).
-- Las entidades reales de negocio (pacientes, citas, etc.) comienzan en Fase 2.
+- Fase completada: **Fase 2 — Pacientes e historia clínica base** (todos los tickets FASE2-01 a FASE2-10 completados; checklist de salida verificado y `ARCHITECTURE.md` actualizado).
+- Última verificación local: `./mvnw.cmd clean verify` el **16 de septiembre de 2026**, con **99/99 pruebas sin fallos**, incluidas **12/12 de `PatientFile*`** (`PatientFileUploadIntegrationTest` y `PatientFileRepositoryIntegrationTest`). Este resultado no implica verificación del último cambio en CI ni despliegue a producción.
+- Siguiente fase a ejecutar: **Fase 3 — Agenda y citas** (FASE3-01: Modelar `Professional` y `Room`, seguido de FASE3-02: `Appointment` y prevención de solapamiento con restricción `EXCLUDE USING gist`).

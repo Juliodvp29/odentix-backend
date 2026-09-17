@@ -115,6 +115,10 @@ public class PatientService {
     patientRepository.save(patient);
   }
 
+  Patient findActiveEntity(UUID id) {
+    return findActiveOrThrow(id);
+  }
+
   private Patient findActiveOrThrow(UUID id) {
     UUID tenantId = TenantContext.getRequiredTenantId();
     // Filtro por tenantId explícito además del automático @TenantId

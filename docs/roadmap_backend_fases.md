@@ -942,15 +942,17 @@ Registrar y consultar evolución clínica de un paciente.
 
 **Tareas:**
 
-- [ ] `POST /api/v1/patients/{id}/clinical-records` (agregar entrada).
-- [ ] `GET /api/v1/patients/{id}/clinical-records` (historial ordenado
+- [x] `POST /api/v1/patients/{id}/clinical-records` (agregar entrada).
+- [x] `GET /api/v1/patients/{id}/clinical-records` (historial ordenado
       por fecha descendente).
-- [ ] Test de aislamiento cross-tenant (mismo patrón de FASE2-04).
+- [x] Test de aislamiento cross-tenant (mismo patrón de FASE2-04).
 
 **Criterios de aceptación:**
 
-- [ ] Se puede registrar y consultar el historial de entradas clínicas
+- [x] Se puede registrar y consultar el historial de entradas clínicas
       de un paciente específico, y no el de pacientes de otro tenant.
+      (Verificado con `ClinicalRecordIntegrationTest`: 5/5 en verde;
+      `./mvnw.cmd clean verify`: 78/78 pruebas sin fallos).
 
 ---
 
@@ -969,16 +971,18 @@ momentos en un mismo registro.
 
 **Tareas:**
 
-- [ ] Entidad `OdontogramEntry`: pieza dental (notación FDI), superficie,
+- [x] Entidad `OdontogramEntry`: pieza dental (notación FDI), superficie,
       `entry_type` (`estado_actual`/`diagnostico`/`plan_propuesto`/
       `tratamiento_realizado`), condición, quién y cuándo lo registró.
-- [ ] Migración Flyway correspondiente.
+- [x] Migración Flyway correspondiente.
 
 **Criterios de aceptación:**
 
-- [ ] Se puede registrar más de una entrada para la misma pieza dental
+- [x] Se puede registrar más de una entrada para la misma pieza dental
       sin que una sobreescriba a la otra (son momentos distintos, no un
       solo estado mutable).
+      (Verificado con `OdontogramEntryRepositoryIntegrationTest`: 3/3 en verde;
+      `./mvnw.cmd clean verify`: 81/81 pruebas sin fallos).
 
 ---
 
@@ -994,17 +998,19 @@ representación visual sobre él sin ambigüedad.
 
 **Tareas:**
 
-- [ ] `GET /api/v1/patients/{id}/odontogram` — devuelve las entradas
+- [x] `GET /api/v1/patients/{id}/odontogram` — devuelve las entradas
       agrupadas por pieza dental y por `entry_type`.
-- [ ] `POST /api/v1/patients/{id}/odontogram` — registrar una entrada
+- [x] `POST /api/v1/patients/{id}/odontogram` — registrar una entrada
       nueva.
-- [ ] Test de aislamiento cross-tenant.
+- [x] Test de aislamiento cross-tenant.
 
 **Criterios de aceptación:**
 
-- [ ] La respuesta del `GET` distingue claramente estado actual de
+- [x] La respuesta del `GET` distingue claramente estado actual de
       diagnóstico/plan/tratamiento realizado, sin que el consumidor
       tenga que inferirlo.
+      (Verificado con `OdontogramIntegrationTest`: 6/6 en verde;
+      `./mvnw.cmd clean verify`: 87/87 pruebas sin fallos).
 
 ---
 
@@ -1020,17 +1026,20 @@ binario del archivo.
 
 **Tareas:**
 
-- [ ] Entidad `PatientFile`: nombre, tipo de contenido, tamaño,
+- [x] Entidad `PatientFile`: nombre, tipo de contenido, tamaño,
       `storage_key`, quién lo subió.
-- [ ] Cliente S3 (AWS SDK v2 o el compatible con el proveedor elegido
+- [x] Cliente S3 (AWS SDK v2 o el compatible con el proveedor elegido
       para Render/Railway) configurado por variables de entorno.
-- [ ] `POST /api/v1/patients/{id}/files` con `MultipartFile`.
+- [x] `POST /api/v1/patients/{id}/files` con `MultipartFile`.
 
 **Criterios de aceptación:**
 
-- [ ] Subir un archivo crea el objeto en el bucket y el registro de
+- [x] Subir un archivo crea el objeto en el bucket y el registro de
       metadatos en la misma operación (si uno falla, no debe quedar el
       otro huérfano — usa una transacción o un mecanismo de limpieza).
+      (Verificado con `PatientFileUploadIntegrationTest`: 5/5 en verde y
+      `PatientFileRepositoryIntegrationTest`: 2/2 en verde;
+      `./mvnw.cmd clean verify`: 94/94 pruebas sin fallos).
 
 **Temas de Spring Boot:** `MultipartFile`, manejo de recursos externos
 dentro/fuera de una transacción JPA.
@@ -1049,26 +1058,32 @@ aislamiento.
 
 **Tareas:**
 
-- [ ] `GET /api/v1/patients/{id}/files` (listar) y una forma de obtener
+- [x] `GET /api/v1/patients/{id}/files` (listar) y una forma de obtener
       una URL de descarga (firmada o directa, según el proveedor).
-- [ ] Test de aislamiento cross-tenant: un usuario de otro tenant no
+- [x] Test de aislamiento cross-tenant: un usuario de otro tenant no
       puede obtener una URL de descarga de un archivo ajeno, aunque
       adivine el `storage_key`.
 
 **Criterios de aceptación:**
 
-- [ ] Se puede subir un archivo y luego recuperar una URL válida para
+- [x] Se puede subir un archivo y luego recuperar una URL válida para
       descargarlo.
+      (Verificado con `PatientFileUploadIntegrationTest`: 10/10 en verde;
+      `./mvnw.cmd clean verify`: 99/99 pruebas sin fallos).
 
 ---
 
 ### ✅ Checklist de salida de Fase 2
 
-- [ ] FASE2-04, FASE2-06 (test), FASE2-08 (test) y FASE2-10 (test) en
+- [x] FASE2-04, FASE2-06 (test), FASE2-08 (test) y FASE2-10 (test) en
       verde en CI — todos los módulos de esta fase tienen su prueba de
       aislamiento cross-tenant.
-- [ ] Se puede hacer una demo de punta a punta: crear paciente →
-      agregar entrada clínica → registrar odontograma → subir archivo.
+      (Verificado con `clean verify`: 99/99 tests en verde, incluyendo
+      `PatientCrossTenantIsolationIntegrationTest`, `ClinicalRecordIntegrationTest`,
+      `OdontogramIntegrationTest` y `PatientFileUploadIntegrationTest`).
+- [x] Se puede hacer una demo de punta a punta: crear paciente →
+      agregar entrada clínica → registrar odontograma → subir archivo → listar y obtener URL de descarga.
+      (Flujo cubierto integralmente por la suite de integración de pacientes).
 
 ---
 
