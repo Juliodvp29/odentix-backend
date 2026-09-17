@@ -1259,14 +1259,16 @@ procedimiento.
 
 **Tareas:**
 
-- [ ] Entidad `WaitlistEntry`: paciente, procedimiento de interés,
+- [x] Entidad `WaitlistEntry`: paciente, procedimiento de interés,
       rango de fechas deseado, estado.
-- [ ] `POST /api/v1/waitlist` para registrar un interesado.
+- [x] `POST /api/v1/waitlist` para registrar un interesado.
 
 **Criterios de aceptación:**
 
-- [ ] Se puede registrar un paciente en lista de espera para un tipo de
+- [x] Se puede registrar un paciente en lista de espera para un tipo de
       procedimiento y rango de fechas.
+      (Verificado con `WaitlistIntegrationTest` 6/6 en verde;
+      `./mvnw.cmd clean verify`: 163/163 pruebas sin fallos).
 
 ---
 
