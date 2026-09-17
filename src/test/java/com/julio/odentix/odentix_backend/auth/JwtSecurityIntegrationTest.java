@@ -1,6 +1,8 @@
 package com.julio.odentix.odentix_backend.auth;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -12,6 +14,9 @@ import com.julio.odentix.odentix_backend.auth.service.JwtService;
 import com.julio.odentix.odentix_backend.auth.service.UserService;
 import com.julio.odentix.odentix_backend.tenant.entity.Tenant;
 import com.julio.odentix.odentix_backend.tenant.repository.TenantRepository;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,7 +65,9 @@ class JwtSecurityIntegrationTest extends AbstractIntegrationTest {
   void requestSinTokenDevuelve401() throws Exception {
     mockMvc.perform(get("/api/v1/me"))
         .andExpect(status().isUnauthorized())
-        .andExpect(jsonPath("$.error").value("No autorizado"));
+        .andExpect(header().string("WWW-Authenticate", "Bearer error=\"unauthorized\""))
+        .andExpect(jsonPath("$.error").value("No autorizado"))
+        .andExpect(jsonPath("$.code").value("token_missing"));
   }
 
   @Test
@@ -82,7 +89,26 @@ class JwtSecurityIntegrationTest extends AbstractIntegrationTest {
     mockMvc.perform(get("/api/v1/me")
             .header("Authorization", "Bearer " + corruptedToken))
         .andExpect(status().isUnauthorized())
-        .andExpect(jsonPath("$.error").value("No autorizado"));
+        .andExpect(header().string("WWW-Authenticate", containsString("error=\"invalid_token\"")))
+        .andExpect(header().string("WWW-Authenticate", containsString("The access token is invalid or tampered")))
+        .andExpect(jsonPath("$.error").value("No autorizado"))
+        .andExpect(jsonPath("$.code").value("token_invalid"));
+  }
+
+  @Test
+  void requestConTokenExpiradoDevuelve401() throws Exception {
+    Date pastIssuedAt = Date.from(Instant.now().minus(2, ChronoUnit.HOURS));
+    Date pastExpiration = Date.from(Instant.now().minus(1, ChronoUnit.HOURS));
+    String expiredToken = jwtService.generateToken(user, pastIssuedAt, pastExpiration);
+
+    mockMvc.perform(get("/api/v1/me")
+            .header("Authorization", "Bearer " + expiredToken))
+        .andExpect(status().isUnauthorized())
+        .andExpect(header().string("WWW-Authenticate", containsString("error=\"invalid_token\"")))
+        .andExpect(header().string("WWW-Authenticate", containsString("The access token expired")))
+        .andExpect(jsonPath("$.error").value("No autorizado"))
+        .andExpect(jsonPath("$.code").value("token_expired"))
+        .andExpect(jsonPath("$.message").value("El token de acceso ha expirado"));
   }
 
   @Test
@@ -101,7 +127,8 @@ class JwtSecurityIntegrationTest extends AbstractIntegrationTest {
     mockMvc.perform(get("/api/v1/me")
             .header("Authorization", "Bearer " + validToken))
         .andExpect(status().isUnauthorized())
-        .andExpect(jsonPath("$.error").value("No autorizado"));
+        .andExpect(jsonPath("$.error").value("No autorizado"))
+        .andExpect(jsonPath("$.code").value("user_inactive"));
   }
 
   @Test

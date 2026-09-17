@@ -282,12 +282,21 @@ curl -X POST http://localhost:8081/api/v1/auth/logout \
   Solo el hash SHA-256 se almacena en BD; el token en texto plano vive
   exclusivamente en el cliente y en tránsito HTTPS.
 - Claims del JWT: `sub` = user_id, `tenant_id`, `email`, `role`.
-- `JwtAuthenticationFilter` (`OncePerRequestFilter`): valida firma y expiración
-  del JWT, luego **verifica en tiempo real** en BD que el usuario exista en
+- `JwtAuthenticationFilter` (`OncePerRequestFilter`): valida firma y vigencia
+  del JWT distinguiendo tokens válidos, expirados e inválidos/manipulados vía
+  `JwtValidationResult`. Luego **verifica en tiempo real** en BD que el usuario exista en
   su tenant y esté activo (`user.isActive()`). Si no → `SecurityContextHolder`
   limpio → 401 instantáneo aunque el JWT sea válido. El rol se sincroniza desde
   BD en cada request (no desde el claim del token), por lo que un cambio de rol
   tiene efecto inmediato sin necesidad de revocar el JWT.
+- **Distinción granular de errores en `JwtAuthenticationEntryPoint` (RFC 6750):**
+  Para facilitar la UX del frontend al refrescar sesión automáticamente, las peticiones
+  no autenticadas reciben la cabecera estándar `WWW-Authenticate` y un payload JSON
+  con código de error específico sin romper compatibilidad (`error: "No autorizado"`):
+  - `token_expired`: HTTP 401, `code: "token_expired"`, cabecera `WWW-Authenticate: Bearer error="invalid_token", error_description="The access token expired"`. Indica al cliente que debe invocar `POST /api/v1/auth/refresh`.
+  - `token_invalid`: HTTP 401, `code: "token_invalid"`, cabecera `WWW-Authenticate: Bearer error="invalid_token", error_description="The access token is invalid or tampered"`. Indica token manipulado o corrupto (fuerza cierre de sesión).
+  - `user_inactive`: HTTP 401, `code: "user_inactive"`, cabecera `WWW-Authenticate: Bearer error="invalid_token", error_description="User is inactive or not found"`.
+  - `token_missing`: HTTP 401, `code: "token_missing"`, cabecera `WWW-Authenticate: Bearer error="unauthorized"`.
 
 ### Reglas de acceso (`SecurityConfig`, stateless, sin sesiones, CSRF off en API)
 
@@ -419,7 +428,7 @@ Implementadas antes de iniciar Fase 3 (agenda y citas):
   en tiempo real).
 - **Rate limiting y protección contra fuerza bruta en login (`LoginRateLimitService`):**
   defensa en profundidad sin dependencias pesadas: (1) límite de 10 peticiones/minuto por IP a `/api/v1/auth/login` con HTTP 429 y `Retry-After`; (2) bloqueo temporal de 15 minutos al acumular 5 fallos consecutivos por email, rechazando solicitudes con HTTP 429 sin ejecutar el costoso cálculo de BCrypt; (3) reseteo de contador tras login exitoso; (4) limpieza periódica de registros vencidos cada 5 minutos.
-- **Pruebas en verde tras mejoras de auth:** `LoginRateLimitIntegrationTest` (4/4), `AuthRefreshIntegrationTest` (5/5) y `JwtSecurityIntegrationTest` (6/6).
+- **Pruebas en verde tras mejoras de auth:** `LoginRateLimitIntegrationTest` (4/4), `AuthRefreshIntegrationTest` (5/5) y `JwtSecurityIntegrationTest` (7/7).
 
 ### Fase 2 — Pacientes e historia clínica base (completada, FASE2-01–10)
 
@@ -436,7 +445,7 @@ Módulo `patient`:
   - Baja lógica (`DELETE /{id}`): acción destructiva reservada exclusivamente a `PROPIETARIO`.
   - Gestión demográfica (`POST /patients`, `PATCH /patients/{id}`): `PROPIETARIO`, `RECEPCION`, `ODONTOLOGO`, `AUXILIAR`.
   - 11 pruebas de autorización en `PatientRoleAuthorizationIntegrationTest` (11/11 en verde).
-- Total de pruebas del proyecto: **123/123 pruebas en verde** en `./mvnw.cmd clean verify`.
+- Total de pruebas del proyecto: **124/124 pruebas en verde** en `./mvnw.cmd clean verify`.
 
 ### Fase 3 — (siguiente)
 

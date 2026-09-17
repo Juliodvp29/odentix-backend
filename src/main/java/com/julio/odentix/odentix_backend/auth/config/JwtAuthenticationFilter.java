@@ -4,6 +4,7 @@ import com.julio.odentix.odentix_backend.auth.dto.AuthenticatedUser;
 import com.julio.odentix.odentix_backend.auth.entity.User;
 import com.julio.odentix.odentix_backend.auth.repository.UserRepository;
 import com.julio.odentix.odentix_backend.auth.service.JwtService;
+import com.julio.odentix.odentix_backend.auth.service.JwtValidationResult;
 import com.julio.odentix.odentix_backend.shared.context.TenantContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -26,6 +27,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * valida en tiempo real la vigencia y estado del usuario en base de datos (FASE1-IMPROVE),
  * sincroniza su rol actual, establece la autenticación en el SecurityContext (FASE1-07)
  * y configura el TenantContext asegurando su limpieza en el bloque finally (FASE1-08).
+ * Si el token es inválido, expirado o el usuario está inactivo, registra atributos en el request
+ * para que JwtAuthenticationEntryPoint emita la respuesta granular adecuada (RFC 6750).
  */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -49,9 +52,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       String authHeader = request.getHeader("Authorization");
 
       if (authHeader != null && authHeader.startsWith("Bearer ")) {
-        String token = authHeader.substring(7);
+        String token = authHeader.substring(7).trim();
 
-        if (jwtService.validateToken(token)) {
+        JwtValidationResult result = jwtService.validateTokenResult(token);
+
+        if (result == JwtValidationResult.VALID) {
           UUID userId = jwtService.extractUserId(token);
           UUID tenantId = jwtService.extractTenantId(token);
 
@@ -74,8 +79,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
           } else {
             SecurityContextHolder.clearContext();
             TenantContext.clear();
+            request.setAttribute("jwt_auth_error_code", "user_inactive");
+            request.setAttribute("jwt_auth_error_message", "El usuario está inactivo o no existe");
           }
+        } else if (result == JwtValidationResult.EXPIRED) {
+          request.setAttribute("jwt_auth_error_code", "token_expired");
+          request.setAttribute("jwt_auth_error_message", "El token de acceso ha expirado");
+        } else {
+          request.setAttribute("jwt_auth_error_code", "token_invalid");
+          request.setAttribute("jwt_auth_error_message", "El token de acceso es inválido o ha sido alterado");
         }
+      } else if (authHeader != null) {
+        request.setAttribute("jwt_auth_error_code", "token_invalid");
+        request.setAttribute("jwt_auth_error_message", "El encabezado Authorization no utiliza el formato Bearer");
       }
 
       filterChain.doFilter(request, response);
