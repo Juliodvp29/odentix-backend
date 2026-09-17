@@ -15,6 +15,8 @@ import com.julio.odentix.odentix_backend.patient.repository.PatientRepository;
 import com.julio.odentix.odentix_backend.shared.context.TenantContext;
 import com.julio.odentix.odentix_backend.shared.exception.ResourceNotFoundException;
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -89,5 +91,43 @@ public class AppointmentService {
     // de forma síncrona dentro del bloque transaccional.
     Appointment saved = appointmentRepository.saveAndFlush(appointment);
     return AppointmentResponse.fromEntity(saved);
+  }
+
+  /**
+   * Consulta la agenda de un rango de fechas, opcionalmente de un solo
+   * profesional, ordenada por hora de inicio (FASE3-03).
+   *
+   * @param from inicio del rango (requerido).
+   * @param to fin del rango (requerido, no anterior a {@code from}).
+   * @param professionalId filtro opcional por profesional del tenant activo.
+   * @return citas del rango en orden ascendente de inicio.
+   * @throws IllegalArgumentException si el rango es inválido.
+   * @throws ResourceNotFoundException si el profesional no existe en el tenant activo.
+   */
+  @Transactional(readOnly = true)
+  public List<AppointmentResponse> listAppointments(Instant from, Instant to, UUID professionalId) {
+    if (from.isAfter(to)) {
+      throw new IllegalArgumentException("La fecha de inicio del rango debe ser anterior o igual a la de fin");
+    }
+
+    UUID currentTenantId = TenantContext.getRequiredTenantId();
+
+    if (professionalId != null) {
+      professionalRepository.findById(professionalId)
+          .filter(professional -> currentTenantId.equals(professional.getTenantId()))
+          .orElseThrow(() -> new ResourceNotFoundException("Profesional no encontrado: " + professionalId));
+      return appointmentRepository
+          .findByTenantIdAndProfessionalIdAndStartsAtBetweenOrderByStartsAtAsc(
+              currentTenantId, professionalId, from, to)
+          .stream()
+          .map(AppointmentResponse::fromEntity)
+          .toList();
+    }
+
+    return appointmentRepository
+        .findByTenantIdAndStartsAtBetweenOrderByStartsAtAsc(currentTenantId, from, to)
+        .stream()
+        .map(AppointmentResponse::fromEntity)
+        .toList();
   }
 }

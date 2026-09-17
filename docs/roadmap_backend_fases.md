@@ -1173,14 +1173,16 @@ Consultar la agenda es tan importante como crearla.
 
 **Tareas:**
 
-- [ ] `GET /api/v1/appointments` con filtros por rango de fechas y,
+- [x] `GET /api/v1/appointments` con filtros por rango de fechas y,
       opcionalmente, por profesional.
-- [ ] Test de aislamiento cross-tenant.
+- [x] Test de aislamiento cross-tenant.
 
 **Criterios de aceptación:**
 
-- [ ] Filtrar por un rango de fechas devuelve solo las citas de ese
+- [x] Filtrar por un rango de fechas devuelve solo las citas de ese
       rango, ordenadas por hora de inicio.
+      (Verificado con `AppointmentAgendaIntegrationTest` 6/6 en verde;
+      `./mvnw.cmd clean verify`: 146/146 pruebas sin fallos).
 
 ---
 

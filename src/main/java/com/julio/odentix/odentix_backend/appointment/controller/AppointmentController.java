@@ -7,11 +7,16 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -49,5 +54,27 @@ public class AppointmentController {
         .buildAndExpand(response.getId())
         .toUri();
     return ResponseEntity.created(location).body(response);
+  }
+
+  /**
+   * Consulta la agenda de un rango de fechas, opcionalmente filtrada por
+   * profesional, ordenada por hora de inicio.
+   *
+   * @param from inicio del rango en formato ISO-8601.
+   * @param to fin del rango en formato ISO-8601.
+   * @param professionalId filtro opcional por profesional del tenant activo.
+   * @return citas del rango en orden ascendente de inicio.
+   */
+  @GetMapping
+  @PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
+  @Operation(
+      summary = "Consultar agenda",
+      description = "Devuelve las citas del tenant activo que inician dentro del rango, ordenadas por hora de inicio. Permite filtrar por profesional."
+  )
+  public ResponseEntity<List<AppointmentResponse>> listAppointments(
+      @RequestParam Instant from,
+      @RequestParam Instant to,
+      @RequestParam(required = false) UUID professionalId) {
+    return ResponseEntity.ok(appointmentService.listAppointments(from, to, professionalId));
   }
 }

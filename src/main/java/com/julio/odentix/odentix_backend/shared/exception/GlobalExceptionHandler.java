@@ -13,8 +13,10 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
@@ -133,6 +135,26 @@ public class GlobalExceptionHandler {
         HttpStatus.BAD_REQUEST.value(),
         HttpStatus.BAD_REQUEST.getReasonPhrase(),
         ex.getMessage(),
+        request.getRequestURI());
+    return ResponseEntity.badRequest().body(error);
+  }
+
+  @ExceptionHandler({
+      MissingServletRequestParameterException.class,
+      MethodArgumentTypeMismatchException.class
+  })
+  public ResponseEntity<ApiErrorResponse> handleBadQueryParam(
+      Exception ex, HttpServletRequest request) {
+    // Parámetro requerido ausente o con formato inválido (ej. fecha no
+    // ISO-8601): 400 con el formato estándar, no un 500 genérico.
+    String message = ex instanceof MissingServletRequestParameterException missing
+        ? "Falta el parámetro requerido: " + missing.getParameterName()
+        : "El parámetro '" + ((MethodArgumentTypeMismatchException) ex).getName()
+            + "' tiene un formato inválido";
+    ApiErrorResponse error = new ApiErrorResponse(
+        HttpStatus.BAD_REQUEST.value(),
+        HttpStatus.BAD_REQUEST.getReasonPhrase(),
+        message,
         request.getRequestURI());
     return ResponseEntity.badRequest().body(error);
   }

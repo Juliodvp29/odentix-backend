@@ -49,4 +49,20 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
    * @return lista de citas programadas en ese consultorio.
    */
   List<Appointment> findByRoomId(UUID roomId);
+
+  /**
+   * Agenda de un rango de fechas, ordenada por hora de inicio (FASE3-03).
+   *
+   * <p>Filtra por {@code tenantId} explícito además del automático @TenantId
+   * (defensa en profundidad, regla §5.2 de AGENTS.md).
+   */
+  List<Appointment> findByTenantIdAndStartsAtBetweenOrderByStartsAtAsc(
+      UUID tenantId, Instant from, Instant to);
+
+  /**
+   * Agenda de un profesional en un rango de fechas, ordenada por hora de
+   * inicio (FASE3-03). Mismo doble filtro de tenant que el método anterior.
+   */
+  List<Appointment> findByTenantIdAndProfessionalIdAndStartsAtBetweenOrderByStartsAtAsc(
+      UUID tenantId, UUID professionalId, Instant from, Instant to);
 }
