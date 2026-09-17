@@ -1231,15 +1231,19 @@ lógica de riesgo/priorización llega después).
 
 **Tareas:**
 
-- [ ] Campo `estimated_value_cop` en `Appointment` (ya existe en
+- [x] Campo `estimated_value_cop` en `Appointment` (ya existe en
       `schema.sql`, confirmar que el DTO lo expone).
-- [ ] Endpoint de agregación: suma de valor estimado por rango de
+- [x] Endpoint de agregación: suma de valor estimado por rango de
       fechas.
 
 **Criterios de aceptación:**
 
-- [ ] El endpoint de agregación devuelve un total coherente con la
+- [x] El endpoint de agregación devuelve un total coherente con la
       suma manual de las citas del rango.
+      (Verificado con `AppointmentValueIntegrationTest` 4/4 en verde;
+      `./mvnw.cmd clean verify`: 157/157 pruebas sin fallos.
+      Decisión: excluye `cancelada`/`no_show`, coherente con el espacio
+      liberado de FASE3-02).
 
 ---
 

@@ -1,6 +1,7 @@
 package com.julio.odentix.odentix_backend.appointment.service;
 
 import com.julio.odentix.odentix_backend.appointment.dto.AppointmentResponse;
+import com.julio.odentix.odentix_backend.appointment.dto.AppointmentValueSummary;
 import com.julio.odentix.odentix_backend.appointment.dto.CreateAppointmentRequest;
 import com.julio.odentix.odentix_backend.appointment.dto.UpdateAppointmentStatusRequest;
 import com.julio.odentix.odentix_backend.appointment.entity.Appointment;
@@ -190,5 +191,37 @@ public class AppointmentService {
     }
 
     return AppointmentResponse.fromEntity(appointmentRepository.save(appointment));
+  }
+
+  /**
+   * Suma del valor estimado de la agenda en un rango (FASE3-05).
+   *
+   * <p>Excluye citas {@code cancelada} y {@code no_show}: son espacio
+   * liberado reutilizable (FASE3-02), y contarlas duplicaría el valor si
+   * el horario se reagenda. Insumo para reportes y Fase 9, sin lógica de
+   * riesgo aquí.
+   *
+   * @param from inicio del rango (requerido).
+   * @param to fin del rango (requerido, no anterior a {@code from}).
+   * @return total estimado y conteo de citas del rango.
+   * @throws IllegalArgumentException si el rango es inválido.
+   */
+  @Transactional(readOnly = true)
+  public AppointmentValueSummary summarizeValue(Instant from, Instant to) {
+    if (from.isAfter(to)) {
+      throw new IllegalArgumentException("La fecha de inicio del rango debe ser anterior o igual a la de fin");
+    }
+
+    UUID currentTenantId = TenantContext.getRequiredTenantId();
+    Object[] resultado = appointmentRepository.sumAndCountByTenantAndRange(
+            currentTenantId, from, to, List.of(AppointmentStatus.cancelada, AppointmentStatus.no_show))
+        .getFirst();
+
+    // El total llega como Number (BigDecimal normalmente, pero el proveedor
+    // puede devolver Long/Integer cuando el rango está vacío): convertir
+    // por texto evita ClassCastException. COALESCE garantiza no-null.
+    BigDecimal total = new BigDecimal(resultado[0].toString());
+    long conteo = ((Number) resultado[1]).longValue();
+    return new AppointmentValueSummary(from, to, total, conteo);
   }
 }

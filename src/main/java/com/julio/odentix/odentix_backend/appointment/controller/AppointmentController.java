@@ -1,6 +1,7 @@
 package com.julio.odentix.odentix_backend.appointment.controller;
 
 import com.julio.odentix.odentix_backend.appointment.dto.AppointmentResponse;
+import com.julio.odentix.odentix_backend.appointment.dto.AppointmentValueSummary;
 import com.julio.odentix.odentix_backend.appointment.dto.CreateAppointmentRequest;
 import com.julio.odentix.odentix_backend.appointment.dto.UpdateAppointmentStatusRequest;
 import com.julio.odentix.odentix_backend.appointment.service.AppointmentService;
@@ -98,5 +99,24 @@ public class AppointmentController {
       @PathVariable UUID id,
       @Valid @RequestBody UpdateAppointmentStatusRequest request) {
     return ResponseEntity.ok(appointmentService.updateStatus(id, request));
+  }
+
+  /**
+   * Suma del valor estimado de la agenda en un rango de fechas.
+   *
+   * @param from inicio del rango en formato ISO-8601.
+   * @param to fin del rango en formato ISO-8601.
+   * @return total estimado y conteo de citas del rango (sin canceladas ni no_show).
+   */
+  @GetMapping("/estimated-value")
+  @PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
+  @Operation(
+      summary = "Valor estimado de la agenda",
+      description = "Devuelve la suma del valor estimado y el conteo de citas del tenant activo en el rango. Excluye citas canceladas y no_show."
+  )
+  public ResponseEntity<AppointmentValueSummary> summarizeValue(
+      @RequestParam Instant from,
+      @RequestParam Instant to) {
+    return ResponseEntity.ok(appointmentService.summarizeValue(from, to));
   }
 }
