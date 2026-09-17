@@ -5,10 +5,11 @@ import com.julio.odentix.odentix_backend.appointment.entity.AppointmentStatus;
 import com.julio.odentix.odentix_backend.appointment.entity.RiskLevel;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
- * Representación de respuesta para una cita odontológica (FASE3-02).
+ * Representación de respuesta para una cita odontológica (FASE3-02 y FASE3-07).
  */
 public class AppointmentResponse {
 
@@ -28,6 +29,7 @@ public class AppointmentResponse {
   private String notes;
   private Instant createdAt;
   private Instant updatedAt;
+  private List<WaitlistEntryResponse> waitlistCandidates;
 
   public static AppointmentResponse fromEntity(Appointment appointment) {
     AppointmentResponse response = new AppointmentResponse();
@@ -122,5 +124,13 @@ public class AppointmentResponse {
 
   public Instant getUpdatedAt() {
     return updatedAt;
+  }
+
+  public List<WaitlistEntryResponse> getWaitlistCandidates() {
+    return waitlistCandidates;
+  }
+
+  public void setWaitlistCandidates(List<WaitlistEntryResponse> waitlistCandidates) {
+    this.waitlistCandidates = waitlistCandidates;
   }
 }

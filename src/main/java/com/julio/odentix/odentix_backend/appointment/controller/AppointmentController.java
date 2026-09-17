@@ -4,6 +4,7 @@ import com.julio.odentix.odentix_backend.appointment.dto.AppointmentResponse;
 import com.julio.odentix.odentix_backend.appointment.dto.AppointmentValueSummary;
 import com.julio.odentix.odentix_backend.appointment.dto.CreateAppointmentRequest;
 import com.julio.odentix.odentix_backend.appointment.dto.UpdateAppointmentStatusRequest;
+import com.julio.odentix.odentix_backend.appointment.dto.WaitlistEntryResponse;
 import com.julio.odentix.odentix_backend.appointment.service.AppointmentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -118,5 +119,22 @@ public class AppointmentController {
       @RequestParam Instant from,
       @RequestParam Instant to) {
     return ResponseEntity.ok(appointmentService.summarizeValue(from, to));
+  }
+
+  /**
+   * Obtiene los candidatos compatibles de la lista de espera para el horario
+   * y procedimiento de una cita (FASE3-07, recuperación de espacios).
+   *
+   * @param id identificador de la cita dentro del tenant activo.
+   * @return lista de candidatos compatibles en orden FIFO.
+   */
+  @GetMapping("/{id}/waitlist-candidates")
+  @PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
+  @Operation(
+      summary = "Candidatos de lista de espera para cita",
+      description = "Devuelve los pacientes en lista de espera compatibles con el horario y procedimiento de la cita para recuperación de espacio."
+  )
+  public ResponseEntity<List<WaitlistEntryResponse>> getWaitlistCandidates(@PathVariable UUID id) {
+    return ResponseEntity.ok(appointmentService.findWaitlistCandidates(id));
   }
 }

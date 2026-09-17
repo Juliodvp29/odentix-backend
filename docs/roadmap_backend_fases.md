@@ -1285,24 +1285,26 @@ Fase 8, aquí solo la lógica de "quién calza").
 
 **Tareas:**
 
-- [ ] Al transicionar una cita a `cancelada`, calcular candidatos
+- [x] Al transicionar una cita a `cancelada`, calcular candidatos
       compatibles de `WaitlistEntry` (mismo tipo de procedimiento y
       disponibilidad declarada que se solapa con el horario liberado).
-- [ ] Endpoint que devuelve esos candidatos para la cita cancelada.
+- [x] Endpoint que devuelve esos candidatos para la cita cancelada (`GET /api/v1/appointments/{id}/waitlist-candidates`).
 
 **Criterios de aceptación:**
 
-- [ ] Cancelar una cita marcada como de alto valor devuelve al menos
+- [x] Cancelar una cita marcada como de alto valor devuelve al menos
       la lista de candidatos compatibles, si existen.
+      (Verificado con `SlotRecoveryIntegrationTest` 7/7 en verde;
+      `./mvnw.cmd clean verify`: 170/170 pruebas sin fallos).
 
 ---
 
 ### ✅ Checklist de salida de Fase 3
 
-- [ ] Restricción `EXCLUDE` de solapamiento verificada con un test real
-      (no solo revisada visualmente).
-- [ ] Se puede hacer una demo: crear cita → confirmar → cancelar → ver
-      candidatos de lista de espera sugeridos.
+- [x] Restricción `EXCLUDE` de solapamiento verificada con un test real
+      (verificado en `AppointmentIntegrationTest.java`).
+- [x] Se puede hacer una demo: crear cita → confirmar → cancelar → ver
+      candidatos de lista de espera sugeridos (verificado con `SlotRecoveryIntegrationTest.java`).
 
 ---
 

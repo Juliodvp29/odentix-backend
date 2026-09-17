@@ -4,14 +4,17 @@ import com.julio.odentix.odentix_backend.appointment.dto.AppointmentResponse;
 import com.julio.odentix.odentix_backend.appointment.dto.AppointmentValueSummary;
 import com.julio.odentix.odentix_backend.appointment.dto.CreateAppointmentRequest;
 import com.julio.odentix.odentix_backend.appointment.dto.UpdateAppointmentStatusRequest;
+import com.julio.odentix.odentix_backend.appointment.dto.WaitlistEntryResponse;
 import com.julio.odentix.odentix_backend.appointment.entity.Appointment;
 import com.julio.odentix.odentix_backend.appointment.entity.AppointmentStatus;
 import com.julio.odentix.odentix_backend.appointment.entity.Professional;
 import com.julio.odentix.odentix_backend.appointment.entity.RiskLevel;
 import com.julio.odentix.odentix_backend.appointment.entity.Room;
+import com.julio.odentix.odentix_backend.appointment.entity.WaitlistStatus;
 import com.julio.odentix.odentix_backend.appointment.repository.AppointmentRepository;
 import com.julio.odentix.odentix_backend.appointment.repository.ProfessionalRepository;
 import com.julio.odentix.odentix_backend.appointment.repository.RoomRepository;
+import com.julio.odentix.odentix_backend.appointment.repository.WaitlistEntryRepository;
 import com.julio.odentix.odentix_backend.patient.entity.Patient;
 import com.julio.odentix.odentix_backend.patient.repository.PatientRepository;
 import com.julio.odentix.odentix_backend.shared.context.TenantContext;
@@ -27,7 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Servicio de negocio para la gestión de citas odontológicas (FASE3-02).
+ * Servicio de negocio para la gestión de citas odontológicas (FASE3-02, FASE3-04, FASE3-05, FASE3-07).
  */
 @Service
 public class AppointmentService {
@@ -36,6 +39,7 @@ public class AppointmentService {
   private final PatientRepository patientRepository;
   private final ProfessionalRepository professionalRepository;
   private final RoomRepository roomRepository;
+  private final WaitlistEntryRepository waitlistEntryRepository;
 
   /**
    * Transiciones de estado permitidas (FASE3-04, sección 8.6 del doc de
@@ -61,11 +65,13 @@ public class AppointmentService {
       AppointmentRepository appointmentRepository,
       PatientRepository patientRepository,
       ProfessionalRepository professionalRepository,
-      RoomRepository roomRepository) {
+      RoomRepository roomRepository,
+      WaitlistEntryRepository waitlistEntryRepository) {
     this.appointmentRepository = appointmentRepository;
     this.patientRepository = patientRepository;
     this.professionalRepository = professionalRepository;
     this.roomRepository = roomRepository;
+    this.waitlistEntryRepository = waitlistEntryRepository;
   }
 
   /**
@@ -190,7 +196,47 @@ public class AppointmentService {
       appointment.setStatus(destino);
     }
 
-    return AppointmentResponse.fromEntity(appointmentRepository.save(appointment));
+    Appointment saved = appointmentRepository.save(appointment);
+    AppointmentResponse response = AppointmentResponse.fromEntity(saved);
+
+    // FASE3-07: Si la cita pasa a cancelada, calcular candidatos compatibles de la lista de espera
+    // para sugerir la recuperación del espacio liberado.
+    if (destino == AppointmentStatus.cancelada) {
+      response.setWaitlistCandidates(findCandidatesForAppointment(saved, currentTenantId));
+    }
+
+    return response;
+  }
+
+  /**
+   * Obtiene los candidatos compatibles de la lista de espera para el espacio
+   * de una cita (FASE3-07).
+   *
+   * @param appointmentId identificador de la cita dentro del tenant activo.
+   * @return lista de candidatos compatibles en formato {@link WaitlistEntryResponse}.
+   * @throws ResourceNotFoundException si la cita no existe en el tenant activo.
+   */
+  @Transactional(readOnly = true)
+  public List<WaitlistEntryResponse> findWaitlistCandidates(UUID appointmentId) {
+    UUID currentTenantId = TenantContext.getRequiredTenantId();
+    Appointment appointment = appointmentRepository.findByIdAndTenantId(appointmentId, currentTenantId)
+        .orElseThrow(() -> new ResourceNotFoundException("Cita no encontrada: " + appointmentId));
+
+    return findCandidatesForAppointment(appointment, currentTenantId);
+  }
+
+  private List<WaitlistEntryResponse> findCandidatesForAppointment(Appointment appointment, UUID tenantId) {
+    UUID patientId = appointment.getPatient() != null ? appointment.getPatient().getId() : null;
+    return waitlistEntryRepository.findCompatibleCandidates(
+            tenantId,
+            WaitlistStatus.activa,
+            patientId,
+            appointment.getProcedureId(),
+            appointment.getStartsAt(),
+            appointment.getEndsAt())
+        .stream()
+        .map(WaitlistEntryResponse::fromEntity)
+        .toList();
   }
 
   /**
