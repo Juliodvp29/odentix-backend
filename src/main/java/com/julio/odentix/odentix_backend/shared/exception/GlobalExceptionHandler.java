@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
@@ -69,6 +70,19 @@ public class GlobalExceptionHandler {
         "Error de validación en la solicitud",
         request.getRequestURI(),
         fieldErrors);
+    return ResponseEntity.badRequest().body(error);
+  }
+
+  @ExceptionHandler(HttpMessageNotReadableException.class)
+  public ResponseEntity<ApiErrorResponse> handleNotReadable(
+      HttpMessageNotReadableException ex, HttpServletRequest request) {
+    // Cuerpo malformado o valor inválido para un enum (ej. entryType
+    // inexistente): 400, nunca el 500 genérico del manejador global.
+    ApiErrorResponse error = new ApiErrorResponse(
+        HttpStatus.BAD_REQUEST.value(),
+        HttpStatus.BAD_REQUEST.getReasonPhrase(),
+        "El cuerpo de la solicitud es inválido o tiene un formato incorrecto",
+        request.getRequestURI());
     return ResponseEntity.badRequest().body(error);
   }
 

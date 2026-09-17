@@ -998,17 +998,19 @@ representación visual sobre él sin ambigüedad.
 
 **Tareas:**
 
-- [ ] `GET /api/v1/patients/{id}/odontogram` — devuelve las entradas
+- [x] `GET /api/v1/patients/{id}/odontogram` — devuelve las entradas
       agrupadas por pieza dental y por `entry_type`.
-- [ ] `POST /api/v1/patients/{id}/odontogram` — registrar una entrada
+- [x] `POST /api/v1/patients/{id}/odontogram` — registrar una entrada
       nueva.
-- [ ] Test de aislamiento cross-tenant.
+- [x] Test de aislamiento cross-tenant.
 
 **Criterios de aceptación:**
 
-- [ ] La respuesta del `GET` distingue claramente estado actual de
+- [x] La respuesta del `GET` distingue claramente estado actual de
       diagnóstico/plan/tratamiento realizado, sin que el consumidor
       tenga que inferirlo.
+      (Verificado con `OdontogramIntegrationTest`: 6/6 en verde;
+      `./mvnw.cmd clean verify`: 87/87 pruebas sin fallos).
 
 ---
 

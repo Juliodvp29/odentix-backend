@@ -2,10 +2,14 @@ package com.julio.odentix.odentix_backend.patient.controller;
 
 import com.julio.odentix.odentix_backend.patient.dto.ClinicalRecordResponse;
 import com.julio.odentix.odentix_backend.patient.dto.CreateClinicalRecordRequest;
+import com.julio.odentix.odentix_backend.patient.dto.CreateOdontogramEntryRequest;
 import com.julio.odentix.odentix_backend.patient.dto.CreatePatientRequest;
+import com.julio.odentix.odentix_backend.patient.dto.OdontogramEntryResponse;
+import com.julio.odentix.odentix_backend.patient.dto.OdontogramResponse;
 import com.julio.odentix.odentix_backend.patient.dto.PatientResponse;
 import com.julio.odentix.odentix_backend.patient.dto.UpdatePatientRequest;
 import com.julio.odentix.odentix_backend.patient.service.ClinicalRecordService;
+import com.julio.odentix.odentix_backend.patient.service.OdontogramService;
 import com.julio.odentix.odentix_backend.patient.service.PatientService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -39,10 +43,13 @@ public class PatientController {
 
   private final PatientService patientService;
   private final ClinicalRecordService clinicalRecordService;
+  private final OdontogramService odontogramService;
 
-  public PatientController(PatientService patientService, ClinicalRecordService clinicalRecordService) {
+  public PatientController(PatientService patientService, ClinicalRecordService clinicalRecordService,
+      OdontogramService odontogramService) {
     this.patientService = patientService;
     this.clinicalRecordService = clinicalRecordService;
+    this.odontogramService = odontogramService;
   }
 
   @PostMapping("/{id}/clinical-records")
@@ -59,6 +66,22 @@ public class PatientController {
   @GetMapping("/{id}/clinical-records")
   public ResponseEntity<List<ClinicalRecordResponse>> listClinicalRecords(@PathVariable UUID id) {
     return ResponseEntity.ok(clinicalRecordService.listByPatient(id));
+  }
+
+  @PostMapping("/{id}/odontogram")
+  public ResponseEntity<OdontogramEntryResponse> addOdontogramEntry(
+      @PathVariable UUID id, @Valid @RequestBody CreateOdontogramEntryRequest request) {
+    OdontogramEntryResponse created = odontogramService.addEntry(id, request);
+    URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+        .path("/{entryId}")
+        .buildAndExpand(created.getId())
+        .toUri();
+    return ResponseEntity.created(location).body(created);
+  }
+
+  @GetMapping("/{id}/odontogram")
+  public ResponseEntity<OdontogramResponse> getOdontogram(@PathVariable UUID id) {
+    return ResponseEntity.ok(odontogramService.getOdontogram(id));
   }
 
   @PostMapping
