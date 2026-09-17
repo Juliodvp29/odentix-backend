@@ -425,7 +425,14 @@ Módulo `patient`:
 - `ClinicalRecord` (FASE2-05/06): modelo de historia clínica y endpoints (`POST /{id}/clinical-records`, `GET /{id}/clinical-records`).
 - `OdontogramEntry` (FASE2-07/08): modelo de odontograma no destructivo, validación de notación FDI (11 a 48), 4 tipos de entrada y endpoints (`POST /{id}/odontogram`, `GET /{id}/odontogram` agrupado por pieza y tipo).
 - Almacenamiento S3 y archivos (FASE2-09/10): `PatientFile` con Flyway `V9`, cliente S3 SDK v2 (`software.amazon.awssdk:s3`), subida multipart `POST /{id}/files` con compensación automática de borrado en S3 si falla la base de datos, listado `GET /{id}/files` y generación de URLs prefirmadas temporales (15 min) `GET /{id}/files/{fileId}/download-url` con `S3Presigner`.
-- Pruebas cross-tenant obligatorias en todos los componentes con 99/99 pruebas en verde en `./mvnw.cmd clean verify`.
+- **Control de acceso por rol (`@PreAuthorize`) en `PatientController`:**
+  - Historia clínica (`POST /{id}/clinical-records`): restringida a personal facultativo (`PROPIETARIO`, `ODONTOLOGO`, `ESPECIALISTA_EXTERNO`).
+  - Historia clínica (`GET /{id}/clinical-records`): confidencial para personal asistencial (`PROPIETARIO`, `ODONTOLOGO`, `ESPECIALISTA_EXTERNO`, `AUXILIAR`). Recepción bloqueada con 403.
+  - Odontograma (`POST /{id}/odontogram`): reservado a `PROPIETARIO`, `ODONTOLOGO`, `ESPECIALISTA_EXTERNO`.
+  - Baja lógica (`DELETE /{id}`): acción destructiva reservada exclusivamente a `PROPIETARIO`.
+  - Gestión demográfica (`POST /patients`, `PATCH /patients/{id}`): `PROPIETARIO`, `RECEPCION`, `ODONTOLOGO`, `AUXILIAR`.
+  - 11 pruebas de autorización en `PatientRoleAuthorizationIntegrationTest` (11/11 en verde).
+- Total de pruebas del proyecto: **119/119 pruebas en verde** en `./mvnw.cmd clean verify`.
 
 ### Fase 3 — (siguiente)
 

@@ -258,8 +258,12 @@ class OdontogramIntegrationTest extends AbstractIntegrationTest {
   void inactivoYsinToken() throws Exception {
     String patientId = crearPaciente(tokenA);
 
+    User propietarioA = userService.createUser(
+        tenantA.getId(), "prop+" + UUID.randomUUID() + "@odonto-a.com", "ClaveSegura123!", "Propietario A", UserRole.propietario);
+    String tokenPropietarioA = jwtService.generateToken(propietarioA);
+
     mockMvc.perform(delete("/api/v1/patients/" + patientId)
-            .header("Authorization", "Bearer " + tokenA))
+            .header("Authorization", "Bearer " + tokenPropietarioA))
         .andExpect(status().isNoContent());
 
     mockMvc.perform(post("/api/v1/patients/" + patientId + "/odontogram")
