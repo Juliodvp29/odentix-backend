@@ -1108,16 +1108,21 @@ Base de la agenda: quién atiende y, opcionalmente, en qué consultorio.
 
 **Tareas:**
 
-- [ ] Entidad `Professional`: nombre, especialidad, licencia,
+- [x] Entidad `Professional`: nombre, especialidad, licencia,
       `is_external` (para diferenciar especialistas externos más
       adelante en la Fase 7), vínculo opcional a `User`.
-- [ ] Entidad `Room` (opcional en esta subfase, se puede simplificar).
-- [ ] Migraciones Flyway correspondientes.
+- [x] Entidad `Room` (opcional en esta subfase, se puede simplificar).
+- [x] Migraciones Flyway correspondientes (`V11__create_professionals_and_rooms.sql`,
+      incluyendo constraints de FK diferidas en V7 y V8:
+      `clinical_records.professional_id` y `odontogram_entries.recorded_by`).
 
 **Criterios de aceptación:**
 
-- [ ] Se puede persistir un `Professional` y asociarlo opcionalmente a
+- [x] Se puede persistir un `Professional` y asociarlo opcionalmente a
       un `User` existente.
+      (Verificado con `ProfessionalRepositoryIntegrationTest` 5/5 y
+      `RoomRepositoryIntegrationTest` 4/4 en verde; suite global 133/133 en
+      `clean verify`).
 
 ---
 
@@ -1134,19 +1139,22 @@ solo en el código Java.
 
 **Tareas:**
 
-- [ ] Entidad `Appointment`: paciente, profesional, procedimiento
+- [x] Entidad `Appointment`: paciente, profesional, procedimiento
       (catálogo simple o texto libre por ahora), fecha/hora de inicio y
       fin, estado, notas.
-- [ ] Migración Flyway con una restricción `EXCLUDE USING gist` (ver
+- [x] Migración Flyway con una restricción `EXCLUDE USING gist` (ver
       `schema.sql`) que impida que un mismo profesional tenga dos citas
-      activas solapadas.
-- [ ] `POST /api/v1/appointments` con manejo del error de la
+      activas solapadas (`V12__create_appointments.sql`).
+- [x] `POST /api/v1/appointments` con manejo del error de la
       restricción (traducirlo a un `409 Conflict` claro, no un `500`).
 
 **Criterios de aceptación:**
 
-- [ ] Crear dos citas solapadas para el mismo profesional devuelve
+- [x] Crear dos citas solapadas para el mismo profesional devuelve
       `409`, no una excepción sin manejar.
+      (Verificado con `AppointmentIntegrationTest` 7/7 en verde: solapamiento
+      devuelve 409 Conflict con mensaje traducido, citas contiguas permitidas,
+      horarios cancelados reutilizables; suite global 140/140 en `clean verify`).
 
 **Temas de Spring Boot:** traducir una violación de constraint de
 PostgreSQL (`DataIntegrityViolationException`) a una respuesta HTTP
