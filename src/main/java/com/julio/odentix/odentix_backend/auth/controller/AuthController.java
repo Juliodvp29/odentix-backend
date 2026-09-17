@@ -3,6 +3,8 @@ package com.julio.odentix.odentix_backend.auth.controller;
 import com.julio.odentix.odentix_backend.auth.dto.LoginRequest;
 import com.julio.odentix.odentix_backend.auth.dto.LoginResponse;
 import com.julio.odentix.odentix_backend.auth.service.AuthService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/v1/auth")
+@Tag(name = "Autenticación", description = "Login público que emite el JWT usado en el resto del API.")
 public class AuthController {
 
   private final AuthService authService;
@@ -29,6 +32,7 @@ public class AuthController {
   }
 
   @PostMapping("/login")
+  @Operation(summary = "Autenticarse con email y contraseña (devuelve el JWT)")
   public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
     LoginResponse response = authService.login(request);
     return ResponseEntity.ok(response);

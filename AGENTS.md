@@ -119,6 +119,19 @@ no como paquetes top-level compartidos. Si vas a crear un módulo nuevo,
 sigue este mismo patrón sin pedir permiso; si vas a _cambiar_ el patrón,
 pregunta primero — es una decisión ya tomada y documentada.
 
+### Documentación interactiva (Swagger UI)
+
+El proyecto expone OpenAPI/Swagger UI (`springdoc-openapi` 3.x, línea
+compatible con Spring Boot 4 — la 2.x es solo para Boot 3): UI en
+`/swagger-ui.html`, JSON en `/v3/api-docs`. Reglas:
+
+- Todo endpoint nuevo lleva `@Tag` (a nivel de controlador) y `@Operation`
+  con un resumen claro; sin esto la UI nace vacía y se vuelve inútil.
+- Al cerrar cada fase se verifica que Swagger UI renderiza los endpoints
+  nuevos (con la app en dev + botón *Authorize* con un JWT real).
+- La documentación va **deshabilitada en prod** (`application-prod.yml`):
+  es una herramienta de desarrollo, no debe exponerse públicamente.
+
 ---
 
 ## 5. Multi-tenancy — reglas críticas (no negociables)
@@ -305,3 +318,4 @@ que quede desactualizada visiblemente a que no exista.)_
 - Fase completada: **Fase 2 — Pacientes e historia clínica base** (todos los tickets FASE2-01 a FASE2-10 completados; checklist de salida verificado y `ARCHITECTURE.md` actualizado).
 - Última verificación local: `./mvnw.cmd clean verify` el **16 de septiembre de 2026**, con **99/99 pruebas sin fallos**, incluidas **12/12 de `PatientFile*`** (`PatientFileUploadIntegrationTest` y `PatientFileRepositoryIntegrationTest`). Este resultado no implica verificación del último cambio en CI ni despliegue a producción.
 - Siguiente fase a ejecutar: **Fase 3 — Agenda y citas** (FASE3-01: Modelar `Professional` y `Room`, seguido de FASE3-02: `Appointment` y prevención de solapamiento con restricción `EXCLUDE USING gist`).
+- Documentación interactiva: Swagger UI activo en dev/test (`/swagger-ui.html`, JSON en `/v3/api-docs`) con `springdoc-openapi` 3.1.1 y esquema `bearerAuth` JWT; deshabilitado en prod. Regla vigente (§4): todo endpoint nuevo se anota con `@Tag`/`@Operation` y cada cierre de fase verifica la UI.
