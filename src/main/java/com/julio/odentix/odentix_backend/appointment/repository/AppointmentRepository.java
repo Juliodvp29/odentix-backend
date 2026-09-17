@@ -3,6 +3,7 @@ package com.julio.odentix.odentix_backend.appointment.repository;
 import com.julio.odentix.odentix_backend.appointment.entity.Appointment;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -49,6 +50,15 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
    * @return lista de citas programadas en ese consultorio.
    */
   List<Appointment> findByRoomId(UUID roomId);
+
+  /**
+   * Busca una cita por ID dentro del tenant activo (FASE3-04).
+   *
+   * <p>Filtra por {@code tenantId} explícito además del automático @TenantId
+   * (defensa en profundidad, regla §5.2 de AGENTS.md): una cita de otro
+   * tenant resulta invisible aunque se conozca su ID directo.
+   */
+  Optional<Appointment> findByIdAndTenantId(UUID id, UUID tenantId);
 
   /**
    * Agenda de un rango de fechas, ordenada por hora de inicio (FASE3-03).

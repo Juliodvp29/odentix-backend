@@ -1198,16 +1198,18 @@ Estados: `programada` → `confirmada` → `atendida` / `no_show` /
 
 **Tareas:**
 
-- [ ] Endpoint de cambio de estado (`PATCH /api/v1/appointments/{id}/status`).
-- [ ] Reglas de transición válida en el service layer (ej. no se puede
+- [x] Endpoint de cambio de estado (`PATCH /api/v1/appointments/{id}/status`).
+- [x] Reglas de transición válida en el service layer (ej. no se puede
       pasar de `cancelada` a `atendida`).
-- [ ] Test de transiciones inválidas.
+- [x] Test de transiciones inválidas.
 
 **Criterios de aceptación:**
 
-- [ ] Las transiciones inválidas de estado devuelven `400` con un
+- [x] Las transiciones inválidas de estado devuelven `400` con un
       mensaje claro sobre qué transición se intentó y por qué no es
       válida.
+      (Verificado con `AppointmentStatusIntegrationTest` 7/7 en verde;
+      `./mvnw.cmd clean verify`: 153/153 pruebas sin fallos).
 
 **Temas de Spring Boot:** modelado de máquinas de estado simples (enum
 

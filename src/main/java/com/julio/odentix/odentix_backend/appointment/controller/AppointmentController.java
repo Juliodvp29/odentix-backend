@@ -2,6 +2,7 @@ package com.julio.odentix.odentix_backend.appointment.controller;
 
 import com.julio.odentix.odentix_backend.appointment.dto.AppointmentResponse;
 import com.julio.odentix.odentix_backend.appointment.dto.CreateAppointmentRequest;
+import com.julio.odentix.odentix_backend.appointment.dto.UpdateAppointmentStatusRequest;
 import com.julio.odentix.odentix_backend.appointment.service.AppointmentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -13,6 +14,8 @@ import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -76,5 +79,24 @@ public class AppointmentController {
       @RequestParam Instant to,
       @RequestParam(required = false) UUID professionalId) {
     return ResponseEntity.ok(appointmentService.listAppointments(from, to, professionalId));
+  }
+
+  /**
+   * Cambia el estado de una cita validando que la transición sea permitida.
+   *
+   * @param id identificador de la cita dentro del tenant activo.
+   * @param request estado destino deseado.
+   * @return cita actualizada.
+   */
+  @PatchMapping("/{id}/status")
+  @PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
+  @Operation(
+      summary = "Cambiar estado de la cita",
+      description = "Avanza la cita por su ciclo de vida (programada → confirmada → atendida / no_show / cancelada). Las transiciones inválidas devuelven 400."
+  )
+  public ResponseEntity<AppointmentResponse> updateStatus(
+      @PathVariable UUID id,
+      @Valid @RequestBody UpdateAppointmentStatusRequest request) {
+    return ResponseEntity.ok(appointmentService.updateStatus(id, request));
   }
 }

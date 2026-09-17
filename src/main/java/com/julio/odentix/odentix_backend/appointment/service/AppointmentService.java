@@ -2,6 +2,7 @@ package com.julio.odentix.odentix_backend.appointment.service;
 
 import com.julio.odentix.odentix_backend.appointment.dto.AppointmentResponse;
 import com.julio.odentix.odentix_backend.appointment.dto.CreateAppointmentRequest;
+import com.julio.odentix.odentix_backend.appointment.dto.UpdateAppointmentStatusRequest;
 import com.julio.odentix.odentix_backend.appointment.entity.Appointment;
 import com.julio.odentix.odentix_backend.appointment.entity.AppointmentStatus;
 import com.julio.odentix.odentix_backend.appointment.entity.Professional;
@@ -16,7 +17,10 @@ import com.julio.odentix.odentix_backend.shared.context.TenantContext;
 import com.julio.odentix.odentix_backend.shared.exception.ResourceNotFoundException;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +35,26 @@ public class AppointmentService {
   private final PatientRepository patientRepository;
   private final ProfessionalRepository professionalRepository;
   private final RoomRepository roomRepository;
+
+  /**
+   * Transiciones de estado permitidas (FASE3-04, sección 8.6 del doc de
+   * arquitectura). Máquina de estado simple en el service layer, sin
+   * librerías: solo avance hacia adelante, los estados finales
+   * ({@code atendida}, {@code no_show}, {@code cancelada}) no salen a
+   * ningún otro. Reprogramar es crear una cita nueva, no un cambio de estado.
+   */
+  private static final Map<AppointmentStatus, Set<AppointmentStatus>> TRANSICIONES_PERMITIDAS;
+
+  static {
+    Map<AppointmentStatus, Set<AppointmentStatus>> transiciones = new EnumMap<>(AppointmentStatus.class);
+    transiciones.put(AppointmentStatus.programada, Set.of(AppointmentStatus.confirmada, AppointmentStatus.cancelada));
+    transiciones.put(AppointmentStatus.confirmada,
+        Set.of(AppointmentStatus.atendida, AppointmentStatus.no_show, AppointmentStatus.cancelada));
+    transiciones.put(AppointmentStatus.atendida, Set.of());
+    transiciones.put(AppointmentStatus.no_show, Set.of());
+    transiciones.put(AppointmentStatus.cancelada, Set.of());
+    TRANSICIONES_PERMITIDAS = Map.copyOf(transiciones);
+  }
 
   public AppointmentService(
       AppointmentRepository appointmentRepository,
@@ -129,5 +153,42 @@ public class AppointmentService {
         .stream()
         .map(AppointmentResponse::fromEntity)
         .toList();
+  }
+
+  /**
+   * Cambia el estado de una cita validando la transición (FASE3-04).
+   *
+   * @param id identificador de la cita dentro del tenant activo.
+   * @param request estado destino deseado.
+   * @return cita actualizada.
+   * @throws ResourceNotFoundException si la cita no existe en el tenant activo.
+   * @throws IllegalArgumentException si la transición no es válida.
+   */
+  @Transactional
+  public AppointmentResponse updateStatus(UUID id, UpdateAppointmentStatusRequest request) {
+    UUID currentTenantId = TenantContext.getRequiredTenantId();
+
+    Appointment appointment = appointmentRepository.findByIdAndTenantId(id, currentTenantId)
+        .orElseThrow(() -> new ResourceNotFoundException("Cita no encontrada: " + id));
+
+    AppointmentStatus actual = appointment.getStatus();
+    AppointmentStatus destino = request.getStatus();
+
+    // Mismo estado: no-op idempotente para que los reintentos no fallen.
+    if (!actual.equals(destino)) {
+      Set<AppointmentStatus> permitidos =
+          TRANSICIONES_PERMITIDAS.getOrDefault(actual, Set.of());
+      if (!permitidos.contains(destino)) {
+        String detalle = permitidos.isEmpty()
+            ? "ninguna (es un estado final)"
+            : "solo " + permitidos;
+        throw new IllegalArgumentException(
+            "No se puede pasar de '" + actual + "' a '" + destino
+                + "'. Transiciones permitidas desde '" + actual + "': " + detalle);
+      }
+      appointment.setStatus(destino);
+    }
+
+    return AppointmentResponse.fromEntity(appointmentRepository.save(appointment));
   }
 }
