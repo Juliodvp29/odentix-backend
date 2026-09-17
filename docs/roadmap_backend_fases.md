@@ -971,16 +971,18 @@ momentos en un mismo registro.
 
 **Tareas:**
 
-- [ ] Entidad `OdontogramEntry`: pieza dental (notación FDI), superficie,
+- [x] Entidad `OdontogramEntry`: pieza dental (notación FDI), superficie,
       `entry_type` (`estado_actual`/`diagnostico`/`plan_propuesto`/
       `tratamiento_realizado`), condición, quién y cuándo lo registró.
-- [ ] Migración Flyway correspondiente.
+- [x] Migración Flyway correspondiente.
 
 **Criterios de aceptación:**
 
-- [ ] Se puede registrar más de una entrada para la misma pieza dental
+- [x] Se puede registrar más de una entrada para la misma pieza dental
       sin que una sobreescriba a la otra (son momentos distintos, no un
       solo estado mutable).
+      (Verificado con `OdontogramEntryRepositoryIntegrationTest`: 3/3 en verde;
+      `./mvnw.cmd clean verify`: 81/81 pruebas sin fallos).
 
 ---
 
