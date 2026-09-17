@@ -1,29 +1,23 @@
 package com.julio.odentix.odentix_backend.auth.dto;
 
 /**
- * Respuesta exitosa de autenticación con JWT (FASE1-06).
+ * Respuesta a la renovación exitosa de sesión (FASE1-IMPROVE).
  */
-public class LoginResponse {
+public class TokenRefreshResponse {
 
   private String accessToken;
   private String refreshToken;
   private String tokenType = "Bearer";
   private long expiresInSeconds;
-  private UserSummaryDto user;
 
-  public LoginResponse() {
+  public TokenRefreshResponse() {
   }
 
-  public LoginResponse(String accessToken, long expiresInSeconds, UserSummaryDto user) {
-    this(accessToken, null, expiresInSeconds, user);
-  }
-
-  public LoginResponse(String accessToken, String refreshToken, long expiresInSeconds, UserSummaryDto user) {
+  public TokenRefreshResponse(String accessToken, String refreshToken, long expiresInSeconds) {
     this.accessToken = accessToken;
     this.refreshToken = refreshToken;
     this.tokenType = "Bearer";
     this.expiresInSeconds = expiresInSeconds;
-    this.user = user;
   }
 
   public String getAccessToken() {
@@ -56,13 +50,5 @@ public class LoginResponse {
 
   public void setExpiresInSeconds(long expiresInSeconds) {
     this.expiresInSeconds = expiresInSeconds;
-  }
-
-  public UserSummaryDto getUser() {
-    return user;
-  }
-
-  public void setUser(UserSummaryDto user) {
-    this.user = user;
   }
 }

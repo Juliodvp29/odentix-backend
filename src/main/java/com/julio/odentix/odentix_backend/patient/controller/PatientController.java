@@ -27,6 +27,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -41,14 +42,20 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 /**
- * CRUD de pacientes con paginación, búsqueda y manejo centralizado de errores (FASE2-02 / FASE2-03 / FASE2-09 / FASE2-10).
+ * CRUD de pacientes con paginación, búsqueda, control de acceso por roles (@PreAuthorize) y manejo centralizado de errores.
  *
- * <p>Sin restricción por rol: cualquier usuario autenticado opera sobre los pacientes de su propio tenant.
- * Los errores son gestionados de forma transversal por {@link com.julio.odentix.odentix_backend.shared.exception.GlobalExceptionHandler}.
+ * <p>Aislamiento estricto por tenant y autorización granular por rol:
+ * <ul>
+ *   <li>Historia clínica (escritura): reservada a PROPIETARIO, ODONTOLOGO, ESPECIALISTA_EXTERNO.</li>
+ *   <li>Historia clínica (lectura): confidencial para personal asistencial (PROPIETARIO, ODONTOLOGO, ESPECIALISTA_EXTERNO, AUXILIAR).</li>
+ *   <li>Odontograma (escritura): reservado a PROPIETARIO, ODONTOLOGO, ESPECIALISTA_EXTERNO.</li>
+ *   <li>Baja lógica de pacientes: acción administrativa de alto nivel reservada a PROPIETARIO.</li>
+ *   <li>Gestión demográfica (crear/modificar): PROPIETARIO, RECEPCION, ODONTOLOGO, AUXILIAR.</li>
+ * </ul>
  */
 @RestController
 @RequestMapping("/api/v1/patients")
-@Tag(name = "Pacientes", description = "CRUD, historia clínica, odontograma y archivos. Todo se aísla por tenant.")
+@Tag(name = "Pacientes", description = "CRUD, historia clínica, odontograma y archivos protegidos por tenant y rol.")
 public class PatientController {
 
   private final PatientService patientService;
@@ -68,6 +75,7 @@ public class PatientController {
   }
 
   @PostMapping(value = "/{id}/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'ESPECIALISTA_EXTERNO', 'AUXILIAR', 'RECEPCION')")
   @Operation(summary = "Subir un archivo del paciente (solo metadatos en BD, binario en S3)")
   public ResponseEntity<PatientFileResponse> uploadFile(
       @PathVariable UUID id,
@@ -82,12 +90,14 @@ public class PatientController {
   }
 
   @GetMapping("/{id}/files")
+  @PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'ESPECIALISTA_EXTERNO', 'AUXILIAR', 'RECEPCION')")
   @Operation(summary = "Listar archivos del paciente")
   public ResponseEntity<List<PatientFileResponse>> listFiles(@PathVariable UUID id) {
     return ResponseEntity.ok(patientFileService.listByPatient(id));
   }
 
   @GetMapping("/{id}/files/{fileId}/download-url")
+  @PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'ESPECIALISTA_EXTERNO', 'AUXILIAR', 'RECEPCION')")
   @Operation(summary = "Obtener URL de descarga de un archivo")
   public ResponseEntity<PatientFileDownloadResponse> getFileDownloadUrl(
       @PathVariable UUID id, @PathVariable UUID fileId) {
@@ -95,6 +105,7 @@ public class PatientController {
   }
 
   @PostMapping("/{id}/clinical-records")
+  @PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'ESPECIALISTA_EXTERNO')")
   @Operation(summary = "Agregar una entrada a la historia clínica")
   public ResponseEntity<ClinicalRecordResponse> addClinicalRecord(
       @PathVariable UUID id, @Valid @RequestBody CreateClinicalRecordRequest request) {
@@ -107,12 +118,14 @@ public class PatientController {
   }
 
   @GetMapping("/{id}/clinical-records")
+  @PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'ESPECIALISTA_EXTERNO', 'AUXILIAR')")
   @Operation(summary = "Listar el historial clínico (más reciente primero)")
   public ResponseEntity<List<ClinicalRecordResponse>> listClinicalRecords(@PathVariable UUID id) {
     return ResponseEntity.ok(clinicalRecordService.listByPatient(id));
   }
 
   @PostMapping("/{id}/odontogram")
+  @PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'ESPECIALISTA_EXTERNO')")
   @Operation(summary = "Registrar una entrada de odontograma (nunca sobrescribe)")
   public ResponseEntity<OdontogramEntryResponse> addOdontogramEntry(
       @PathVariable UUID id, @Valid @RequestBody CreateOdontogramEntryRequest request) {
@@ -125,12 +138,14 @@ public class PatientController {
   }
 
   @GetMapping("/{id}/odontogram")
+  @PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'ESPECIALISTA_EXTERNO', 'AUXILIAR', 'RECEPCION')")
   @Operation(summary = "Ver el odontograma agrupado por pieza y por tipo")
   public ResponseEntity<OdontogramResponse> getOdontogram(@PathVariable UUID id) {
     return ResponseEntity.ok(odontogramService.getOdontogram(id));
   }
 
   @PostMapping
+  @PreAuthorize("hasAnyRole('PROPIETARIO', 'RECEPCION', 'ODONTOLOGO', 'AUXILIAR')")
   @Operation(summary = "Crear un paciente en el tenant autenticado")
   public ResponseEntity<PatientResponse> create(@Valid @RequestBody CreatePatientRequest request) {
     PatientResponse created = patientService.create(request);
@@ -142,6 +157,7 @@ public class PatientController {
   }
 
   @GetMapping
+  @PreAuthorize("hasAnyRole('PROPIETARIO', 'RECEPCION', 'ODONTOLOGO', 'AUXILIAR', 'ESPECIALISTA_EXTERNO')")
   @Operation(summary = "Listar pacientes con paginación y búsqueda opcional")
   public ResponseEntity<Page<PatientResponse>> list(
       @RequestParam(required = false) String query,
@@ -150,12 +166,14 @@ public class PatientController {
   }
 
   @GetMapping("/{id}")
+  @PreAuthorize("hasAnyRole('PROPIETARIO', 'RECEPCION', 'ODONTOLOGO', 'AUXILIAR', 'ESPECIALISTA_EXTERNO')")
   @Operation(summary = "Obtener un paciente por ID (404 si es de otro tenant)")
   public ResponseEntity<PatientResponse> getById(@PathVariable UUID id) {
     return ResponseEntity.ok(patientService.getById(id));
   }
 
   @PatchMapping("/{id}")
+  @PreAuthorize("hasAnyRole('PROPIETARIO', 'RECEPCION', 'ODONTOLOGO', 'AUXILIAR')")
   @Operation(summary = "Actualizar parcialmente un paciente")
   public ResponseEntity<PatientResponse> patch(
       @PathVariable UUID id, @Valid @RequestBody UpdatePatientRequest request) {
@@ -163,6 +181,7 @@ public class PatientController {
   }
 
   @DeleteMapping("/{id}")
+  @PreAuthorize("hasRole('PROPIETARIO')")
   @Operation(summary = "Dar de baja un paciente (baja lógica, no borra la fila)")
   public ResponseEntity<Void> delete(@PathVariable UUID id) {
     // Baja lógica: marca is_active = false, no borra la fila (FASE2-02).

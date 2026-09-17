@@ -42,7 +42,8 @@ management:
 jwt:
   # Clave HMAC-SHA256 (al menos 256 bits = 32 caracteres). En prod se sobreescribe con JWT_SECRET.
   secret: ${JWT_SECRET:odentix_super_secret_jwt_key_for_development_purposes_only_123456}
-  expiration-minutes: ${JWT_EXPIRATION_MINUTES:1440}
+  expiration-minutes: ${JWT_EXPIRATION_MINUTES:15}
+  refresh-token-expiration-days: ${JWT_REFRESH_TOKEN_EXPIRATION_DAYS:7}
 
 storage:
   s3:
@@ -52,4 +53,12 @@ storage:
     access-key: ${AWS_ACCESS_KEY_ID:}
     secret-key: ${AWS_SECRET_ACCESS_KEY:}
     path-style-access-enabled: ${AWS_S3_PATH_STYLE_ACCESS:false}
+
+security:
+  rate-limit:
+    login:
+      max-requests-per-minute: ${LOGIN_RATE_LIMIT_IP_MAX:10}
+      max-failed-attempts: ${LOGIN_RATE_LIMIT_EMAIL_MAX_ATTEMPTS:5}
+      lockout-duration-minutes: ${LOGIN_RATE_LIMIT_LOCKOUT_MINUTES:15}
+
 

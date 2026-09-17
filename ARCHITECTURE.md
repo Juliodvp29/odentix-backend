@@ -108,7 +108,8 @@ repo solo hay defaults locales sin valor productivo.
 | `DB_USERNAME` / `DB_PASSWORD` | `odentix` / `odentix` | sin default (obligatorias) |
 | `PORT` | `8081` fijo en local | `${PORT:8080}` (Render inyecta `$PORT`) |
 | `JWT_SECRET` | clave de desarrollo en `application.yml` | **obligatoria**: `JWT_SECRET` real (≥32 caracteres) |
-| `JWT_EXPIRATION_MINUTES` | `1440` (24 h) | `1440` salvo que se configure |
+| `JWT_EXPIRATION_MINUTES` | `15` (15 min) | `15` recomendado; ajustable |
+| `JWT_REFRESH_TOKEN_EXPIRATION_DAYS` | `7` (7 días) | `7` recomendado; ajustable |
 
 Particularidades de la máquina de desarrollo (no generalizar):
 
@@ -144,6 +145,12 @@ docker compose up -d                                   # Postgres local
 | `V2__create_tenants` | Extensiones `pgcrypto`/`citext`, función `current_tenant_id()`, tipo `tenant_status`, tabla `tenants`, índice, trigger `updated_at`, RLS (`tenant_self_isolation`) |
 | `V3__create_users` | Tipo `user_role`, tabla `users` (email `CITEXT`, unique `(tenant_id, email)`), índice `(tenant_id, role)`, trigger, RLS |
 | `V4__create_audit_log` | Tipo `audit_action`, tabla `audit_log`, índices, trigger, RLS (ver §8 por 2 desviaciones documentadas) |
+| `V5__create_patients` | Extensión `pg_trgm`, función `immutable_unaccent()`, tabla `patients`, índice trgm para búsqueda insensible, trigger, RLS |
+| `V6__create_clinical_records` | Tabla `clinical_records` con FK `patient_id`, `recorded_by_id`, trigger, RLS |
+| `V7__create_odontogram_entries` | Tipo `odontogram_entry_type`, tabla `odontogram_entries`, restricción `CHECK` notación FDI, trigger, RLS |
+| `V8__create_patient_files` | Tipo `storage_provider`, tabla `patient_files` (metadatos S3), trigger, RLS |
+| `V9__test_patient_file_data` | Migración de test (solo se aplica en perfil `test` mediante `V999`) |
+| `V10__create_refresh_tokens` | Tabla `refresh_tokens` (hash SHA-256 del token, `expires_at`, `revoked`, `revoked_at`, FK `tenant_id`/`user_id`), índices, trigger, RLS (permite `current_tenant_id() IS NULL` porque el refresh se hace antes de que exista `TenantContext`) |
 
 Patrón RLS en cada tabla de negocio (defensa en profundidad, §6):
 
@@ -198,7 +205,7 @@ asociación desde FASE1-02) y catálogos globales (`plans`, `plan_features`,
 
 ---
 
-## 7. Autenticación y autorización (Fase 1)
+## 7. Autenticación y autorización (Fase 1 + mejoras previas a Fase 3)
 
 ### Modelo
 
@@ -213,6 +220,12 @@ asociación desde FASE1-02) y catálogos globales (`plans`, `plan_features`,
 - `UserService.createUser(...)` (interno, sin registro público): valida datos,
   exige tenant existente, rechaza email duplicado por tenant, hashea con
   `BCryptPasswordEncoder` y guarda activo.
+- `RefreshToken` (V10): entidad de sesión persistida. Almacena `token_hash`
+  (SHA-256 del token en texto plano, nunca el token crudo), `expires_at`,
+  `revoked`, `revoked_at`, FK a `tenant_id` y `user_id`. No extiende
+  `TenantAwareEntity` (al igual que `User`): las operaciones de refresh se
+  producen antes de que exista `TenantContext`. Su RLS permite
+  `current_tenant_id() IS NULL` por la misma razón.
 
 ### Login — `POST /api/v1/auth/login` (público)
 
@@ -220,7 +233,7 @@ asociación desde FASE1-02) y catálogos globales (`plans`, `plan_features`,
 curl -X POST http://localhost:8081/api/v1/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"admin@clinica.com","password":"Secreta123"}'
-# 200 → {"accessToken":"...","tokenType":"Bearer","expiresInSeconds":86400,
+# 200 → {"accessToken":"...","refreshToken":"...","tokenType":"Bearer","expiresInSeconds":900,
 #        "user":{"email":"...","role":"propietario","tenantId":"..."}}
 # Credenciales inválidas → 401 {"error":"Credenciales inválidas"} (genérico a
 # propósito: no distingue usuario inexistente de clave errónea, anti-enumeración)
@@ -229,28 +242,77 @@ curl -X POST http://localhost:8081/api/v1/auth/login \
 `tenantId` opcional en el request: solo se usa para desambiguar si el mismo
 email existiera en varias clínicas. Usuario inactivo → 401 genérico.
 
+**Protección contra fuerza bruta y DoS (Rate Limiting en memoria):**
+- **Rate limiting por IP:** Máximo 10 peticiones/minuto por IP hacia `/api/v1/auth/login` (configurable vía `LOGIN_RATE_LIMIT_IP_MAX`). Soporta proxies (`X-Forwarded-For` o `getRemoteAddr`). Al excederlo → `429 Too Many Requests` con cabecera `Retry-After: <segundos>` antes de ejecutar BCrypt ni consultar la base de datos.
+- **Bloqueo temporal por cuenta/email:** Máximo 5 intentos fallidos consecutivos en una ventana de 15 minutos (configurable vía `LOGIN_RATE_LIMIT_EMAIL_MAX_ATTEMPTS`). Al 5to fallo, la cuenta queda bloqueada por 15 minutos (`LOGIN_RATE_LIMIT_LOCKOUT_MINUTES`). Intentos posteriores durante el bloqueo reciben `429 Too Many Requests` con cabecera `Retry-After` sin gastar CPU en BCrypt. Un login exitoso resetea el contador de fallos.
+- `LoginRateLimitService` limpia automáticamente entradas vencidas cada 5 minutos (`@Scheduled`).
+
+### Renovación de sesión — `POST /api/v1/auth/refresh` (público)
+
+Rota el refresh token de forma atómica: invalida el token anterior y emite
+un nuevo par (access token + refresh token). Detección de reúso: si se
+intenta renovar con un token ya revocado → 401. Token expirado → 401.
+Usuario inactivo al momento del refresh → 401.
+
+```bash
+curl -X POST http://localhost:8081/api/v1/auth/refresh \
+  -H 'Content-Type: application/json' \
+  -d '{"refreshToken":"<token-de-7-dias>"}'
+# 200 → {"accessToken":"...","refreshToken":"...","tokenType":"Bearer","expiresInSeconds":900}
+# Token revocado/expirado/inválido → 401 {"error":"Refresh token revocado|expirado|inválido"}
+```
+
+### Cierre de sesión — `POST /api/v1/auth/logout` (público)
+
+Revoca el refresh token. El access token (15 min) sigue siendo válido hasta
+su expiración natural, pero sin refresh token la sesión no se puede renovar.
+
+```bash
+curl -X POST http://localhost:8081/api/v1/auth/logout \
+  -H 'Content-Type: application/json' \
+  -d '{"refreshToken":"<token-a-revocar>"}'
+# 204 No Content
+```
+
 ### JWT
 
-- HMAC-SHA256 (`JwtService`, JJWT), expiración configurable (default 24 h).
-- Claims: `sub` = user_id, `tenant_id`, `email`, `role`.
-- `JwtAuthenticationFilter` (`OncePerRequestFilter`, antes de
-  `UsernamePasswordAuthenticationFilter`): valida `Authorization: Bearer ...`,
-  puebla `SecurityContext` (principal `AuthenticatedUser` + authority
-  `ROLE_<ROL>`) y `TenantContext` (limpieza en `finally`).
+- HMAC-SHA256 (`JwtService`, JJWT), **access token 15 min** (configurable
+  con `JWT_EXPIRATION_MINUTES`; default en dev/test `15`).
+- **Refresh token 7 días** (configurable con `JWT_REFRESH_TOKEN_EXPIRATION_DAYS`).
+  Solo el hash SHA-256 se almacena en BD; el token en texto plano vive
+  exclusivamente en el cliente y en tránsito HTTPS.
+- Claims del JWT: `sub` = user_id, `tenant_id`, `email`, `role`.
+- `JwtAuthenticationFilter` (`OncePerRequestFilter`): valida firma y vigencia
+  del JWT distinguiendo tokens válidos, expirados e inválidos/manipulados vía
+  `JwtValidationResult`. Luego **verifica en tiempo real** en BD que el usuario exista en
+  su tenant y esté activo (`user.isActive()`). Si no → `SecurityContextHolder`
+  limpio → 401 instantáneo aunque el JWT sea válido. El rol se sincroniza desde
+  BD en cada request (no desde el claim del token), por lo que un cambio de rol
+  tiene efecto inmediato sin necesidad de revocar el JWT.
+- **Distinción granular de errores en `JwtAuthenticationEntryPoint` (RFC 6750):**
+  Para facilitar la UX del frontend al refrescar sesión automáticamente, las peticiones
+  no autenticadas reciben la cabecera estándar `WWW-Authenticate` y un payload JSON
+  con código de error específico sin romper compatibilidad (`error: "No autorizado"`):
+  - `token_expired`: HTTP 401, `code: "token_expired"`, cabecera `WWW-Authenticate: Bearer error="invalid_token", error_description="The access token expired"`. Indica al cliente que debe invocar `POST /api/v1/auth/refresh`.
+  - `token_invalid`: HTTP 401, `code: "token_invalid"`, cabecera `WWW-Authenticate: Bearer error="invalid_token", error_description="The access token is invalid or tampered"`. Indica token manipulado o corrupto (fuerza cierre de sesión).
+  - `user_inactive`: HTTP 401, `code: "user_inactive"`, cabecera `WWW-Authenticate: Bearer error="invalid_token", error_description="User is inactive or not found"`.
+  - `token_missing`: HTTP 401, `code: "token_missing"`, cabecera `WWW-Authenticate: Bearer error="unauthorized"`.
 
 ### Reglas de acceso (`SecurityConfig`, stateless, sin sesiones, CSRF off en API)
 
-- Públicas: `/actuator/health`, `/actuator/info`, `/api/v1/auth/login`.
+- Públicas: `/actuator/health`, `/actuator/info`, `/api/v1/auth/login`,
+  `/api/v1/auth/refresh`, `/api/v1/auth/logout`.
 - Todo lo demás exige autenticación; `@EnableMethodSecurity` permite
   `@PreAuthorize("hasRole('PROPIETARIO')")` (rol en mayúsculas = enum en
   mayúsculas; `UserRole` en minúsculas se mapea con `toUpperCase()`).
 - Errores probados: sin token → 401 `{"error":"No autorizado"}`; rol
   insuficiente → 403 `{"error":"Acceso denegado","message":"..."}`.
+- Usuario desactivado en BD → 401 inmediato incluso con JWT válido.
 
 ### `GET /api/v1/me` (protegida)
 
 Devuelve el perfil del usuario del token (`@AuthenticationPrincipal`):
-sin token → 401; token válido → 200 con sus datos.
+sin token → 401; token válido → 200 con sus datos; usuario desactivado → 401.
 
 ---
 
@@ -350,6 +412,24 @@ por request + `UserService` con BCrypt + login JWT (`/api/v1/auth/login`,
 Checklist de salida verificado: FASE1-10 5/5 y FASE1-12 5/5 en `clean verify`
 (lo que corre el CI), base lista para Fase 2.
 
+### Mejoras de seguridad de sesión (pre-Fase 3)
+
+Implementadas antes de iniciar Fase 3 (agenda y citas):
+
+- **Refresh tokens con rotación atómica** (`V10__create_refresh_tokens.sql`,
+  `RefreshToken`, `RefreshTokenService`): access token de 15 min + refresh
+  token de 7 días con hash SHA-256 en BD. `POST /api/v1/auth/refresh` rota
+  el token y emite nuevo par. `POST /api/v1/auth/logout` revoca el token.
+  Detección de reúso de tokens revocados → 401.
+- **Validación en tiempo real del usuario** (`JwtAuthenticationFilter`):
+  en cada request autenticado se consulta la BD para verificar `isActive()` y
+  el tenant. Desactivar un usuario tiene efecto inmediato sin esperar a que
+  expire el JWT. El rol también se lee de BD en cada request (sincronización
+  en tiempo real).
+- **Rate limiting y protección contra fuerza bruta en login (`LoginRateLimitService`):**
+  defensa en profundidad sin dependencias pesadas: (1) límite de 10 peticiones/minuto por IP a `/api/v1/auth/login` con HTTP 429 y `Retry-After`; (2) bloqueo temporal de 15 minutos al acumular 5 fallos consecutivos por email, rechazando solicitudes con HTTP 429 sin ejecutar el costoso cálculo de BCrypt; (3) reseteo de contador tras login exitoso; (4) limpieza periódica de registros vencidos cada 5 minutos.
+- **Pruebas en verde tras mejoras de auth:** `LoginRateLimitIntegrationTest` (4/4), `AuthRefreshIntegrationTest` (5/5) y `JwtSecurityIntegrationTest` (7/7).
+
 ### Fase 2 — Pacientes e historia clínica base (completada, FASE2-01–10)
 
 Módulo `patient`:
@@ -358,7 +438,14 @@ Módulo `patient`:
 - `ClinicalRecord` (FASE2-05/06): modelo de historia clínica y endpoints (`POST /{id}/clinical-records`, `GET /{id}/clinical-records`).
 - `OdontogramEntry` (FASE2-07/08): modelo de odontograma no destructivo, validación de notación FDI (11 a 48), 4 tipos de entrada y endpoints (`POST /{id}/odontogram`, `GET /{id}/odontogram` agrupado por pieza y tipo).
 - Almacenamiento S3 y archivos (FASE2-09/10): `PatientFile` con Flyway `V9`, cliente S3 SDK v2 (`software.amazon.awssdk:s3`), subida multipart `POST /{id}/files` con compensación automática de borrado en S3 si falla la base de datos, listado `GET /{id}/files` y generación de URLs prefirmadas temporales (15 min) `GET /{id}/files/{fileId}/download-url` con `S3Presigner`.
-- Pruebas cross-tenant obligatorias en todos los componentes con 99/99 pruebas en verde en `./mvnw.cmd clean verify`.
+- **Control de acceso por rol (`@PreAuthorize`) en `PatientController`:**
+  - Historia clínica (`POST /{id}/clinical-records`): restringida a personal facultativo (`PROPIETARIO`, `ODONTOLOGO`, `ESPECIALISTA_EXTERNO`).
+  - Historia clínica (`GET /{id}/clinical-records`): confidencial para personal asistencial (`PROPIETARIO`, `ODONTOLOGO`, `ESPECIALISTA_EXTERNO`, `AUXILIAR`). Recepción bloqueada con 403.
+  - Odontograma (`POST /{id}/odontogram`): reservado a `PROPIETARIO`, `ODONTOLOGO`, `ESPECIALISTA_EXTERNO`.
+  - Baja lógica (`DELETE /{id}`): acción destructiva reservada exclusivamente a `PROPIETARIO`.
+  - Gestión demográfica (`POST /patients`, `PATCH /patients/{id}`): `PROPIETARIO`, `RECEPCION`, `ODONTOLOGO`, `AUXILIAR`.
+  - 11 pruebas de autorización en `PatientRoleAuthorizationIntegrationTest` (11/11 en verde).
+- Total de pruebas del proyecto: **124/124 pruebas en verde** en `./mvnw.cmd clean verify`.
 
 ### Fase 3 — (siguiente)
 

@@ -72,12 +72,12 @@ class PatientControllerIntegrationTest extends AbstractIntegrationTest {
 
     tenantA = tenantRepository.save(new Tenant("Clínica CRUD A", "903111222-1"));
     User userA = userService.createUser(
-        tenantA.getId(), "recepcion@crud-a.com", "ClaveSegura123!", "Recepción A", UserRole.recepcion);
+        tenantA.getId(), "propietario@crud-a.com", "ClaveSegura123!", "Propietario A", UserRole.propietario);
     tokenA = jwtService.generateToken(userA);
 
     tenantB = tenantRepository.save(new Tenant("Clínica CRUD B", "904333444-2"));
     User userB = userService.createUser(
-        tenantB.getId(), "recepcion@crud-b.com", "ClaveSegura456!", "Recepción B", UserRole.recepcion);
+        tenantB.getId(), "propietario@crud-b.com", "ClaveSegura456!", "Propietario B", UserRole.propietario);
     tokenB = jwtService.generateToken(userB);
   }
 

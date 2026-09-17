@@ -2,6 +2,7 @@ package com.julio.odentix.odentix_backend.auth.service;
 
 import com.julio.odentix.odentix_backend.auth.entity.User;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -42,14 +43,20 @@ public class JwtService {
   public String generateToken(User user) {
     Instant now = Instant.now();
     Instant expiry = now.plus(expirationMinutes, ChronoUnit.MINUTES);
+    return generateToken(user, Date.from(now), Date.from(expiry));
+  }
 
+  /**
+   * Genera un JWT con fechas explícitas de emisión y expiración.
+   */
+  public String generateToken(User user, Date issuedAt, Date expiration) {
     return Jwts.builder()
         .subject(user.getId().toString())
         .claim("tenant_id", user.getTenant().getId().toString())
         .claim("email", user.getEmail())
         .claim("role", user.getRole().name())
-        .issuedAt(Date.from(now))
-        .expiration(Date.from(expiry))
+        .issuedAt(issuedAt)
+        .expiration(expiration)
         .signWith(secretKey)
         .compact();
   }
@@ -68,15 +75,27 @@ public class JwtService {
   }
 
   /**
+   * Valida detalladamente el token distinguiendo entre vigente, expirado o inválido/manipulado.
+   */
+  public JwtValidationResult validateTokenResult(String token) {
+    try {
+      Claims claims = extractAllClaims(token);
+      if (claims.getExpiration() != null && claims.getExpiration().before(new Date())) {
+        return JwtValidationResult.EXPIRED;
+      }
+      return JwtValidationResult.VALID;
+    } catch (ExpiredJwtException e) {
+      return JwtValidationResult.EXPIRED;
+    } catch (JwtException | IllegalArgumentException e) {
+      return JwtValidationResult.INVALID;
+    }
+  }
+
+  /**
    * Valida si el token es estructuralmente correcto, su firma es válida y no ha expirado.
    */
   public boolean validateToken(String token) {
-    try {
-      Claims claims = extractAllClaims(token);
-      return claims.getExpiration().after(new Date());
-    } catch (JwtException | IllegalArgumentException e) {
-      return false;
-    }
+    return validateTokenResult(token) == JwtValidationResult.VALID;
   }
 
   public UUID extractUserId(String token) {
