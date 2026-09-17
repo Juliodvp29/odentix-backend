@@ -70,6 +70,7 @@ class AuthLoginIntegrationTest extends AbstractIntegrationTest {
             .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.accessToken").isNotEmpty())
+        .andExpect(jsonPath("$.refreshToken").isNotEmpty())
         .andExpect(jsonPath("$.tokenType").value("Bearer"))
         .andExpect(jsonPath("$.expiresInSeconds").isNumber())
         .andExpect(jsonPath("$.user.email").value(userEmail))

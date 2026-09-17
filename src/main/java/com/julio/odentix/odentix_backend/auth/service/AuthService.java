@@ -5,8 +5,12 @@ import com.julio.odentix.odentix_backend.audit.service.AuditService;
 import com.julio.odentix.odentix_backend.auth.dto.LoginRequest;
 import com.julio.odentix.odentix_backend.auth.dto.LoginResponse;
 import com.julio.odentix.odentix_backend.auth.dto.UserSummaryDto;
+import com.julio.odentix.odentix_backend.auth.dto.LogoutRequest;
+import com.julio.odentix.odentix_backend.auth.dto.TokenRefreshRequest;
+import com.julio.odentix.odentix_backend.auth.dto.TokenRefreshResponse;
 import com.julio.odentix.odentix_backend.auth.entity.User;
 import com.julio.odentix.odentix_backend.auth.repository.UserRepository;
+import com.julio.odentix.odentix_backend.auth.service.RefreshTokenService.RotatedTokenResult;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -17,10 +21,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Servicio de autenticación y emisión de credenciales (FASE1-06).
+ * Servicio de autenticación y emisión de credenciales (FASE1-06 / FASE1-IMPROVE).
  *
- * <p>Maneja el flujo de login por email y contraseña. No filtra detalles del fallo
- * (usuario inexistente vs contraseña errónea) para prevenir ataques de enumeración.
+ * <p>Maneja el flujo de login por email y contraseña, rotación de refresh tokens y logout.
+ * No filtra detalles del fallo (usuario inexistente vs contraseña errónea) para prevenir ataques de enumeración.
  *
  * <p>Convención: Sin Lombok (regla §9 de AGENTS.md).
  */
@@ -30,16 +34,19 @@ public class AuthService {
   private final UserRepository userRepository;
   private final PasswordEncoder passwordEncoder;
   private final JwtService jwtService;
+  private final RefreshTokenService refreshTokenService;
   private final AuditService auditService;
 
   public AuthService(
       UserRepository userRepository,
       PasswordEncoder passwordEncoder,
       JwtService jwtService,
+      RefreshTokenService refreshTokenService,
       AuditService auditService) {
     this.userRepository = userRepository;
     this.passwordEncoder = passwordEncoder;
     this.jwtService = jwtService;
+    this.refreshTokenService = refreshTokenService;
     this.auditService = auditService;
   }
 
@@ -73,9 +80,30 @@ public class AuthService {
         Map.of("email", request.getEmail()));
 
     String token = jwtService.generateToken(user);
+    String refreshToken = refreshTokenService.createRefreshToken(user);
     long expiresInSeconds = jwtService.getExpirationMinutes() * 60;
 
-    return new LoginResponse(token, expiresInSeconds, UserSummaryDto.fromEntity(user));
+    return new LoginResponse(token, refreshToken, expiresInSeconds, UserSummaryDto.fromEntity(user));
+  }
+
+  /**
+   * Rota el refresh token provisto y emite un nuevo par (access token + refresh token).
+   */
+  @Transactional
+  public TokenRefreshResponse refreshToken(TokenRefreshRequest request) {
+    RotatedTokenResult result = refreshTokenService.rotateRefreshToken(request.getRefreshToken());
+    String newAccessToken = jwtService.generateToken(result.user());
+    long expiresInSeconds = jwtService.getExpirationMinutes() * 60;
+
+    return new TokenRefreshResponse(newAccessToken, result.newRefreshToken(), expiresInSeconds);
+  }
+
+  /**
+   * Revoca el refresh token para cerrar la sesión de forma segura.
+   */
+  @Transactional
+  public void logout(LogoutRequest request) {
+    refreshTokenService.revokeToken(request.getRefreshToken());
   }
 
   private User buscarCandidato(LoginRequest request) {

@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.julio.odentix.odentix_backend.AbstractIntegrationTest;
 import com.julio.odentix.odentix_backend.auth.entity.User;
 import com.julio.odentix.odentix_backend.auth.entity.UserRole;
+import com.julio.odentix.odentix_backend.auth.repository.UserRepository;
 import com.julio.odentix.odentix_backend.auth.service.JwtService;
 import com.julio.odentix.odentix_backend.auth.service.UserService;
 import com.julio.odentix.odentix_backend.tenant.entity.Tenant;
@@ -18,7 +19,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * Pruebas de integración para la validación de JWT en Spring Security (FASE1-07).
+ * Pruebas de integración para la validación de JWT en Spring Security (FASE1-07)
+ * y verificación en tiempo real del usuario en base de datos (FASE1-IMPROVE).
  */
 @AutoConfigureMockMvc
 class JwtSecurityIntegrationTest extends AbstractIntegrationTest {
@@ -28,6 +30,9 @@ class JwtSecurityIntegrationTest extends AbstractIntegrationTest {
 
   @Autowired
   private TenantRepository tenantRepository;
+
+  @Autowired
+  private UserRepository userRepository;
 
   @Autowired
   private UserService userService;
@@ -86,5 +91,27 @@ class JwtSecurityIntegrationTest extends AbstractIntegrationTest {
             .header("Authorization", "Basic 123456"))
         .andExpect(status().isUnauthorized())
         .andExpect(jsonPath("$.error").value("No autorizado"));
+  }
+
+  @Test
+  void usuarioDesactivadoEnBdRechazaRequestAunqueTokenSeaValido() throws Exception {
+    user.setActive(false);
+    userRepository.save(user);
+
+    mockMvc.perform(get("/api/v1/me")
+            .header("Authorization", "Bearer " + validToken))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.error").value("No autorizado"));
+  }
+
+  @Test
+  void cambioDeRolEnBdSeReflejaEnTiempoReal() throws Exception {
+    user.setRole(UserRole.propietario);
+    userRepository.save(user);
+
+    mockMvc.perform(get("/api/v1/me")
+            .header("Authorization", "Bearer " + validToken))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.role").value("propietario"));
   }
 }

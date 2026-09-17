@@ -42,7 +42,8 @@ management:
 jwt:
   # Clave HMAC-SHA256 (al menos 256 bits = 32 caracteres). En prod se sobreescribe con JWT_SECRET.
   secret: ${JWT_SECRET:odentix_super_secret_jwt_key_for_development_purposes_only_123456}
-  expiration-minutes: ${JWT_EXPIRATION_MINUTES:1440}
+  expiration-minutes: ${JWT_EXPIRATION_MINUTES:15}
+  refresh-token-expiration-days: ${JWT_REFRESH_TOKEN_EXPIRATION_DAYS:7}
 
 storage:
   s3:
