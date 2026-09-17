@@ -1173,14 +1173,16 @@ Consultar la agenda es tan importante como crearla.
 
 **Tareas:**
 
-- [ ] `GET /api/v1/appointments` con filtros por rango de fechas y,
+- [x] `GET /api/v1/appointments` con filtros por rango de fechas y,
       opcionalmente, por profesional.
-- [ ] Test de aislamiento cross-tenant.
+- [x] Test de aislamiento cross-tenant.
 
 **Criterios de aceptación:**
 
-- [ ] Filtrar por un rango de fechas devuelve solo las citas de ese
+- [x] Filtrar por un rango de fechas devuelve solo las citas de ese
       rango, ordenadas por hora de inicio.
+      (Verificado con `AppointmentAgendaIntegrationTest` 6/6 en verde;
+      `./mvnw.cmd clean verify`: 146/146 pruebas sin fallos).
 
 ---
 
@@ -1196,16 +1198,18 @@ Estados: `programada` → `confirmada` → `atendida` / `no_show` /
 
 **Tareas:**
 
-- [ ] Endpoint de cambio de estado (`PATCH /api/v1/appointments/{id}/status`).
-- [ ] Reglas de transición válida en el service layer (ej. no se puede
+- [x] Endpoint de cambio de estado (`PATCH /api/v1/appointments/{id}/status`).
+- [x] Reglas de transición válida en el service layer (ej. no se puede
       pasar de `cancelada` a `atendida`).
-- [ ] Test de transiciones inválidas.
+- [x] Test de transiciones inválidas.
 
 **Criterios de aceptación:**
 
-- [ ] Las transiciones inválidas de estado devuelven `400` con un
+- [x] Las transiciones inválidas de estado devuelven `400` con un
       mensaje claro sobre qué transición se intentó y por qué no es
       válida.
+      (Verificado con `AppointmentStatusIntegrationTest` 7/7 en verde;
+      `./mvnw.cmd clean verify`: 153/153 pruebas sin fallos).
 
 **Temas de Spring Boot:** modelado de máquinas de estado simples (enum
 
@@ -1227,15 +1231,19 @@ lógica de riesgo/priorización llega después).
 
 **Tareas:**
 
-- [ ] Campo `estimated_value_cop` en `Appointment` (ya existe en
+- [x] Campo `estimated_value_cop` en `Appointment` (ya existe en
       `schema.sql`, confirmar que el DTO lo expone).
-- [ ] Endpoint de agregación: suma de valor estimado por rango de
+- [x] Endpoint de agregación: suma de valor estimado por rango de
       fechas.
 
 **Criterios de aceptación:**
 
-- [ ] El endpoint de agregación devuelve un total coherente con la
+- [x] El endpoint de agregación devuelve un total coherente con la
       suma manual de las citas del rango.
+      (Verificado con `AppointmentValueIntegrationTest` 4/4 en verde;
+      `./mvnw.cmd clean verify`: 157/157 pruebas sin fallos.
+      Decisión: excluye `cancelada`/`no_show`, coherente con el espacio
+      liberado de FASE3-02).
 
 ---
 
@@ -1251,14 +1259,16 @@ procedimiento.
 
 **Tareas:**
 
-- [ ] Entidad `WaitlistEntry`: paciente, procedimiento de interés,
+- [x] Entidad `WaitlistEntry`: paciente, procedimiento de interés,
       rango de fechas deseado, estado.
-- [ ] `POST /api/v1/waitlist` para registrar un interesado.
+- [x] `POST /api/v1/waitlist` para registrar un interesado.
 
 **Criterios de aceptación:**
 
-- [ ] Se puede registrar un paciente en lista de espera para un tipo de
+- [x] Se puede registrar un paciente en lista de espera para un tipo de
       procedimiento y rango de fechas.
+      (Verificado con `WaitlistIntegrationTest` 6/6 en verde;
+      `./mvnw.cmd clean verify`: 163/163 pruebas sin fallos).
 
 ---
 
@@ -1275,24 +1285,26 @@ Fase 8, aquí solo la lógica de "quién calza").
 
 **Tareas:**
 
-- [ ] Al transicionar una cita a `cancelada`, calcular candidatos
+- [x] Al transicionar una cita a `cancelada`, calcular candidatos
       compatibles de `WaitlistEntry` (mismo tipo de procedimiento y
       disponibilidad declarada que se solapa con el horario liberado).
-- [ ] Endpoint que devuelve esos candidatos para la cita cancelada.
+- [x] Endpoint que devuelve esos candidatos para la cita cancelada (`GET /api/v1/appointments/{id}/waitlist-candidates`).
 
 **Criterios de aceptación:**
 
-- [ ] Cancelar una cita marcada como de alto valor devuelve al menos
+- [x] Cancelar una cita marcada como de alto valor devuelve al menos
       la lista de candidatos compatibles, si existen.
+      (Verificado con `SlotRecoveryIntegrationTest` 7/7 en verde;
+      `./mvnw.cmd clean verify`: 170/170 pruebas sin fallos).
 
 ---
 
 ### ✅ Checklist de salida de Fase 3
 
-- [ ] Restricción `EXCLUDE` de solapamiento verificada con un test real
-      (no solo revisada visualmente).
-- [ ] Se puede hacer una demo: crear cita → confirmar → cancelar → ver
-      candidatos de lista de espera sugeridos.
+- [x] Restricción `EXCLUDE` de solapamiento verificada con un test real
+      (verificado en `AppointmentIntegrationTest.java`).
+- [x] Se puede hacer una demo: crear cita → confirmar → cancelar → ver
+      candidatos de lista de espera sugeridos (verificado con `SlotRecoveryIntegrationTest.java`).
 
 ---
 

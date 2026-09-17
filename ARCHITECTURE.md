@@ -2,7 +2,7 @@
 
 > Documento vivo de arquitectura y decisiones del backend SaaS para clínicas
 > odontológicas (multi-tenant: cada clínica es un `tenant`).
-> **Estado:** documenta Fase 0 y Fase 1. Al cerrar cada fase este archivo debe
+> **Estado:** documenta Fase 0, Fase 1, Fase 2 y Fase 3. Al cerrar cada fase este archivo debe
 > actualizarse (regla en `AGENTS.md` §11: sin esa actualización la fase no se
 > considera cerrada).
 >
@@ -389,6 +389,13 @@ NULL). Detalle solo con el email: nunca contraseñas.
 | FASE2-07 | Entradas de odontograma append-only | Cada entrada es un momento clínico; varias entradas coexisten en la misma pieza |
 | FASE2-09 | Compensación en subida de archivos S3 | Si el guardado en BD falla tras subir a S3, se elimina el objeto para evitar huérfanos |
 | FASE2-10 | URLs prefirmadas temporales con S3Presigner | Descarga directa desde storage/CDN sin saturar ancho de banda del backend (15 min) |
+| FASE3-01 | Recursos físicos y profesionales (`Professional`, `Room`) | Desacoplados del usuario de login; `Room` opcional en la cita |
+| FASE3-02 | Prevención de solapamiento vía constraint PostgreSQL `EXCLUDE USING gist` | Garantía a nivel de motor contra carreras concurrentes usando `tstzrange`; citas canceladas/no_show excluidas (`WHERE status NOT IN ('cancelada', 'no_show')`) |
+| FASE3-03 | Consulta de agenda con filtros opcionales de rango y profesional | Ordenamiento cronológico ascendente y aislamiento cross-tenant estricto |
+| FASE3-04 | Máquina de estados en servicio con transiciones explícitas | Validaciones en dominio (`programada` -> `confirmada` -> `atendida` / `no_show` / `cancelada`) con HTTP 400 descriptivo |
+| FASE3-05 | Agregación de valor de agenda (`summarizeValue`) | Excluye citas canceladas y no_show, coherente con el espacio liberado |
+| FASE3-06 | `WaitlistEntry` para demanda insatisfecha | Ventana de disponibilidad temporal (`desired_from`, `desired_to`) y procedimiento de interés |
+| FASE3-07 | Recuperación de espacio al cancelar cita | Sugerencia inmediata de candidatos compatibles en la respuesta de cancelación y vía endpoint dedicado, con orden FIFO y exclusión del paciente cancelador |
 
 ---
 
@@ -447,6 +454,22 @@ Módulo `patient`:
   - 11 pruebas de autorización en `PatientRoleAuthorizationIntegrationTest` (11/11 en verde).
 - Total de pruebas del proyecto: **124/124 pruebas en verde** en `./mvnw.cmd clean verify`.
 
-### Fase 3 — (siguiente)
+### Fase 3 — Agenda y citas (completada, FASE3-01–07)
 
-Agenda y citas. Modelado de `Professional` y `Room` (FASE3-01), prevención de solapamiento de citas con `EXCLUDE USING gist` en PostgreSQL (FASE3-02) y endpoints de consulta y gestión de agenda (FASE3-03/04).
+Módulo `appointment`:
+- `Professional` y `Room` (FASE3-01): catálogo de recursos profesionales y consultorios/sillones por tenant con validación de existencia y estado activo. Migración Flyway `V11__create_professionals_and_rooms.sql`.
+- `Appointment` y prevención de solapamiento (FASE3-02): modelo de citas con migración `V12__create_appointments.sql`. Restricción `EXCLUDE USING gist` en PostgreSQL sobre `(tenant_id WITH =, professional_id WITH =, tstzrange(starts_at, ends_at) WITH &&)` para evitar doble-agendamiento físico a nivel de motor. Citas canceladas y no_show quedan excluidas del constraint (`WHERE status NOT IN ('cancelada', 'no_show')`), liberando el espacio automáticamente. Manejo de error en `GlobalExceptionHandler` traduciendo a HTTP 409 Conflict.
+- Endpoints de consulta de agenda (FASE3-03): `GET /api/v1/appointments` con filtros opcionales por rango (`from`, `to`) y por profesional (`professionalId`), ordenados por `starts_at ASC`. Aislamiento cross-tenant verificado.
+- Máquina de estados y transiciones válidas (FASE3-04): `PATCH /api/v1/appointments/{id}/status` soportando ciclo `programada` → `confirmada` → `atendida` / `no_show` / `cancelada`. Transiciones ilegales rechazadas con HTTP 400.
+- Valor económico de la cita (FASE3-05): campo `estimated_value_cop` y endpoint de agregación `GET /api/v1/appointments/summary-value` que suma y cuenta citas del rango excluyendo estados terminales liberados (`cancelada`, `no_show`).
+- Lista de espera (FASE3-06): modelo `WaitlistEntry` con migración `V13__create_waitlist_entries.sql` y endpoint `POST /api/v1/waitlist` para registrar demanda insatisfecha con ventana de disponibilidad y procedimiento deseado.
+- Recuperación de espacio al cancelar una cita (FASE3-07):
+  - Al transicionar una cita a `cancelada` vía `PATCH /api/v1/appointments/{id}/status`, el backend calcula automáticamente los candidatos compatibles de la lista de espera y los anexa en `AppointmentResponse.waitlistCandidates`.
+  - Endpoint dedicado de consulta: `GET /api/v1/appointments/{id}/waitlist-candidates`.
+  - Lógica de compatibilidad: mismo tenant, estado activo (`WaitlistStatus.activa`), procedimiento compatible (mismo `procedureId` o comodín `null`), ventana horaria solapada con el intervalo liberado, exclusión del paciente cancelador y orden FIFO por fecha de registro.
+  - Verificado con `SlotRecoveryIntegrationTest` (7/7 en verde).
+- Total de pruebas del proyecto: **170/170 pruebas en verde** en `./mvnw.cmd clean verify`.
+
+### Fase 4 — (siguiente)
+
+Planes de tratamiento y facturación básica. Modelado de `TreatmentPlan` (FASE4-01), ítems de tratamiento (FASE4-02), máquina de estados de planes (FASE4-03) y facturación básica con pagos (FASE4-04/05).

@@ -1,17 +1,27 @@
 package com.julio.odentix.odentix_backend.appointment.controller;
 
 import com.julio.odentix.odentix_backend.appointment.dto.AppointmentResponse;
+import com.julio.odentix.odentix_backend.appointment.dto.AppointmentValueSummary;
 import com.julio.odentix.odentix_backend.appointment.dto.CreateAppointmentRequest;
+import com.julio.odentix.odentix_backend.appointment.dto.UpdateAppointmentStatusRequest;
+import com.julio.odentix.odentix_backend.appointment.dto.WaitlistEntryResponse;
 import com.julio.odentix.odentix_backend.appointment.service.AppointmentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -49,5 +59,82 @@ public class AppointmentController {
         .buildAndExpand(response.getId())
         .toUri();
     return ResponseEntity.created(location).body(response);
+  }
+
+  /**
+   * Consulta la agenda de un rango de fechas, opcionalmente filtrada por
+   * profesional, ordenada por hora de inicio.
+   *
+   * @param from inicio del rango en formato ISO-8601.
+   * @param to fin del rango en formato ISO-8601.
+   * @param professionalId filtro opcional por profesional del tenant activo.
+   * @return citas del rango en orden ascendente de inicio.
+   */
+  @GetMapping
+  @PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
+  @Operation(
+      summary = "Consultar agenda",
+      description = "Devuelve las citas del tenant activo que inician dentro del rango, ordenadas por hora de inicio. Permite filtrar por profesional."
+  )
+  public ResponseEntity<List<AppointmentResponse>> listAppointments(
+      @RequestParam Instant from,
+      @RequestParam Instant to,
+      @RequestParam(required = false) UUID professionalId) {
+    return ResponseEntity.ok(appointmentService.listAppointments(from, to, professionalId));
+  }
+
+  /**
+   * Cambia el estado de una cita validando que la transición sea permitida.
+   *
+   * @param id identificador de la cita dentro del tenant activo.
+   * @param request estado destino deseado.
+   * @return cita actualizada.
+   */
+  @PatchMapping("/{id}/status")
+  @PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
+  @Operation(
+      summary = "Cambiar estado de la cita",
+      description = "Avanza la cita por su ciclo de vida (programada → confirmada → atendida / no_show / cancelada). Las transiciones inválidas devuelven 400."
+  )
+  public ResponseEntity<AppointmentResponse> updateStatus(
+      @PathVariable UUID id,
+      @Valid @RequestBody UpdateAppointmentStatusRequest request) {
+    return ResponseEntity.ok(appointmentService.updateStatus(id, request));
+  }
+
+  /**
+   * Suma del valor estimado de la agenda en un rango de fechas.
+   *
+   * @param from inicio del rango en formato ISO-8601.
+   * @param to fin del rango en formato ISO-8601.
+   * @return total estimado y conteo de citas del rango (sin canceladas ni no_show).
+   */
+  @GetMapping("/estimated-value")
+  @PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
+  @Operation(
+      summary = "Valor estimado de la agenda",
+      description = "Devuelve la suma del valor estimado y el conteo de citas del tenant activo en el rango. Excluye citas canceladas y no_show."
+  )
+  public ResponseEntity<AppointmentValueSummary> summarizeValue(
+      @RequestParam Instant from,
+      @RequestParam Instant to) {
+    return ResponseEntity.ok(appointmentService.summarizeValue(from, to));
+  }
+
+  /**
+   * Obtiene los candidatos compatibles de la lista de espera para el horario
+   * y procedimiento de una cita (FASE3-07, recuperación de espacios).
+   *
+   * @param id identificador de la cita dentro del tenant activo.
+   * @return lista de candidatos compatibles en orden FIFO.
+   */
+  @GetMapping("/{id}/waitlist-candidates")
+  @PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
+  @Operation(
+      summary = "Candidatos de lista de espera para cita",
+      description = "Devuelve los pacientes en lista de espera compatibles con el horario y procedimiento de la cita para recuperación de espacio."
+  )
+  public ResponseEntity<List<WaitlistEntryResponse>> getWaitlistCandidates(@PathVariable UUID id) {
+    return ResponseEntity.ok(appointmentService.findWaitlistCandidates(id));
   }
 }
