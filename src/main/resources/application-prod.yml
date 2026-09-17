@@ -11,3 +11,10 @@ spring:
 server:
   # En prod el proveedor asigna el puerto vía $PORT.
   port: ${PORT:8080}
+
+# La documentación interactiva no se expone en producción.
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

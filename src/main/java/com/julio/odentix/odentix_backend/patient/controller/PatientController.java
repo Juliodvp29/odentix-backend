@@ -15,6 +15,8 @@ import com.julio.odentix.odentix_backend.patient.service.ClinicalRecordService;
 import com.julio.odentix.odentix_backend.patient.service.OdontogramService;
 import com.julio.odentix.odentix_backend.patient.service.PatientFileService;
 import com.julio.odentix.odentix_backend.patient.service.PatientService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -46,6 +48,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
  */
 @RestController
 @RequestMapping("/api/v1/patients")
+@Tag(name = "Pacientes", description = "CRUD, historia clínica, odontograma y archivos. Todo se aísla por tenant.")
 public class PatientController {
 
   private final PatientService patientService;
@@ -65,6 +68,7 @@ public class PatientController {
   }
 
   @PostMapping(value = "/{id}/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @Operation(summary = "Subir un archivo del paciente (solo metadatos en BD, binario en S3)")
   public ResponseEntity<PatientFileResponse> uploadFile(
       @PathVariable UUID id,
       @RequestParam("file") MultipartFile file,
@@ -78,17 +82,20 @@ public class PatientController {
   }
 
   @GetMapping("/{id}/files")
+  @Operation(summary = "Listar archivos del paciente")
   public ResponseEntity<List<PatientFileResponse>> listFiles(@PathVariable UUID id) {
     return ResponseEntity.ok(patientFileService.listByPatient(id));
   }
 
   @GetMapping("/{id}/files/{fileId}/download-url")
+  @Operation(summary = "Obtener URL de descarga de un archivo")
   public ResponseEntity<PatientFileDownloadResponse> getFileDownloadUrl(
       @PathVariable UUID id, @PathVariable UUID fileId) {
     return ResponseEntity.ok(patientFileService.getDownloadUrl(id, fileId));
   }
 
   @PostMapping("/{id}/clinical-records")
+  @Operation(summary = "Agregar una entrada a la historia clínica")
   public ResponseEntity<ClinicalRecordResponse> addClinicalRecord(
       @PathVariable UUID id, @Valid @RequestBody CreateClinicalRecordRequest request) {
     ClinicalRecordResponse created = clinicalRecordService.addEntry(id, request);
@@ -100,11 +107,13 @@ public class PatientController {
   }
 
   @GetMapping("/{id}/clinical-records")
+  @Operation(summary = "Listar el historial clínico (más reciente primero)")
   public ResponseEntity<List<ClinicalRecordResponse>> listClinicalRecords(@PathVariable UUID id) {
     return ResponseEntity.ok(clinicalRecordService.listByPatient(id));
   }
 
   @PostMapping("/{id}/odontogram")
+  @Operation(summary = "Registrar una entrada de odontograma (nunca sobrescribe)")
   public ResponseEntity<OdontogramEntryResponse> addOdontogramEntry(
       @PathVariable UUID id, @Valid @RequestBody CreateOdontogramEntryRequest request) {
     OdontogramEntryResponse created = odontogramService.addEntry(id, request);
@@ -116,11 +125,13 @@ public class PatientController {
   }
 
   @GetMapping("/{id}/odontogram")
+  @Operation(summary = "Ver el odontograma agrupado por pieza y por tipo")
   public ResponseEntity<OdontogramResponse> getOdontogram(@PathVariable UUID id) {
     return ResponseEntity.ok(odontogramService.getOdontogram(id));
   }
 
   @PostMapping
+  @Operation(summary = "Crear un paciente en el tenant autenticado")
   public ResponseEntity<PatientResponse> create(@Valid @RequestBody CreatePatientRequest request) {
     PatientResponse created = patientService.create(request);
     URI location = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -131,6 +142,7 @@ public class PatientController {
   }
 
   @GetMapping
+  @Operation(summary = "Listar pacientes con paginación y búsqueda opcional")
   public ResponseEntity<Page<PatientResponse>> list(
       @RequestParam(required = false) String query,
       @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -138,17 +150,20 @@ public class PatientController {
   }
 
   @GetMapping("/{id}")
+  @Operation(summary = "Obtener un paciente por ID (404 si es de otro tenant)")
   public ResponseEntity<PatientResponse> getById(@PathVariable UUID id) {
     return ResponseEntity.ok(patientService.getById(id));
   }
 
   @PatchMapping("/{id}")
+  @Operation(summary = "Actualizar parcialmente un paciente")
   public ResponseEntity<PatientResponse> patch(
       @PathVariable UUID id, @Valid @RequestBody UpdatePatientRequest request) {
     return ResponseEntity.ok(patientService.patch(id, request));
   }
 
   @DeleteMapping("/{id}")
+  @Operation(summary = "Dar de baja un paciente (baja lógica, no borra la fila)")
   public ResponseEntity<Void> delete(@PathVariable UUID id) {
     // Baja lógica: marca is_active = false, no borra la fila (FASE2-02).
     patientService.deactivate(id);

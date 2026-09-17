@@ -30,6 +30,7 @@
 		<java.version>25</java.version>
 		<jjwt.version>0.12.6</jjwt.version>
 		<aws.sdk.version>2.30.34</aws.sdk.version>
+		<springdoc.version>3.1.1</springdoc.version>
 	</properties>
 	<!-- FASE0-06: el parent fija la versión del BOM (testcontainers-bom);
 	     importarlo versiona todos los org.testcontainers:* sin fijar cada uno. -->
@@ -85,6 +86,14 @@
 		<dependency>
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-database-postgresql</artifactId>
+		</dependency>
+		<!-- Documentación interactiva: springdoc-openapi 3.x es la línea
+		     compatible con Spring Boot 4 (verificada en Maven Central; la 2.x
+		     es solo para Boot 3). UI en /swagger-ui.html, JSON en /v3/api-docs. -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>${springdoc.version}</version>
 		</dependency>
 
 		<dependency>
