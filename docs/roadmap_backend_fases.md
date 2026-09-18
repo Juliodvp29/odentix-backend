@@ -1797,15 +1797,28 @@ movimientos automáticamente al stock — aquí solo la capa Java.
 
 **Tareas:**
 
-- [ ] Entidades `InventoryItem`, `StockMovement`.
-- [ ] Migraciones Flyway correspondientes (reutilizando las de
+- [x] Entidades `InventoryItem`, `StockMovement`.
+      (Módulo nuevo `inventory/` con ambas entidades + repositorios; `quantity`
+      solo la mueve el trigger, Java nunca la recalcula; `createdBy` como UUID
+      simple, precedente `ClinicalRecord.professionalId`.)
+- [x] Migraciones Flyway correspondientes (reutilizando las de
       `schema.sql` si ya están escritas como referencia).
+      (`V20__create_inventory.sql`: tablas, índice parcial
+      `idx_inventory_items_critical`, función + trigger `apply_stock_movement`
+      reutilizados tal cual, triggers `set_updated_at`, RLS con política
+      `tenant_isolation`; desviación documentada: `updated_at` en
+      `stock_movements`, exigido por `TenantAwareEntity`.)
 
 **Criterios de aceptación:**
 
-- [ ] Insertar un `StockMovement` actualiza automáticamente la
+- [x] Insertar un `StockMovement` actualiza automáticamente la
       cantidad del `InventoryItem` (verificado por el trigger, no por
       lógica Java redundante).
+      (Verificado con `InventoryRepositoryIntegrationTest` 7/7 en verde:
+      entrada/salida aplicadas por trigger con re-lectura, consumo en negativo
+      revertido por CHECK con stock intacto, `delta = 0` y nombre duplicado
+      rechazados, detección de críticos por umbral, y aislamiento cross-tenant
+      a nivel JPA y de trigger; `./mvnw.cmd clean verify`: 265/265 sin fallos).
 
 ---
 
