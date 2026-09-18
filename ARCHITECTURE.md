@@ -2,7 +2,7 @@
 
 > Documento vivo de arquitectura y decisiones del backend SaaS para clínicas
 > odontológicas (multi-tenant: cada clínica es un `tenant`).
-> **Estado:** documenta Fase 0, Fase 1, Fase 2, Fase 3, Fase 4, Fase 5 y Fase 6. Al cerrar cada fase este archivo debe
+> **Estado:** documenta Fase 0, Fase 1, Fase 2, Fase 3, Fase 4, Fase 5, Fase 6 y Fase 7. Al cerrar cada fase este archivo debe
 > actualizarse (regla en `AGENTS.md` §11: sin esa actualización la fase no se
 > considera cerrada).
 >
@@ -572,7 +572,29 @@ Módulo `billing`/`cartera`:
     - `GET /api/v1/portfolio/summary`
 - Total de pruebas del proyecto: **244/244 pruebas en verde** en `./mvnw.cmd clean verify`.
 
-### Fase 7 — Especialistas externos e inventario (siguiente)
+### Fase 7 — Especialistas externos e inventario (completada, FASE7-01–04)
 
-Módulos `specialist` e `inventory`: Modelado de `Specialist` (1—1 con `Professional`, porcentaje de honorarios) y liquidaciones `SpecialistSettlement` (FASE7-01), catálogo de insumos dentales y control de stock mínimo con alertas (FASE7-02), consumo automático de insumos al completar citas/tratamientos (FASE7-03), y reporte de rentabilidad real por procedimiento (FASE7-04).
+Módulos `specialist` e `inventory`:
+- **Modelado de `Specialist` y liquidaciones (FASE7-01):**
+  - Entidad `Specialist` (extiende `TenantAwareEntity`, 1—1 con `Professional` vía `professional_id UNIQUE`, `fee_percentage NUMERIC(5,2)` 0–100).
+  - Entidad `SpecialistSettlement` (periodo `DATE` con CHECK `period_end >= period_start`, montos `NUMERIC(12,2)`, estado `settlement_status`, `paid_at` nullable) + enum nativo `SettlementStatus` con `@JdbcType(PostgreSQLEnumJdbcType.class)`.
+  - Migración `V19__create_specialists.sql`: trigger `check_specialist_is_external` reutilizado tal cual de `schema.sql` + validación de aplicación en `@PrePersist/@PreUpdate` (defensa en profundidad), RLS `tenant_isolation` en ambas tablas.
+  - Verificado con `SpecialistRepositoryIntegrationTest` (7/7 en verde).
+- **Cálculo y endpoint de liquidaciones (FASE7-02):**
+  - `POST /api/v1/specialists/{id}/settlements` (`SettlementController`, solo `PROPIETARIO`, 201 + `Location`): producción bruta = `SUM(total_cop)` de facturas emitidas en el periodo vinculadas a tratamientos del profesional (excluye `anulada` y sin tratamiento) vía `InvoiceRepository.sumFacturadoPorProfesionalEnPeriodo` (JPQL con filtro explícito de tenant); honorarios = bruto × porcentaje / 100 (HALF_UP); límites del periodo en la zona horaria de la clínica; idempotencia por periodo (409).
+  - Verificado con `SettlementIntegrationTest` (7/7 en verde).
+- **Modelado de inventario (FASE7-03):**
+  - Entidades `InventoryItem` (nombre único por tenant, `quantity`, `min_threshold`) y `StockMovement` (`quantity_delta` ≠ 0, `reason`, `created_by` UUID simple).
+  - Migración `V20__create_inventory.sql`: índice parcial `idx_inventory_items_critical`, función + trigger `apply_stock_movement` reutilizados tal cual (el trigger es el único que mueve el stock; el CHECK revierte consumos en negativo), RLS en ambas. Desviación: `updated_at` en `stock_movements` (lo exige `TenantAwareEntity`).
+  - Verificado con `InventoryRepositoryIntegrationTest` (7/7 en verde).
+- **Endpoints de inventario y alertas (FASE7-04):**
+  - `InventoryController` (`/api/v1/inventory`, roles operativos amplios): CRUD de ítems (DELETE solo sin movimientos → 409), `POST /items/{id}/movements` (devuelve stock resultante; negativo → 409 "Stock insuficiente"; `delta = 0` → 400), `GET /critical` (vía `findCritical` con JPQL explícito, usa el índice parcial).
+  - Verificado con `InventoryIntegrationTest` (8/8 en verde).
+- **Documentación OpenAPI y regla §4 de AGENTS.md:**
+  - Los 8 endpoints nuevos registrados y verificados en `OpenApiDocsIntegrationTest`:
+    - `POST /api/v1/specialists/{id}/settlements`
+    - `POST/GET /api/v1/inventory/items`, `GET /api/v1/inventory/critical`,
+      `GET/PATCH/DELETE /api/v1/inventory/items/{id}`,
+      `POST /api/v1/inventory/items/{id}/movements`
+- Total de pruebas del proyecto: **273/273 pruebas en verde** en `./mvnw.cmd clean verify`.
 

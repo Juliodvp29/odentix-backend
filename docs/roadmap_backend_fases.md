@@ -1830,19 +1830,30 @@ movimientos automáticamente al stock — aquí solo la capa Java.
 
 **Tareas:**
 
-- [ ] CRUD de `InventoryItem`, endpoint de registro de
+- [x] CRUD de `InventoryItem`, endpoint de registro de
       `StockMovement`.
-- [ ] `GET /api/v1/inventory/critical` — ítems con `quantity <=
+      (`InventoryController` + `InventoryService`: `POST/GET /api/v1/inventory/items`,
+      `GET/PATCH/DELETE /api/v1/inventory/items/{id}`,
+      `POST /api/v1/inventory/items/{id}/movements`; DELETE solo sin movimientos → 409;
+      `created_by` desde el usuario autenticado, precedente `LeadController`.)
+- [x] `GET /api/v1/inventory/critical` — ítems con `quantity <=
     min_threshold` (usa el índice parcial ya definido en
       `schema.sql`).
-- [ ] Test: un movimiento que dejaría el stock en negativo debe
+      (Vía `InventoryItemRepository.findCritical` con JPQL explícito — las queries
+      derivadas no comparan dos columnas.)
+- [x] Test: un movimiento que dejaría el stock en negativo debe
       fallar (verificado por el `CHECK` de la base, capturado y
       traducido a un `409`/`400` claro en la API).
+      (`InventoryIntegrationTest`: consumo en negativo → 409 "Stock insuficiente"
+      con stock intacto; `delta = 0` → 400.)
 
 **Criterios de aceptación:**
 
-- [ ] Al registrar un consumo de inventario, el stock se actualiza y
+- [x] Al registrar un consumo de inventario, el stock se actualiza y
       se puede consultar qué ítems están por debajo del umbral.
+      (Verificado con `InventoryIntegrationTest` 8/8 en verde: CRUD, movimientos
+      con stock resultante, entrada/salida en `critical`, cross-tenant 404;
+      `./mvnw.cmd clean verify`: 273/273 pruebas sin fallos).
 
 ---
 
