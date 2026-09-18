@@ -1409,18 +1409,20 @@ Generar facturas y registrar pagos contra ellas.
 
 **Tareas:**
 
-- [ ] `POST /api/v1/invoices` (generar factura, opcionalmente desde un
+- [x] `POST /api/v1/invoices` (generar factura, opcionalmente desde un
       `TreatmentPlan`).
-- [ ] `POST /api/v1/invoices/{id}/payments` (registrar pago parcial o
+- [x] `POST /api/v1/invoices/{id}/payments` (registrar pago parcial o
       total).
-- [ ] Lógica que actualiza `status` de la factura (`pendiente` →
+- [x] Lógica que actualiza `status` de la factura (`pendiente` →
       `parcial` → `pagada`) según los pagos acumulados.
-- [ ] Test de aislamiento cross-tenant.
+- [x] Test de aislamiento cross-tenant.
 
 **Criterios de aceptación:**
 
-- [ ] Registrar pagos parciales hasta cubrir el total cambia el estado
+- [x] Registrar pagos parciales hasta cubrir el total cambia el estado
       de la factura a `pagada` automáticamente.
+      (Verificado con `InvoiceIntegrationTest` 9/9 en verde;
+      `./mvnw.cmd clean verify`: 200/200 pruebas sin fallos).
 
 ---
 
