@@ -8,6 +8,9 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -19,7 +22,7 @@ import org.springframework.stereotype.Repository;
  * (regla §5 de AGENTS.md).
  */
 @Repository
-public interface LeadRepository extends JpaRepository<Lead, UUID> {
+public interface LeadRepository extends JpaRepository<Lead, UUID>, JpaSpecificationExecutor<Lead> {
 
   Optional<Lead> findByIdAndTenantId(UUID id, UUID tenantId);
 
@@ -36,4 +39,12 @@ public interface LeadRepository extends JpaRepository<Lead, UUID> {
   long countByTenantIdAndStatus(UUID tenantId, LeadStatus status);
 
   long countByTenantId(UUID tenantId);
+
+  @Query("""
+      SELECT l FROM Lead l
+      LEFT JOIN FETCH l.assignedTo
+      LEFT JOIN FETCH l.convertedPatient
+      WHERE l.id = :id AND l.tenantId = :tenantId
+  """)
+  Optional<Lead> findWithDetailsByIdAndTenantId(@Param("id") UUID id, @Param("tenantId") UUID tenantId);
 }

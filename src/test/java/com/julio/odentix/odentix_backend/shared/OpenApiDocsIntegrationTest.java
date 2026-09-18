@@ -64,6 +64,14 @@ class OpenApiDocsIntegrationTest extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.paths./api/v1/treatment-plans/{id}/status.patch").exists())
         // facturación y pagos.
         .andExpect(jsonPath("$.paths./api/v1/invoices.post").exists())
-        .andExpect(jsonPath("$.paths./api/v1/invoices/{id}/payments.post").exists());
+        .andExpect(jsonPath("$.paths./api/v1/invoices/{id}/payments.post").exists())
+        // CRM leads.
+        .andExpect(jsonPath("$.paths./api/v1/leads.post").exists())
+        .andExpect(jsonPath("$.paths./api/v1/leads.get").exists())
+        .andExpect(jsonPath("$.paths./api/v1/leads/{id}.get").exists())
+        .andExpect(jsonPath("$.paths./api/v1/leads/{id}.put").exists())
+        .andExpect(jsonPath("$.paths./api/v1/leads/{id}/status.patch").exists())
+        .andExpect(jsonPath("$.paths./api/v1/leads/{id}/activities.post").exists())
+        .andExpect(jsonPath("$.paths./api/v1/leads/{id}/activities.get").exists());
   }
 }

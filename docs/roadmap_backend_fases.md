@@ -1500,16 +1500,18 @@ Pipeline: `nuevo` → `contactado` → `calificado` → `cita_propuesta` →
 
 **Tareas:**
 
-- [ ] CRUD de `Lead` + endpoint de registro de `LeadActivity`.
-- [ ] Endpoint de cambio de estado, sin restricciones de transición
+- [x] CRUD de `Lead` + endpoint de registro de `LeadActivity`.
+- [x] Endpoint de cambio de estado, sin restricciones de transición
       estrictas (a diferencia de citas/tratamientos, un lead sí puede
       "retroceder" en el pipeline en casos reales).
-- [ ] Test de aislamiento cross-tenant.
+- [x] Test de aislamiento cross-tenant.
 
 **Criterios de aceptación:**
 
-- [ ] Se puede registrar un lead manualmente y moverlo por el pipeline
-      vía API.
+- [x] Se puede registrar un lead manualmente y moverlo por el pipeline
+      vía API. Verificado con `LeadIntegrationTest` (9/9 pruebas cubriendo CRUD,
+      retroceso/avance de pipeline, registro de actividad con actualización reactiva
+      de lastContactAt, paginación dinámica por Specification, aislamiento cross-tenant y RBAC).
 
 ---
 

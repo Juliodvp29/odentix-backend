@@ -22,5 +22,16 @@ public interface LeadActivityRepository extends JpaRepository<LeadActivity, UUID
 
   List<LeadActivity> findByLeadIdAndTenantIdOrderByCreatedAtDesc(UUID leadId, UUID tenantId);
 
+  @org.springframework.data.jpa.repository.Query("""
+      SELECT la FROM LeadActivity la
+      LEFT JOIN FETCH la.user
+      WHERE la.lead.id = :leadId AND la.tenantId = :tenantId
+      ORDER BY la.createdAt DESC
+  """)
+  List<LeadActivity> findByLeadIdAndTenantIdOrderByCreatedAtDescWithUser(
+      @org.springframework.data.repository.query.Param("leadId") UUID leadId,
+      @org.springframework.data.repository.query.Param("tenantId") UUID tenantId
+  );
+
   long countByTenantIdAndLeadId(UUID tenantId, UUID leadId);
 }
