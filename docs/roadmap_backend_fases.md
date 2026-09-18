@@ -1724,19 +1724,30 @@ Extensión financiera de `Professional` para especialistas externos
 
 **Tareas:**
 
-- [ ] Entidad `Specialist` (1—1 con `Professional`, porcentaje de
+- [x] Entidad `Specialist` (1—1 con `Professional`, porcentaje de
       honorarios). Reutiliza el trigger `check_specialist_is_external`
       de `schema.sql` — no reimplementes esa validación en Java como
       único mecanismo, es defensa en profundidad igual que con
       multi-tenancy.
-- [ ] Entidad `SpecialistSettlement` (liquidación por periodo).
-- [ ] Migraciones Flyway correspondientes.
+      (Módulo nuevo `specialist/` con `Specialist` + `SpecialistRepository`;
+      validación de aplicación en `@PrePersist/@PreUpdate` como segunda capa.)
+- [x] Entidad `SpecialistSettlement` (liquidación por periodo).
+      (`SpecialistSettlement` + enum `SettlementStatus` + `SpecialistSettlementRepository`;
+      nace en `pendiente` con montos en cero; cálculo en FASE7-02.)
+- [x] Migraciones Flyway correspondientes.
+      (`V19__create_specialists.sql`: tipo `settlement_status`, tablas
+      `specialists` y `specialist_settlements`, trigger `trg_check_specialist_is_external`,
+      triggers `set_updated_at`, RLS con política `tenant_isolation` en ambas.)
 
 **Criterios de aceptación:**
 
-- [ ] Intentar crear un `Specialist` sobre un `Professional` con
+- [x] Intentar crear un `Specialist` sobre un `Professional` con
       `is_external = false` falla (ya sea por el trigger de BD o por
       validación de aplicación — ambas deben estar presentes).
+      (Verificado con `SpecialistRepositoryIntegrationTest` 7/7 en verde:
+      rechazo en capa JPA y en trigger vía SQL nativo, UNIQUE por profesional,
+      CHECKs de `fee_percentage` y periodo, y aislamiento cross-tenant;
+      `./mvnw.cmd clean verify`: 251/251 pruebas sin fallos).
 
 ---
 
@@ -1748,16 +1759,29 @@ Extensión financiera de `Professional` para especialistas externos
 
 **Tareas:**
 
-- [ ] Lógica de cálculo de producción bruta de un especialista en un
+- [x] Lógica de cálculo de producción bruta de un especialista en un
       periodo (a partir de tratamientos/citas asociadas ya facturadas).
-- [ ] `POST /api/v1/specialists/{id}/settlements` (generar liquidación
+      (`SettlementService` + `InvoiceRepository.sumFacturadoPorProfesionalEnPeriodo`:
+      suma `total_cop` de facturas emitidas en el periodo vinculadas a tratamientos
+      del profesional, excluyendo `anulada` y facturas sin tratamiento; honorarios =
+      bruto × `fee_percentage` / 100 HALF_UP; límites del periodo en días calendario
+      de la zona horaria de la clínica.)
+- [x] `POST /api/v1/specialists/{id}/settlements` (generar liquidación
       para un periodo).
-- [ ] Test de aislamiento cross-tenant.
+      (`SettlementController` con `@Tag`/`@Operation`, 201 + `Location`;
+      solo `PROPIETARIO`; 409 si el periodo ya fue liquidado.)
+- [x] Test de aislamiento cross-tenant.
+      (`SettlementIntegrationTest`: especialista de otro tenant → 404;
+      recepción → 403; sin token → 401.)
 
 **Criterios de aceptación:**
 
-- [ ] Se puede calcular cuánto se le debe liquidar a un especialista en
+- [x] Se puede calcular cuánto se le debe liquidar a un especialista en
       un periodo dado, a partir de los tratamientos/citas asociadas.
+      (Verificado con `SettlementIntegrationTest` 7/7 en verde: cálculo exacto
+      bruto/honorarios con exclusiones de periodo, estado, profesional y facturas
+      sin tratamiento; idempotencia por periodo; `./mvnw.cmd clean verify`:
+      258/258 pruebas sin fallos).
 
 ---
 
@@ -1773,15 +1797,28 @@ movimientos automáticamente al stock — aquí solo la capa Java.
 
 **Tareas:**
 
-- [ ] Entidades `InventoryItem`, `StockMovement`.
-- [ ] Migraciones Flyway correspondientes (reutilizando las de
+- [x] Entidades `InventoryItem`, `StockMovement`.
+      (Módulo nuevo `inventory/` con ambas entidades + repositorios; `quantity`
+      solo la mueve el trigger, Java nunca la recalcula; `createdBy` como UUID
+      simple, precedente `ClinicalRecord.professionalId`.)
+- [x] Migraciones Flyway correspondientes (reutilizando las de
       `schema.sql` si ya están escritas como referencia).
+      (`V20__create_inventory.sql`: tablas, índice parcial
+      `idx_inventory_items_critical`, función + trigger `apply_stock_movement`
+      reutilizados tal cual, triggers `set_updated_at`, RLS con política
+      `tenant_isolation`; desviación documentada: `updated_at` en
+      `stock_movements`, exigido por `TenantAwareEntity`.)
 
 **Criterios de aceptación:**
 
-- [ ] Insertar un `StockMovement` actualiza automáticamente la
+- [x] Insertar un `StockMovement` actualiza automáticamente la
       cantidad del `InventoryItem` (verificado por el trigger, no por
       lógica Java redundante).
+      (Verificado con `InventoryRepositoryIntegrationTest` 7/7 en verde:
+      entrada/salida aplicadas por trigger con re-lectura, consumo en negativo
+      revertido por CHECK con stock intacto, `delta = 0` y nombre duplicado
+      rechazados, detección de críticos por umbral, y aislamiento cross-tenant
+      a nivel JPA y de trigger; `./mvnw.cmd clean verify`: 265/265 sin fallos).
 
 ---
 
@@ -1793,19 +1830,30 @@ movimientos automáticamente al stock — aquí solo la capa Java.
 
 **Tareas:**
 
-- [ ] CRUD de `InventoryItem`, endpoint de registro de
+- [x] CRUD de `InventoryItem`, endpoint de registro de
       `StockMovement`.
-- [ ] `GET /api/v1/inventory/critical` — ítems con `quantity <=
+      (`InventoryController` + `InventoryService`: `POST/GET /api/v1/inventory/items`,
+      `GET/PATCH/DELETE /api/v1/inventory/items/{id}`,
+      `POST /api/v1/inventory/items/{id}/movements`; DELETE solo sin movimientos → 409;
+      `created_by` desde el usuario autenticado, precedente `LeadController`.)
+- [x] `GET /api/v1/inventory/critical` — ítems con `quantity <=
     min_threshold` (usa el índice parcial ya definido en
       `schema.sql`).
-- [ ] Test: un movimiento que dejaría el stock en negativo debe
+      (Vía `InventoryItemRepository.findCritical` con JPQL explícito — las queries
+      derivadas no comparan dos columnas.)
+- [x] Test: un movimiento que dejaría el stock en negativo debe
       fallar (verificado por el `CHECK` de la base, capturado y
       traducido a un `409`/`400` claro en la API).
+      (`InventoryIntegrationTest`: consumo en negativo → 409 "Stock insuficiente"
+      con stock intacto; `delta = 0` → 400.)
 
 **Criterios de aceptación:**
 
-- [ ] Al registrar un consumo de inventario, el stock se actualiza y
+- [x] Al registrar un consumo de inventario, el stock se actualiza y
       se puede consultar qué ítems están por debajo del umbral.
+      (Verificado con `InventoryIntegrationTest` 8/8 en verde: CRUD, movimientos
+      con stock resultante, entrada/salida en `critical`, cross-tenant 404;
+      `./mvnw.cmd clean verify`: 273/273 pruebas sin fallos).
 
 ---
 

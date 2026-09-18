@@ -79,6 +79,16 @@ class OpenApiDocsIntegrationTest extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.paths./api/v1/leads/{id}/activities.get").exists())
         .andExpect(jsonPath("$.paths./api/v1/leads/{id}/convert.post").exists())
         .andExpect(jsonPath("$.paths./api/v1/leads/metrics/conversion.get").exists())
-        .andExpect(jsonPath("$.paths./api/v1/leads/metrics/response-time.get").exists());
+        .andExpect(jsonPath("$.paths./api/v1/leads/metrics/response-time.get").exists())
+        // especialistas: liquidación de honorarios (FASE7-02).
+        .andExpect(jsonPath("$.paths./api/v1/specialists/{id}/settlements.post").exists())
+        // inventario: CRUD, movimientos y críticos (FASE7-04).
+        .andExpect(jsonPath("$.paths./api/v1/inventory/items.post").exists())
+        .andExpect(jsonPath("$.paths./api/v1/inventory/items.get").exists())
+        .andExpect(jsonPath("$.paths./api/v1/inventory/critical.get").exists())
+        .andExpect(jsonPath("$.paths./api/v1/inventory/items/{id}.get").exists())
+        .andExpect(jsonPath("$.paths./api/v1/inventory/items/{id}.patch").exists())
+        .andExpect(jsonPath("$.paths./api/v1/inventory/items/{id}.delete").exists())
+        .andExpect(jsonPath("$.paths./api/v1/inventory/items/{id}/movements.post").exists());
   }
 }
