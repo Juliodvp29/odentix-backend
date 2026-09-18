@@ -1327,16 +1327,19 @@ paciente y en qué estado va esa propuesta.
 
 **Tareas:**
 
-- [ ] Entidad `TreatmentPlan`: diagnóstico, precio total, paciente,
+- [x] Entidad `TreatmentPlan`: diagnóstico, precio total, paciente,
       profesional, estado (`borrador` → `presentado` → `en_decision` →
       `aceptado` → `en_ejecucion` → `completado` / `rechazado` /
       `pospuesto` / `abandonado` — sección 8.9).
-- [ ] Entidad `TreatmentPlanItem` (procedimientos/piezas involucradas).
-- [ ] Migraciones Flyway correspondientes.
+- [x] Entidad `TreatmentPlanItem` (procedimientos/piezas involucradas).
+- [x] Migraciones Flyway correspondientes (`V14__create_treatment_plans.sql`).
 
 **Criterios de aceptación:**
 
-- [ ] Se puede crear un plan de tratamiento con varios ítems asociados.
+- [x] Se puede crear un plan de tratamiento con varios ítems asociados.
+      (Verificado con `TreatmentPlanRepositoryIntegrationTest` 7/7 en verde:
+      cascada, orphan removal, aislamiento multi-tenant, checks FDI y triggers de consistencia;
+      `./mvnw.cmd clean verify`: 177/177 pruebas sin fallos).
 
 ---
 
