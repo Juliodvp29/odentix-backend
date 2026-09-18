@@ -1724,19 +1724,30 @@ Extensión financiera de `Professional` para especialistas externos
 
 **Tareas:**
 
-- [ ] Entidad `Specialist` (1—1 con `Professional`, porcentaje de
+- [x] Entidad `Specialist` (1—1 con `Professional`, porcentaje de
       honorarios). Reutiliza el trigger `check_specialist_is_external`
       de `schema.sql` — no reimplementes esa validación en Java como
       único mecanismo, es defensa en profundidad igual que con
       multi-tenancy.
-- [ ] Entidad `SpecialistSettlement` (liquidación por periodo).
-- [ ] Migraciones Flyway correspondientes.
+      (Módulo nuevo `specialist/` con `Specialist` + `SpecialistRepository`;
+      validación de aplicación en `@PrePersist/@PreUpdate` como segunda capa.)
+- [x] Entidad `SpecialistSettlement` (liquidación por periodo).
+      (`SpecialistSettlement` + enum `SettlementStatus` + `SpecialistSettlementRepository`;
+      nace en `pendiente` con montos en cero; cálculo en FASE7-02.)
+- [x] Migraciones Flyway correspondientes.
+      (`V19__create_specialists.sql`: tipo `settlement_status`, tablas
+      `specialists` y `specialist_settlements`, trigger `trg_check_specialist_is_external`,
+      triggers `set_updated_at`, RLS con política `tenant_isolation` en ambas.)
 
 **Criterios de aceptación:**
 
-- [ ] Intentar crear un `Specialist` sobre un `Professional` con
+- [x] Intentar crear un `Specialist` sobre un `Professional` con
       `is_external = false` falla (ya sea por el trigger de BD o por
       validación de aplicación — ambas deben estar presentes).
+      (Verificado con `SpecialistRepositoryIntegrationTest` 7/7 en verde:
+      rechazo en capa JPA y en trigger vía SQL nativo, UNIQUE por profesional,
+      CHECKs de `fee_percentage` y periodo, y aislamiento cross-tenant;
+      `./mvnw.cmd clean verify`: 251/251 pruebas sin fallos).
 
 ---
 
