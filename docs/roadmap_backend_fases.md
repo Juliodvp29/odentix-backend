@@ -1477,16 +1477,18 @@ Pipeline: `nuevo` → `contactado` → `calificado` → `cita_propuesta` →
 
 **Tareas:**
 
-- [ ] Entidad `Lead`: nombre, contacto, fuente, campaña, procedimiento
+- [x] Entidad `Lead`: nombre, contacto, fuente, campaña, procedimiento
       de interés, valor potencial, estado, responsable asignado
       (sección 8.7).
-- [ ] Entidad `LeadActivity` (historial de contactos: llamada,
+- [x] Entidad `LeadActivity` (historial de contactos: llamada,
       WhatsApp, email, nota).
-- [ ] Migraciones Flyway correspondientes.
+- [x] Migraciones Flyway correspondientes (`V17__create_leads.sql` con RLS,
+      triggers de consistencia multi-tenant e índice para motor de oportunidades).
 
 **Criterios de aceptación:**
 
-- [ ] Se puede registrar un lead y agregarle actividades de contacto.
+- [x] Se puede registrar un lead y agregarle actividades de contacto. Verificado
+      con `LeadRepositoryIntegrationTest` (5/5 pruebas sin fallos en PostgreSQL real).
 
 ---
 
@@ -1498,16 +1500,18 @@ Pipeline: `nuevo` → `contactado` → `calificado` → `cita_propuesta` →
 
 **Tareas:**
 
-- [ ] CRUD de `Lead` + endpoint de registro de `LeadActivity`.
-- [ ] Endpoint de cambio de estado, sin restricciones de transición
+- [x] CRUD de `Lead` + endpoint de registro de `LeadActivity`.
+- [x] Endpoint de cambio de estado, sin restricciones de transición
       estrictas (a diferencia de citas/tratamientos, un lead sí puede
       "retroceder" en el pipeline en casos reales).
-- [ ] Test de aislamiento cross-tenant.
+- [x] Test de aislamiento cross-tenant.
 
 **Criterios de aceptación:**
 
-- [ ] Se puede registrar un lead manualmente y moverlo por el pipeline
-      vía API.
+- [x] Se puede registrar un lead manualmente y moverlo por el pipeline
+      vía API. Verificado con `LeadIntegrationTest` (9/9 pruebas cubriendo CRUD,
+      retroceso/avance de pipeline, registro de actividad con actualización reactiva
+      de lastContactAt, paginación dinámica por Specification, aislamiento cross-tenant y RBAC).
 
 ---
 
@@ -1522,17 +1526,19 @@ Evitar duplicar datos entre `Lead` y `Patient` al convertir.
 
 **Tareas:**
 
-- [ ] `POST /api/v1/leads/{id}/convert` — crea `Patient` (+
+- [x] `POST /api/v1/leads/{id}/convert` — crea `Patient` (+
       opcionalmente `Appointment`) a partir de los datos del lead.
-- [ ] El lead queda enlazado al paciente resultante
+- [x] El lead queda enlazado al paciente resultante
       (`converted_patient_id`) para trazabilidad de origen.
-- [ ] Test: convertir un lead no crea un paciente duplicado si se
+- [x] Test: convertir un lead no crea un paciente duplicado si se
       llama dos veces por error (idempotencia razonable).
 
 **Criterios de aceptación:**
 
-- [ ] Convertir un lead crea correctamente el paciente y la cita
-      asociada, y el lead queda enlazado a ese paciente.
+- [x] Convertir un lead crea correctamente el paciente y la cita
+      asociada, y el lead queda enlazado a ese paciente. Verificado con
+      `LeadIntegrationTest` (15/15 pruebas cubriendo conversión con/sin cita, inferencia
+      automática de nombres, idempotencia, aislamiento cross-tenant y rollback ante fallos).
 
 ---
 
@@ -1548,14 +1554,16 @@ frontend graficará esto después, aquí solo los endpoints de datos.
 
 **Tareas:**
 
-- [ ] Endpoint de conversión por fuente y por campaña (cuántos leads
+- [x] Endpoint de conversión por fuente y por campaña (cuántos leads
       llegaron vs. cuántos se convirtieron).
-- [ ] Endpoint de tiempo promedio de primera respuesta a un lead.
+- [x] Endpoint de tiempo promedio de primera respuesta a un lead.
 
 **Criterios de aceptación:**
 
-- [ ] Los endpoints devuelven estos indicadores para un rango de fechas
-      dado, filtrados correctamente por tenant.
+- [x] Los endpoints devuelven estos indicadores para un rango de fechas
+      dado, filtrados correctamente por tenant. Verificado con `LeadIntegrationTest`
+      (19/19 pruebas cubriendo métricas de conversión por dimensión, tiempo promedio de
+      respuesta, filtrado temporal, rangos vacíos y aislamiento cross-tenant).
 
 ---
 

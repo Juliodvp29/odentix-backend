@@ -2,7 +2,7 @@
 
 > Documento vivo de arquitectura y decisiones del backend SaaS para clínicas
 > odontológicas (multi-tenant: cada clínica es un `tenant`).
-> **Estado:** documenta Fase 0, Fase 1, Fase 2, Fase 3 y Fase 4. Al cerrar cada fase este archivo debe
+> **Estado:** documenta Fase 0, Fase 1, Fase 2, Fase 3, Fase 4 y Fase 5. Al cerrar cada fase este archivo debe
 > actualizarse (regla en `AGENTS.md` §11: sin esa actualización la fase no se
 > considera cerrada).
 >
@@ -505,6 +505,33 @@ Módulos `treatmentplan` y `billing`:
   - Revisión y alineación con los límites del plan Esencial (`max_patients`, `max_users`, `max_sedes`).
 - Total de pruebas del proyecto: **201/201 pruebas en verde** en `./mvnw.cmd clean verify`.
 
-### Fase 5 — CRM de leads (siguiente)
+### Fase 5 — CRM de leads (completada, FASE5-01–04)
 
-Módulo `crm`: Modelado de `Lead` y etapas del pipeline comercial (`FASE5-01`), endpoints de gestión y scoring/origen de prospectos, detección de oportunidades de conversión y transición a paciente.
+Módulo `crm`:
+- **Modelado de `Lead` y su pipeline comercial (FASE5-01):**
+  - Entidad `Lead`: contacto comercial con nombre, teléfono, email (`citext`), canal de marketing (`source`), campaña publicitaria (`campaign`), procedimiento de interés (`procedure_of_interest`), valor estimado (`estimated_value_cop`), asignación de responsable (`assigned_to`) y paciente convertido (`converted_patient_id`).
+  - Pipeline de 9 etapas modelado con enum PostgreSQL nativo `lead_status`: `nuevo`, `contactado`, `calificado`, `cita_propuesta`, `cita_agendada`, `cita_asistida`, `tratamiento_propuesto`, `tratamiento_aceptado`, `perdido`.
+  - Entidad `LeadActivity`: historial cronológico de interacciones de contacto (`llamada`, `whatsapp`, `email`, `nota`) con usuario autor y notas explicativas.
+  - Migración Flyway `V17__create_leads.sql` con Row Level Security activado (`tenant_isolation`), trigger de consistencia multi-tenant (`check_lead_tenant_consistency` y `check_lead_activity_tenant_consistency`) e índice analítico parcial `idx_leads_unresponded` (`WHERE status = 'nuevo'`) para alimentar el motor de oportunidades (Fase 9).
+  - `LeadRepositoryIntegrationTest` (5/5 en verde).
+- **Endpoints CRUD y cambio de estado de leads (FASE5-02):**
+  - Endpoints REST bajo `/api/v1/leads` con documentación OpenAPI (`@Tag("CRM Leads")`).
+  - Creación manual (`POST /api/v1/leads`), consulta por id (`GET /{id}`) y listado paginado con filtros dinámicos (`GET /api/v1/leads?status=...&assignedToId=...&source=...`) mediante Spring Data JPA `Specification<Lead>`.
+  - Transición flexible del pipeline comercial (`PATCH /{id}/status`): a diferencia de citas y tratamientos clínicos, el embudo de ventas permite libremente avances y retrocesos conforme al comportamiento real del prospecto, registrando automáticamente actividades de tipo `nota` cuando se suministra justificación.
+  - Registro de actividades (`POST /{id}/activities`) con actualización reactiva del timestamp `last_contact_at` en el lead ante interacciones directas, y consulta del historial cronológico descendente (`GET /{id}/activities`).
+- **Conversión de lead a paciente/cita (FASE5-03):**
+  - Endpoint de conversión: `POST /api/v1/leads/{id}/convert`.
+  - Transforma un prospecto en paciente activo (`Patient`) de la clínica con inferencia inteligente de nombres (`fullName` desglosado automáticamente en `firstName` y `lastName` si no se especifican en el body) y herencia de datos de contacto.
+  - Programación opcional de primera cita médica (`Appointment`) en la misma transacción atómica bajo `@Transactional`. Si se incluye cita, el estado del prospecto avanza automáticamente a `cita_agendada`; sin cita avanza a `calificado`.
+  - Idempotencia razonable: si el lead ya cuenta con `converted_patient_id`, llamadas posteriores retornan el paciente existente con `alreadyConverted = true` (HTTP 200 OK) sin duplicar filas en la tabla `patients`.
+  - Registro automático de actividad de trazabilidad enlazando al colaborador y a la cita agendada.
+- **Métricas de conversión y velocidad de atención (FASE5-04):**
+  - Servicio analítico `LeadMetricsService` desacoplado del flujo operativo (SRP).
+  - `GET /api/v1/leads/metrics/conversion`: calcula el volumen total de prospectos, convertidos a pacientes y porcentaje de conversión global, desglosado por canal (`bySource`) y por campaña (`byCampaign`) para un rango opcional de fechas (`from`, `to`).
+  - `GET /api/v1/leads/metrics/response-time`: mide la velocidad de atención desde la creación del prospecto hasta su primera interacción (`MIN(la.created_at)`), reportando leads atendidos, sin respuesta, tasa de atención y promedios en minutos y horas.
+  - Verificado con `LeadIntegrationTest` (19/19 en verde) y `OpenApiDocsIntegrationTest` (1/1 en verde).
+- Total de pruebas del proyecto: **225/225 pruebas en verde** en `./mvnw.cmd clean verify`.
+
+### Fase 6 — Cartera y pagos por etapas (siguiente)
+
+Módulo `billing`/`cartera`: Modelado de `PaymentPlan` e `Installment` (FASE6-01), endpoints para planes de pago en cuotas ligadas a planes de tratamiento (FASE6-02), soporte de pagos parciales por cuota (FASE6-03), alertas y estados de cuotas vencidas (FASE6-04) y checkpoint del plan Profesional (FASE6-05).
