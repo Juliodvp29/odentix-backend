@@ -1616,17 +1616,26 @@ frontend graficará esto después, aquí solo los endpoints de datos.
 
 **Tareas:**
 
-- [ ] `POST /api/v1/treatment-plans/{id}/payment-plan` (crear plan de
+- [x] `POST /api/v1/treatment-plans/{id}/payment-plan` (crear plan de
       pago en N cuotas).
-- [ ] `POST /api/v1/installments/{id}/pay` (marcar cuota como pagada,
-      idealmente generando el `Payment`/`Invoice` correspondiente en
-      vez de solo cambiar el estado).
-- [ ] Test de aislamiento cross-tenant.
+      (`PaymentPlanController` + `PaymentPlanService`; distribución con redondeo
+      HALF_UP, resto absorbido en la última cuota; 409 si el tratamiento ya
+      tiene un plan activo vía `ConflictException` nueva en `shared/exception/`).
+- [x] `POST /api/v1/installments/{id}/pay` (marcar cuota como pagada,
+      generando `Invoice` + `Payment` automáticos vía `InvoiceService.createInvoiceParaCuota`
+      — trazabilidad financiera completa sin intervención manual del operador).
+- [x] Test de aislamiento cross-tenant.
+      (`PaymentPlanIntegrationTest`: tratamiento de otro tenant → 404,
+      cuota de otro tenant → 404).
 
 **Criterios de aceptación:**
 
-- [ ] Pagar una cuota la marca como `pagada` y queda reflejada en el
+- [x] Pagar una cuota la marca como `pagada` y queda reflejada en el
       dashboard de cartera (FASE6-04).
+      (Verificado con `PaymentPlanIntegrationTest` 6/6 en verde:
+      plan creado con N cuotas en `pendiente`, pago marca `pagada` con `paidAt`,
+      segundo pago 409, segundo plan 409, aislamiento cross-tenant 2/2;
+      `./mvnw.cmd test -Dtest=PaymentPlanIntegrationTest`: 6/6 sin fallos).
 
 ---
 

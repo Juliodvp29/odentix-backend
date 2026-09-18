@@ -204,6 +204,54 @@ public class InvoiceService {
     return PaymentResponse.fromEntity(guardado, actualizada.getStatus());
   }
 
+  /**
+   * Genera una factura de un único ítem para el pago automático de una cuota (FASE6-02).
+   *
+   * <p>Llamado internamente por {@code PaymentPlanService.payInstallment()} para mantener
+   * la trazabilidad financiera: cada cuota pagada genera su propio Invoice + Payment en BD,
+   * sin requerir intervención manual del operador.
+   *
+   * @param tenantId tenant activo (ya validado por el caller).
+   * @param patientId paciente del plan de tratamiento asociado.
+   * @param descripcion texto que identifica la cuota (ej. "Cuota 2 de 3 — Plan X").
+   * @param monto monto exacto de la cuota.
+   * @return la factura creada (ya en estado {@code pagada}).
+   */
+  @Transactional
+  public InvoiceResponse createInvoiceParaCuota(UUID tenantId, UUID patientId,
+      String descripcion, BigDecimal monto) {
+    Patient patient = patientRepository.findByIdAndTenantId(patientId, tenantId)
+        .orElseThrow(() -> new ResourceNotFoundException("Paciente no encontrado: " + patientId));
+
+    Invoice invoice = new Invoice();
+    invoice.setTenantId(tenantId);
+    invoice.setPatient(patient);
+    invoice.setInvoiceNumber(siguienteNumero());
+    invoice.setSubtotalCop(monto);
+    invoice.setDiscountCop(BigDecimal.ZERO);
+    invoice.setTotalCop(monto);
+    invoice.setIssuedAt(Instant.now());
+    // El pago de la cuota crea la factura ya pagada — el pago se registra
+    // a continuación en la misma transacción del caller.
+    invoice.setStatus(InvoiceStatus.pagada);
+    Invoice guardada = invoiceRepository.save(invoice);
+
+    InvoiceItem item = new InvoiceItem(tenantId, guardada, descripcion, 1, monto);
+    invoiceItemRepository.save(item);
+    invoiceItemRepository.flush();
+    entityManager.clear();
+
+    Invoice releida = invoiceRepository.findByIdAndTenantId(guardada.getId(), tenantId)
+        .orElseThrow(() -> new IllegalStateException("Factura de cuota recién creada no encontrada"));
+    List<InvoiceItemResponse> items = invoiceItemRepository
+        .findAllByTenantIdAndInvoiceId(tenantId, guardada.getId())
+        .stream()
+        .map(InvoiceItemResponse::fromEntity)
+        .toList();
+
+    return InvoiceResponse.fromEntity(releida, items);
+  }
+
   private String siguienteNumero() {
     Long secuencia = ((Number) entityManager
         .createNativeQuery("SELECT nextval('invoice_number_seq')")
