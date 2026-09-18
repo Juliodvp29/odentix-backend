@@ -2,7 +2,7 @@
 
 > Documento vivo de arquitectura y decisiones del backend SaaS para clínicas
 > odontológicas (multi-tenant: cada clínica es un `tenant`).
-> **Estado:** documenta Fase 0, Fase 1, Fase 2, Fase 3, Fase 4 y Fase 5. Al cerrar cada fase este archivo debe
+> **Estado:** documenta Fase 0, Fase 1, Fase 2, Fase 3, Fase 4, Fase 5 y Fase 6. Al cerrar cada fase este archivo debe
 > actualizarse (regla en `AGENTS.md` §11: sin esa actualización la fase no se
 > considera cerrada).
 >
@@ -532,6 +532,47 @@ Módulo `crm`:
   - Verificado con `LeadIntegrationTest` (19/19 en verde) y `OpenApiDocsIntegrationTest` (1/1 en verde).
 - Total de pruebas del proyecto: **225/225 pruebas en verde** en `./mvnw.cmd clean verify`.
 
-### Fase 6 — Cartera y pagos por etapas (siguiente)
+### Fase 6 — Cartera y pagos por etapas (completada, FASE6-01–04)
 
-Módulo `billing`/`cartera`: Modelado de `PaymentPlan` e `Installment` (FASE6-01), endpoints para planes de pago en cuotas ligadas a planes de tratamiento (FASE6-02), soporte de pagos parciales por cuota (FASE6-03), alertas y estados de cuotas vencidas (FASE6-04) y checkpoint del plan Profesional (FASE6-05).
+Módulo `billing`/`cartera`:
+- **Modelado de `PaymentPlan` e `Installment` (FASE6-01):**
+  - Entidad `PaymentPlan` (extiende `TenantAwareEntity`, FK hacia `TreatmentPlan` como UUID plano para desacoplar el grafo JPA, monto total pactado en `NUMERIC(12,2)` y número de cuotas).
+  - Entidad `Installment` (cuotas individuales con `@ManyToOne` hacia `PaymentPlan`, número de cuota, monto en `NUMERIC(12,2)`, fecha de vencimiento `due_date`, estado `status` y marca temporal `paid_at`).
+  - Tipo enum nativo PostgreSQL `installment_status`: `pendiente`, `pagada`, `vencida` con `@JdbcType(PostgreSQLEnumJdbcType.class)`.
+  - Restricción de unicidad `uq_installments_plan_number UNIQUE (payment_plan_id, installment_number)` para evitar duplicados en un mismo plan.
+  - Migración Flyway `V18__create_payment_plans.sql`: crea tablas con Row Level Security activado y forzado (`tenant_isolation`), trigger `set_updated_at` y función PL/pgSQL `mark_overdue_installments()`.
+  - Verificado con `PaymentPlanRepositoryIntegrationTest` (5/5 en verde).
+- **Endpoints de planes de pago y registro de cuotas pagadas (FASE6-02):**
+  - `POST /api/v1/treatment-plans/{id}/payment-plan`: crea un plan en N cuotas mensuales con redondeo bancario estándar (`HALF_UP`) y absorción del residuo en la última cuota para cuadrar el monto pactado al centavo. Si el tratamiento ya tiene un plan activo, responde con HTTP 409 Conflict vía `ConflictException`.
+  - `POST /api/v1/installments/{id}/pay`: liquida una cuota, transicionando su estado a `pagada` y registrando `paid_at`. Genera automáticamente su `Invoice` saldada y su ítem de detalle correspondiente para mantener trazabilidad contable completa. Intentar pagar una cuota ya pagada devuelve HTTP 409 Conflict.
+  - Controladores `PaymentPlanController` e `InstallmentController` protegidos con `@PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")`.
+  - Verificado con `PaymentPlanIntegrationTest` (6/6 en verde) con pruebas de ciclo de vida y aislamiento cross-tenant 404.
+- **Job diario de cuotas vencidas (FASE6-03):**
+  - Servicio `OverdueInstallmentsJob` en `billing.service`.
+  - Método `execute()`: transaccional, ejecuta la función SQL nativa `mark_overdue_installments()`, actualiza a `vencida` las cuotas en estado `pendiente` con `due_date < CURRENT_DATE` y loguea las filas afectadas con SLF4J.
+  - Disparador `@Scheduled(cron = "${odentix.jobs.overdue-installments.cron:0 0 2 * * *}")` configurable vía `application.yml`.
+  - Ejecución en contexto de sistema (fuera de petición HTTP) operando sobre `ROOT_TENANT_ID` y RLS `current_tenant_id() IS NULL` para actualizar todas las clínicas de forma global y atómica.
+  - Verificado con `OverdueInstallmentsJobIntegrationTest` (4/4 en verde).
+- **Dashboard de cartera consolidado (FASE6-04):**
+  - Endpoint `GET /api/v1/portfolio/summary` en `PortfolioController`.
+  - Servicio `PortfolioService` y consulta agregada en `InstallmentRepository.getPortfolioSummary(tenantId)`.
+  - Calcula en tiempo real:
+    - Cartera total pactada (`totalAmountCop`).
+    - Cartera vencida (`overdueAmountCop`): cuotas con estado `vencida` o pendientes con fecha de vencimiento pasada previa a la ejecución del job.
+    - Cartera por vencer (`upcomingAmountCop`): cuotas pendientes con vencimiento futuro.
+    - Cartera al día / pagada (`paidAmountCop`): cuotas saldadas.
+    - Saldo total por cobrar (`outstandingAmountCop`): suma de vencidas + por vencer.
+    - Conteos de cuotas por categoría (`totalInstallmentsCount`, `overdueInstallmentsCount`, `upcomingInstallmentsCount`, `paidInstallmentsCount`).
+  - Si una clínica no tiene planes de pago, devuelve todos los montos en `0.00` y conteos en `0` (sin nulos).
+  - Verificado con `PortfolioIntegrationTest` (4/4 en verde).
+- **Documentación OpenAPI y regla §4 de AGENTS.md:**
+  - Todas las operaciones de cartera registradas y verificadas exhaustivamente en `OpenApiDocsIntegrationTest`:
+    - `POST /api/v1/treatment-plans/{id}/payment-plan`
+    - `POST /api/v1/installments/{id}/pay`
+    - `GET /api/v1/portfolio/summary`
+- Total de pruebas del proyecto: **244/244 pruebas en verde** en `./mvnw.cmd clean verify`.
+
+### Fase 7 — Especialistas externos e inventario (siguiente)
+
+Módulos `specialist` e `inventory`: Modelado de `Specialist` (1—1 con `Professional`, porcentaje de honorarios) y liquidaciones `SpecialistSettlement` (FASE7-01), catálogo de insumos dentales y control de stock mínimo con alertas (FASE7-02), consumo automático de insumos al completar citas/tratamientos (FASE7-03), y reporte de rentabilidad real por procedimiento (FASE7-04).
+

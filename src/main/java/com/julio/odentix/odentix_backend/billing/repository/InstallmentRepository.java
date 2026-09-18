@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 /**
  * Repositorio JPA para {@link Installment} (FASE6-01).
@@ -37,4 +38,30 @@ public interface InstallmentRepository extends JpaRepository<Installment, UUID> 
    */
   @Query(value = "SELECT mark_overdue_installments()", nativeQuery = true)
   int markOverdueInstallments();
+
+  /**
+   * Obtiene el resumen financiero consolidado de cartera para un tenant (FASE6-04).
+   *
+   * <p>Agrupa y totaliza montos y conteos de cuotas:
+   * <ul>
+   *   <li>Total pactado: todas las cuotas de la clínica.</li>
+   *   <li>Vencidas: cuotas en estado 'vencida' o pendientes con {@code due_date < CURRENT_DATE}.</li>
+   *   <li>Por vencer: cuotas en estado 'pendiente' con {@code due_date >= CURRENT_DATE}.</li>
+   *   <li>Al día / Pagadas: cuotas en estado 'pagada'.</li>
+   * </ul>
+   */
+  @Query(value = """
+      SELECT
+        COALESCE(SUM(amount_cop), 0) AS totalAmountCop,
+        COALESCE(SUM(CASE WHEN status = 'vencida' OR (status = 'pendiente' AND due_date < CURRENT_DATE) THEN amount_cop ELSE 0 END), 0) AS overdueAmountCop,
+        COALESCE(SUM(CASE WHEN status = 'pendiente' AND due_date >= CURRENT_DATE THEN amount_cop ELSE 0 END), 0) AS upcomingAmountCop,
+        COALESCE(SUM(CASE WHEN status = 'pagada' THEN amount_cop ELSE 0 END), 0) AS paidAmountCop,
+        COUNT(*) AS totalCount,
+        COUNT(CASE WHEN status = 'vencida' OR (status = 'pendiente' AND due_date < CURRENT_DATE) THEN 1 END) AS overdueCount,
+        COUNT(CASE WHEN status = 'pendiente' AND due_date >= CURRENT_DATE THEN 1 END) AS upcomingCount,
+        COUNT(CASE WHEN status = 'pagada' THEN 1 END) AS paidCount
+      FROM installments
+      WHERE tenant_id = :tenantId
+      """, nativeQuery = true)
+  PortfolioSummaryProjection getPortfolioSummary(@Param("tenantId") UUID tenantId);
 }

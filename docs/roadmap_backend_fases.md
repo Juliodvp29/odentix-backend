@@ -1687,13 +1687,21 @@ si en el futuro hay múltiples instancias corriendo el mismo job
 
 **Tareas:**
 
-- [ ] `GET /api/v1/portfolio/summary` — cartera total, vencida, por
+- [x] `GET /api/v1/portfolio/summary` — cartera total, vencida, por
       vencer y al día.
+      (`PortfolioController` + `PortfolioService` + `InstallmentRepository.getPortfolioSummary`;
+      agrupación analítica en SQL nativo retornando `PortfolioSummaryResponse` con montos:
+      `totalAmountCop`, `overdueAmountCop`, `upcomingAmountCop`, `paidAmountCop`,
+      `outstandingAmountCop`, y conteos de cuotas por estado).
 
 **Criterios de aceptación:**
 
-- [ ] El endpoint devuelve totales coherentes con los datos de
+- [x] El endpoint devuelve totales coherentes con los datos de
       `Installment` en ese momento.
+      (Verificado con `PortfolioIntegrationTest` 4/4 en verde:
+      cálculo exacto de cartera total, vencida, por vencer y pagada con cuotas reales;
+      clínica sin cuotas devuelve ceros limpios; aislamiento cross-tenant estricto;
+      acceso no autenticado devuelve 401; `clean verify`: 244/244 sin fallos).
 
 ---
 
