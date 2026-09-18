@@ -1582,15 +1582,29 @@ frontend graficará esto después, aquí solo los endpoints de datos.
 
 **Tareas:**
 
-- [ ] Entidad `PaymentPlan` (asociada a un `TreatmentPlan`), entidad
+- [x] Entidad `PaymentPlan` (asociada a un `TreatmentPlan`), entidad
       `Installment` (cuotas con número, monto, fecha de vencimiento,
       estado).
-- [ ] Migraciones Flyway correspondientes.
+      (`PaymentPlan` extiende `TenantAwareEntity`, FK a `treatment_plans` como
+      UUID simple; `Installment` con `@ManyToOne` hacia `PaymentPlan`,
+      `dueDate` como `LocalDate`, `paidAt` como `Instant` nullable;
+      enum `InstallmentStatus` con `PostgreSQLEnumJdbcType` — mismo patrón
+      que `InvoiceStatus`).
+- [x] Migraciones Flyway correspondientes.
+      (`V18__create_payment_plans.sql`: tipo `installment_status`, tablas
+      `payment_plans` e `installments`, índices, triggers `set_updated_at`,
+      función `mark_overdue_installments()`, RLS con política `tenant_isolation`
+      en ambas tablas).
 
 **Criterios de aceptación:**
 
-- [ ] Se puede definir un plan de pago en cuotas y ver el estado de
+- [x] Se puede definir un plan de pago en cuotas y ver el estado de
       cada cuota (`pendiente`, `pagada`, `vencida`).
+      (Verificado con `PaymentPlanRepositoryIntegrationTest` 5/5 en verde:
+      cuotas nacen en estado `pendiente`, búsqueda por tratamiento,
+      constraint UNIQUE de cuota duplicada, y aislamiento cross-tenant
+      en `PaymentPlan` e `Installment`; `./mvnw.cmd test -Dtest=PaymentPlanRepositoryIntegrationTest`:
+      5/5 sin fallos, V18 aplicada correctamente por Flyway).
 
 ---
 
@@ -1602,17 +1616,26 @@ frontend graficará esto después, aquí solo los endpoints de datos.
 
 **Tareas:**
 
-- [ ] `POST /api/v1/treatment-plans/{id}/payment-plan` (crear plan de
+- [x] `POST /api/v1/treatment-plans/{id}/payment-plan` (crear plan de
       pago en N cuotas).
-- [ ] `POST /api/v1/installments/{id}/pay` (marcar cuota como pagada,
-      idealmente generando el `Payment`/`Invoice` correspondiente en
-      vez de solo cambiar el estado).
-- [ ] Test de aislamiento cross-tenant.
+      (`PaymentPlanController` + `PaymentPlanService`; distribución con redondeo
+      HALF_UP, resto absorbido en la última cuota; 409 si el tratamiento ya
+      tiene un plan activo vía `ConflictException` nueva en `shared/exception/`).
+- [x] `POST /api/v1/installments/{id}/pay` (marcar cuota como pagada,
+      generando `Invoice` + `Payment` automáticos vía `InvoiceService.createInvoiceParaCuota`
+      — trazabilidad financiera completa sin intervención manual del operador).
+- [x] Test de aislamiento cross-tenant.
+      (`PaymentPlanIntegrationTest`: tratamiento de otro tenant → 404,
+      cuota de otro tenant → 404).
 
 **Criterios de aceptación:**
 
-- [ ] Pagar una cuota la marca como `pagada` y queda reflejada en el
+- [x] Pagar una cuota la marca como `pagada` y queda reflejada en el
       dashboard de cartera (FASE6-04).
+      (Verificado con `PaymentPlanIntegrationTest` 6/6 en verde:
+      plan creado con N cuotas en `pendiente`, pago marca `pagada` con `paidAt`,
+      segundo pago 409, segundo plan 409, aislamiento cross-tenant 2/2;
+      `./mvnw.cmd test -Dtest=PaymentPlanIntegrationTest`: 6/6 sin fallos).
 
 ---
 
@@ -1628,17 +1651,27 @@ aquí se conecta a un scheduler de Spring.
 
 **Tareas:**
 
-- [ ] Job diario con `@Scheduled` que invoca la lógica de marcar cuotas
+- [x] Job diario con `@Scheduled` que invoca la lógica de marcar cuotas
       vencidas (puede llamar la función SQL directamente o
       reimplementar la misma regla en Java — mantente consistente con
       lo que ya existe en la base para no duplicar lógica divergente).
-- [ ] Log o métrica de cuántas cuotas se marcaron vencidas en cada
+      (`OverdueInstallmentsJob.java` en `billing.service`; invoca la función nativa
+      `mark_overdue_installments()` vía `InstallmentRepository`; método `execute()`
+      invocable directamente y `@Scheduled(cron = "${odentix.jobs.overdue-installments.cron:0 0 2 * * *}")`).
+- [x] Log o métrica de cuántas cuotas se marcaron vencidas en cada
       corrida, útil para depurar en producción.
+      (`execute()` retorna el entero de filas afectadas y registra con SLF4J
+      `log.info("Job de cuotas vencidas completado: {} cuotas marcadas como vencidas.", afectadas)`).
 
 **Criterios de aceptación:**
 
-- [ ] Una cuota con `due_date` en el pasado y estado `pendiente`
+- [x] Una cuota con `due_date` en el pasado y estado `pendiente`
       cambia a `vencida` después de correr el job.
+      (Verificado con `OverdueInstallmentsJobIntegrationTest` 4/4 en verde:
+      cuota vencida en pendiente pasa a vencida, cuota futura permanece en pendiente,
+      cuota pagada no cambia, ejecución multi-tenant global y retorno exacto del conteo;
+      `./mvnw.cmd test -Dtest=OverdueInstallmentsJobIntegrationTest`: 4/4 sin fallos;
+      `clean verify`: 240/240 sin fallos).
 
 **Temas de Spring Boot:** `@Scheduled`, consideraciones de concurrencia
 si en el futuro hay múltiples instancias corriendo el mismo job
@@ -1654,13 +1687,21 @@ si en el futuro hay múltiples instancias corriendo el mismo job
 
 **Tareas:**
 
-- [ ] `GET /api/v1/portfolio/summary` — cartera total, vencida, por
+- [x] `GET /api/v1/portfolio/summary` — cartera total, vencida, por
       vencer y al día.
+      (`PortfolioController` + `PortfolioService` + `InstallmentRepository.getPortfolioSummary`;
+      agrupación analítica en SQL nativo retornando `PortfolioSummaryResponse` con montos:
+      `totalAmountCop`, `overdueAmountCop`, `upcomingAmountCop`, `paidAmountCop`,
+      `outstandingAmountCop`, y conteos de cuotas por estado).
 
 **Criterios de aceptación:**
 
-- [ ] El endpoint devuelve totales coherentes con los datos de
+- [x] El endpoint devuelve totales coherentes con los datos de
       `Installment` en ese momento.
+      (Verificado con `PortfolioIntegrationTest` 4/4 en verde:
+      cálculo exacto de cartera total, vencida, por vencer y pagada con cuotas reales;
+      clínica sin cuotas devuelve ceros limpios; aislamiento cross-tenant estricto;
+      acceso no autenticado devuelve 401; `clean verify`: 244/244 sin fallos).
 
 ---
 
