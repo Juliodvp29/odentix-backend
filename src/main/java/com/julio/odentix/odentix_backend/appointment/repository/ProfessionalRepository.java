@@ -18,6 +18,11 @@ import org.springframework.stereotype.Repository;
 public interface ProfessionalRepository extends JpaRepository<Professional, UUID> {
 
   /**
+   * Busca un profesional por su ID y tenant (defensa en profundidad, regla §5.2 de AGENTS.md).
+   */
+  Optional<Professional> findByIdAndTenantId(UUID id, UUID tenantId);
+
+  /**
    * Busca un profesional vinculado a un usuario específico por su ID.
    *
    * @param userId identificador del usuario del sistema.

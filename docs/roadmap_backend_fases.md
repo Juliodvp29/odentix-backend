@@ -1327,16 +1327,19 @@ paciente y en qué estado va esa propuesta.
 
 **Tareas:**
 
-- [ ] Entidad `TreatmentPlan`: diagnóstico, precio total, paciente,
+- [x] Entidad `TreatmentPlan`: diagnóstico, precio total, paciente,
       profesional, estado (`borrador` → `presentado` → `en_decision` →
       `aceptado` → `en_ejecucion` → `completado` / `rechazado` /
       `pospuesto` / `abandonado` — sección 8.9).
-- [ ] Entidad `TreatmentPlanItem` (procedimientos/piezas involucradas).
-- [ ] Migraciones Flyway correspondientes.
+- [x] Entidad `TreatmentPlanItem` (procedimientos/piezas involucradas).
+- [x] Migraciones Flyway correspondientes (`V14__create_treatment_plans.sql`).
 
 **Criterios de aceptación:**
 
-- [ ] Se puede crear un plan de tratamiento con varios ítems asociados.
+- [x] Se puede crear un plan de tratamiento con varios ítems asociados.
+      (Verificado con `TreatmentPlanRepositoryIntegrationTest` 7/7 en verde:
+      cascada, orphan removal, aislamiento multi-tenant, checks FDI y triggers de consistencia;
+      `./mvnw.cmd clean verify`: 177/177 pruebas sin fallos).
 
 ---
 
@@ -1352,15 +1355,18 @@ aquí.
 
 **Tareas:**
 
-- [ ] CRUD de `TreatmentPlan` + ítems.
-- [ ] Endpoint de cambio de estado con las mismas reglas de transición
-      válida que en la Fase 3.2.
-- [ ] Test de transiciones inválidas y de aislamiento cross-tenant.
+- [x] CRUD de `TreatmentPlan` + ítems (`POST`, `GET /{id}`, `GET`, `PATCH /{id}`).
+- [x] Endpoint de cambio de estado con reglas de transición válida (`PATCH /{id}/status`).
+- [x] Test de transiciones inválidas y de aislamiento cross-tenant.
 
 **Criterios de aceptación:**
 
-- [ ] Se puede crear un plan de tratamiento y avanzarlo por sus
+- [x] Se puede crear un plan de tratamiento y avanzarlo por sus
       estados vía API.
+      (Verificado con `TreatmentPlanIntegrationTest` 10/10 en verde:
+      ciclo de vida borrador → presentado → en_decision → aceptado → en_ejecucion → completado,
+      rechazo de transiciones inválidas, timestamps automáticos, autorización por rol y aislamiento cross-tenant;
+      `./mvnw.cmd clean verify`: 187/187 pruebas sin fallos).
 
 ---
 
@@ -1377,16 +1383,18 @@ del doc de arquitectura).
 
 **Tareas:**
 
-- [ ] Entidades `Invoice`, `InvoiceItem`, `Payment` (ver `schema.sql`
+- [x] Entidades `Invoice`, `InvoiceItem`, `Payment` (ver `schema.sql`
       para la referencia exacta de columnas y constraints).
-- [ ] Relación `Invoice` → `TreatmentPlan` (opcional, puede facturarse
+- [x] Relación `Invoice` → `TreatmentPlan` (opcional, puede facturarse
       sin un plan asociado).
-- [ ] Migraciones Flyway correspondientes.
+- [x] Migraciones Flyway correspondientes.
 
 **Criterios de aceptación:**
 
-- [ ] Se puede persistir una factura con ítems y su total coincide con
+- [x] Se puede persistir una factura con ítems y su total coincide con
       la suma de los ítems.
+      (Verificado con `BillingModelIntegrationTest` 4/4 en verde;
+      `./mvnw.cmd clean verify`: 191/191 pruebas sin fallos).
 
 ---
 
@@ -1401,18 +1409,20 @@ Generar facturas y registrar pagos contra ellas.
 
 **Tareas:**
 
-- [ ] `POST /api/v1/invoices` (generar factura, opcionalmente desde un
+- [x] `POST /api/v1/invoices` (generar factura, opcionalmente desde un
       `TreatmentPlan`).
-- [ ] `POST /api/v1/invoices/{id}/payments` (registrar pago parcial o
+- [x] `POST /api/v1/invoices/{id}/payments` (registrar pago parcial o
       total).
-- [ ] Lógica que actualiza `status` de la factura (`pendiente` →
+- [x] Lógica que actualiza `status` de la factura (`pendiente` →
       `parcial` → `pagada`) según los pagos acumulados.
-- [ ] Test de aislamiento cross-tenant.
+- [x] Test de aislamiento cross-tenant.
 
 **Criterios de aceptación:**
 
-- [ ] Registrar pagos parciales hasta cubrir el total cambia el estado
+- [x] Registrar pagos parciales hasta cubrir el total cambia el estado
       de la factura a `pagada` automáticamente.
+      (Verificado con `InvoiceIntegrationTest` 9/9 en verde;
+      `./mvnw.cmd clean verify`: 200/200 pruebas sin fallos).
 
 ---
 
@@ -1430,17 +1440,20 @@ antes de seguir construyendo funcionalidades de planes superiores.
 
 **Tareas:**
 
-- [ ] Demo de punta a punta: crear paciente → agendar cita → crear plan
-      de tratamiento → aceptarlo → facturar → registrar pago.
-- [ ] Revisar que los límites del plan Esencial (`max_patients`,
+- [x] Demo de punta a punta: crear paciente → agendar cita → crear plan
+      de tratamiento → aceptarlo → facturar → registrar pago (validado
+      vía `EssentialPlanFlowIntegrationTest`).
+- [x] Revisar que los límites del plan Esencial (`max_patients`,
       `max_users`, etc. de `plan_limits`) tengan sentido con datos
       reales de esta demo, aunque el feature-gating recién se
       implemente en la Fase 11.
 
 **Criterios de aceptación:**
 
-- [ ] La demo completa corre sin intervención manual en la base de
-      datos (todo vía API).
+- [x] La demo completa corre sin intervención manual en la base de
+      datos (todo vía API). Verificado con `EssentialPlanFlowIntegrationTest`
+      (13 pasos ejecutados sobre API REST) y suite global en `./mvnw.cmd clean verify`
+      con 201/201 pruebas en verde.
 
 ---
 

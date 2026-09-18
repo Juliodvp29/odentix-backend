@@ -2,7 +2,7 @@
 
 > Documento vivo de arquitectura y decisiones del backend SaaS para clínicas
 > odontológicas (multi-tenant: cada clínica es un `tenant`).
-> **Estado:** documenta Fase 0, Fase 1, Fase 2 y Fase 3. Al cerrar cada fase este archivo debe
+> **Estado:** documenta Fase 0, Fase 1, Fase 2, Fase 3 y Fase 4. Al cerrar cada fase este archivo debe
 > actualizarse (regla en `AGENTS.md` §11: sin esa actualización la fase no se
 > considera cerrada).
 >
@@ -396,6 +396,11 @@ NULL). Detalle solo con el email: nunca contraseñas.
 | FASE3-05 | Agregación de valor de agenda (`summarizeValue`) | Excluye citas canceladas y no_show, coherente con el espacio liberado |
 | FASE3-06 | `WaitlistEntry` para demanda insatisfecha | Ventana de disponibilidad temporal (`desired_from`, `desired_to`) y procedimiento de interés |
 | FASE3-07 | Recuperación de espacio al cancelar cita | Sugerencia inmediata de candidatos compatibles en la respuesta de cancelación y vía endpoint dedicado, con orden FIFO y exclusión del paciente cancelador |
+| FASE4-01 | Planes de tratamiento e ítems (`TreatmentPlan`, `TreatmentPlanItem`) | Extienden `TenantAwareEntity`, trigger de consistencia de tenant `check_treatment_plan_tenant_consistency` (valida que paciente y profesional pertenezcan al mismo tenant), check de pieza dental FDI (11..48) y recálculo automático de `total_price_cop` |
+| FASE4-02 | Máquina de estados de planes (`TreatmentPlanService`) | Estados: `borrador` -> `presentado` -> `aceptado` / `rechazado` -> `en_ejecucion` -> `completado` / `cancelado`. Registro automático de `presented_at` y `last_contact_at` para seguimiento CRM/oportunidades |
+| FASE4-03 | Facturación y pagos simples (`Invoice`, `InvoiceItem`, `Payment`) | Relación `tenant_id` + `patient_id` obligatoria, relación opcional con `treatment_plan_id`. Secuencia y numeración correlativa atómica (`FAC-000001`) con `V16` y trigger `check_invoice_tenant_consistency` |
+| FASE4-04 | Transición de estado en factura y control de sobrepagos | Al registrar abonos (`POST /invoices/{id}/payments`), la factura transiciona automáticamente de `pendiente` -> `parcial` -> `pagada`. Sobrepagos rechazados con HTTP 400 (`IllegalArgumentException`) |
+| FASE4-05 | Checkpoint Plan Esencial validado vía E2E | Validación completa del flujo comercial y clínico vía MockMvc (`EssentialPlanFlowIntegrationTest`, 13 pasos) sin intervención directa en base de datos |
 
 ---
 
@@ -470,6 +475,36 @@ Módulo `appointment`:
   - Verificado con `SlotRecoveryIntegrationTest` (7/7 en verde).
 - Total de pruebas del proyecto: **170/170 pruebas en verde** en `./mvnw.cmd clean verify`.
 
-### Fase 4 — (siguiente)
+### Fase 4 — Planes de tratamiento y facturación básica (completada, FASE4-01–05)
 
-Planes de tratamiento y facturación básica. Modelado de `TreatmentPlan` (FASE4-01), ítems de tratamiento (FASE4-02), máquina de estados de planes (FASE4-03) y facturación básica con pagos (FASE4-04/05).
+Módulos `treatmentplan` y `billing`:
+- **Modelado de planes e ítems de tratamiento (FASE4-01):**
+  - Entidades `TreatmentPlan` y `TreatmentPlanItem` mapeadas con `TenantAwareEntity`.
+  - Migración Flyway `V14__create_treatment_plans.sql` con check FDI para piezas dentales (`tooth_number BETWEEN 11 AND 48`), trigger de aislamiento de tenant (`check_treatment_plan_tenant_consistency`) y recálculo automático de `total_price_cop`.
+  - `TreatmentPlanRepositoryIntegrationTest` (7/7 en verde).
+- **Endpoints y máquina de estados de planes (FASE4-02):**
+  - Endpoints REST bajo `/api/v1/treatment-plans` con `@Tag("Planes de Tratamiento")` y documentación Swagger/OpenAPI.
+  - Creación con ítems (`POST /api/v1/treatment-plans`), actualización de datos diagnósticos/profesional (`PUT /{id}`), consulta (`GET /{id}`) y listado paginado con filtros (`GET /api/v1/treatment-plans?patientId=...&status=...`).
+  - Gestión del ciclo de vida (`PATCH /{id}/status`): estados `borrador` -> `presentado` -> `aceptado` / `rechazado` -> `en_ejecucion` -> `completado` / `cancelado`. Registro automático de marcas temporales `presented_at` y `last_contact_at` para soporte del motor de oportunidades y CRM.
+  - `TreatmentPlanIntegrationTest` (10/10 en verde).
+- **Modelado de facturación y pagos (FASE4-03):**
+  - Entidades `Invoice`, `InvoiceItem` y `Payment` con migración Flyway `V15__create_invoices_and_payments.sql`.
+  - Trigger `check_invoice_tenant_consistency` garantizando que el paciente y el plan de tratamiento pertenezcan estrictamente al mismo tenant.
+  - Migración Flyway `V16__create_invoice_number_seq.sql` para generación atómica y correlativa del número de factura (`FAC-000001`) por tenant.
+  - `BillingModelIntegrationTest` (4/4 en verde).
+- **Endpoints de facturación y registro de pagos (FASE4-04):**
+  - Endpoints REST bajo `/api/v1/invoices` con `@Tag("Facturación")`.
+  - Creación de facturas manuales o a partir de un plan de tratamiento aprobado (`POST /api/v1/invoices`), consulta por id (`GET /{id}`) y listado por paciente/estado (`GET /api/v1/invoices`).
+  - Registro de cobros y pagos (`POST /api/v1/invoices/{id}/payments`) con soporte de medios de pago (`efectivo`, `tarjeta`, `transferencia`, `otro`).
+  - Transición automática reactiva de estado: `pendiente` -> `parcial` -> `pagada` cuando los abonos acumulados saldan el total de la factura.
+  - Control riguroso de sobrepagos: rechaza pagos que excedan el saldo pendiente con HTTP 400 (`IllegalArgumentException`).
+  - `InvoiceIntegrationTest` (9/9 en verde).
+- **Checkpoint del plan Esencial y Demo E2E (FASE4-05):**
+  - Flujo de negocio de 13 pasos cubierto de punta a punta en `EssentialPlanFlowIntegrationTest`: autenticación de Propietario y Recepcionista → alta de paciente → agendamiento de cita → consulta clínica → registro de hallazgo en odontograma → atención de cita → creación de presupuesto con descuentos → presentación y aceptación del plan → facturación → pagos parciales hasta liquidación completa → cierre de tratamiento.
+  - 100% ejecutado a través de la API REST sin manipulación directa de base de datos.
+  - Revisión y alineación con los límites del plan Esencial (`max_patients`, `max_users`, `max_sedes`).
+- Total de pruebas del proyecto: **201/201 pruebas en verde** en `./mvnw.cmd clean verify`.
+
+### Fase 5 — CRM de leads (siguiente)
+
+Módulo `crm`: Modelado de `Lead` y etapas del pipeline comercial (`FASE5-01`), endpoints de gestión y scoring/origen de prospectos, detección de oportunidades de conversión y transición a paciente.
