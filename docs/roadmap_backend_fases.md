@@ -1440,17 +1440,20 @@ antes de seguir construyendo funcionalidades de planes superiores.
 
 **Tareas:**
 
-- [ ] Demo de punta a punta: crear paciente → agendar cita → crear plan
-      de tratamiento → aceptarlo → facturar → registrar pago.
-- [ ] Revisar que los límites del plan Esencial (`max_patients`,
+- [x] Demo de punta a punta: crear paciente → agendar cita → crear plan
+      de tratamiento → aceptarlo → facturar → registrar pago (validado
+      vía `EssentialPlanFlowIntegrationTest`).
+- [x] Revisar que los límites del plan Esencial (`max_patients`,
       `max_users`, etc. de `plan_limits`) tengan sentido con datos
       reales de esta demo, aunque el feature-gating recién se
       implemente en la Fase 11.
 
 **Criterios de aceptación:**
 
-- [ ] La demo completa corre sin intervención manual en la base de
-      datos (todo vía API).
+- [x] La demo completa corre sin intervención manual en la base de
+      datos (todo vía API). Verificado con `EssentialPlanFlowIntegrationTest`
+      (13 pasos ejecutados sobre API REST) y suite global en `./mvnw.cmd clean verify`
+      con 201/201 pruebas en verde.
 
 ---
 
