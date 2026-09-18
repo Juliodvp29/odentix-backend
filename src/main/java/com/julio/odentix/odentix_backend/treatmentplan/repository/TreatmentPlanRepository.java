@@ -35,6 +35,16 @@ public interface TreatmentPlanRepository extends JpaRepository<TreatmentPlan, UU
   List<TreatmentPlan> findByStatusAndTenantId(TreatmentPlanStatus status, UUID tenantId);
 
   /**
+   * Busca planes de tratamiento de un paciente filtrados por estado dentro de un tenant.
+   */
+  List<TreatmentPlan> findByPatientIdAndStatusAndTenantId(UUID patientId, TreatmentPlanStatus status, UUID tenantId);
+
+  /**
+   * Lista todos los planes del tenant ordenados por fecha de creación descendente.
+   */
+  List<TreatmentPlan> findAllByTenantIdOrderByCreatedAtDesc(UUID tenantId);
+
+  /**
    * Recupera un plan de tratamiento junto con sus ítems asociados en una sola consulta
    * ({@code LEFT JOIN FETCH}) para evitar el problema N+1.
    */

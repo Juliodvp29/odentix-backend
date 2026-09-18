@@ -1355,15 +1355,18 @@ aquí.
 
 **Tareas:**
 
-- [ ] CRUD de `TreatmentPlan` + ítems.
-- [ ] Endpoint de cambio de estado con las mismas reglas de transición
-      válida que en la Fase 3.2.
-- [ ] Test de transiciones inválidas y de aislamiento cross-tenant.
+- [x] CRUD de `TreatmentPlan` + ítems (`POST`, `GET /{id}`, `GET`, `PATCH /{id}`).
+- [x] Endpoint de cambio de estado con reglas de transición válida (`PATCH /{id}/status`).
+- [x] Test de transiciones inválidas y de aislamiento cross-tenant.
 
 **Criterios de aceptación:**
 
-- [ ] Se puede crear un plan de tratamiento y avanzarlo por sus
+- [x] Se puede crear un plan de tratamiento y avanzarlo por sus
       estados vía API.
+      (Verificado con `TreatmentPlanIntegrationTest` 10/10 en verde:
+      ciclo de vida borrador → presentado → en_decision → aceptado → en_ejecucion → completado,
+      rechazo de transiciones inválidas, timestamps automáticos, autorización por rol y aislamiento cross-tenant;
+      `./mvnw.cmd clean verify`: 187/187 pruebas sin fallos).
 
 ---
 
