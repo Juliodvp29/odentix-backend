@@ -1,6 +1,8 @@
 package com.julio.odentix.odentix_backend.crm.controller;
 
 import com.julio.odentix.odentix_backend.auth.dto.AuthenticatedUser;
+import com.julio.odentix.odentix_backend.crm.dto.ConvertLeadRequest;
+import com.julio.odentix.odentix_backend.crm.dto.ConvertLeadResponse;
 import com.julio.odentix.odentix_backend.crm.dto.CreateLeadActivityRequest;
 import com.julio.odentix.odentix_backend.crm.dto.CreateLeadRequest;
 import com.julio.odentix.odentix_backend.crm.dto.LeadActivityResponse;
@@ -19,6 +21,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -134,5 +137,22 @@ public class LeadController {
   )
   public ResponseEntity<List<LeadActivityResponse>> getActivities(@PathVariable UUID id) {
     return ResponseEntity.ok(leadService.getActivities(id));
+  }
+
+  @PostMapping("/{id}/convert")
+  @Operation(
+      summary = "Convertir lead a paciente",
+      description = "Transforma un prospecto en paciente de la clínica y opcionalmente agenda su primera cita médica. Idempotente si el lead ya fue previamente convertido."
+  )
+  public ResponseEntity<ConvertLeadResponse> convertLead(
+      @PathVariable UUID id,
+      @Valid @RequestBody(required = false) ConvertLeadRequest request,
+      @AuthenticationPrincipal AuthenticatedUser authUser) {
+    UUID currentUserId = (authUser != null) ? authUser.getUserId() : null;
+    ConvertLeadResponse response = leadService.convertLead(id, request, currentUserId);
+    if (response.isAlreadyConverted()) {
+      return ResponseEntity.ok(response);
+    }
+    return ResponseEntity.status(HttpStatus.CREATED).body(response);
   }
 }

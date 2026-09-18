@@ -24,6 +24,7 @@ public class LeadResponse {
   private UUID assignedToId;
   private String assignedToName;
   private UUID convertedPatientId;
+  private String convertedPatientName;
   private Instant lastContactAt;
   private Instant nextActionAt;
   private Instant createdAt;
@@ -46,6 +47,7 @@ public class LeadResponse {
       UUID assignedToId,
       String assignedToName,
       UUID convertedPatientId,
+      String convertedPatientName,
       Instant lastContactAt,
       Instant nextActionAt,
       Instant createdAt,
@@ -63,6 +65,7 @@ public class LeadResponse {
     this.assignedToId = assignedToId;
     this.assignedToName = assignedToName;
     this.convertedPatientId = convertedPatientId;
+    this.convertedPatientName = convertedPatientName;
     this.lastContactAt = lastContactAt;
     this.nextActionAt = nextActionAt;
     this.createdAt = createdAt;
@@ -72,6 +75,10 @@ public class LeadResponse {
   public static LeadResponse fromEntity(Lead lead) {
     if (lead == null) {
       return null;
+    }
+    String patientFullName = null;
+    if (lead.getConvertedPatient() != null) {
+      patientFullName = lead.getConvertedPatient().getFirstName() + " " + lead.getConvertedPatient().getLastName();
     }
     return new LeadResponse(
         lead.getId(),
@@ -87,6 +94,7 @@ public class LeadResponse {
         lead.getAssignedTo() != null ? lead.getAssignedTo().getId() : null,
         lead.getAssignedTo() != null ? lead.getAssignedTo().getFullName() : null,
         lead.getConvertedPatient() != null ? lead.getConvertedPatient().getId() : null,
+        patientFullName,
         lead.getLastContactAt(),
         lead.getNextActionAt(),
         lead.getCreatedAt(),
@@ -196,6 +204,14 @@ public class LeadResponse {
 
   public void setConvertedPatientId(UUID convertedPatientId) {
     this.convertedPatientId = convertedPatientId;
+  }
+
+  public String getConvertedPatientName() {
+    return convertedPatientName;
+  }
+
+  public void setConvertedPatientName(String convertedPatientName) {
+    this.convertedPatientName = convertedPatientName;
   }
 
   public Instant getLastContactAt() {

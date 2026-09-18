@@ -14,20 +14,30 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.julio.odentix.odentix_backend.AbstractIntegrationTest;
+import com.julio.odentix.odentix_backend.appointment.entity.Professional;
+import com.julio.odentix.odentix_backend.appointment.entity.Room;
+import com.julio.odentix.odentix_backend.appointment.repository.ProfessionalRepository;
+import com.julio.odentix.odentix_backend.appointment.repository.RoomRepository;
 import com.julio.odentix.odentix_backend.auth.entity.User;
 import com.julio.odentix.odentix_backend.auth.entity.UserRole;
 import com.julio.odentix.odentix_backend.auth.service.JwtService;
 import com.julio.odentix.odentix_backend.auth.service.UserService;
+import com.julio.odentix.odentix_backend.crm.dto.ConvertLeadAppointmentData;
+import com.julio.odentix.odentix_backend.crm.dto.ConvertLeadPatientData;
+import com.julio.odentix.odentix_backend.crm.dto.ConvertLeadRequest;
 import com.julio.odentix.odentix_backend.crm.dto.CreateLeadActivityRequest;
 import com.julio.odentix.odentix_backend.crm.dto.CreateLeadRequest;
 import com.julio.odentix.odentix_backend.crm.dto.UpdateLeadRequest;
 import com.julio.odentix.odentix_backend.crm.dto.UpdateLeadStatusRequest;
 import com.julio.odentix.odentix_backend.crm.entity.LeadActivityType;
 import com.julio.odentix.odentix_backend.crm.entity.LeadStatus;
+import com.julio.odentix.odentix_backend.patient.repository.PatientRepository;
 import com.julio.odentix.odentix_backend.shared.context.TenantContext;
 import com.julio.odentix.odentix_backend.tenant.entity.Tenant;
 import com.julio.odentix.odentix_backend.tenant.repository.TenantRepository;
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,7 +49,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 /**
- * Pruebas de integración para los endpoints REST del CRM de leads (FASE5-02)
+ * Pruebas de integración para los endpoints REST del CRM de leads (FASE5-02, FASE5-03)
  * contra PostgreSQL 16 real vía Testcontainers.
  *
  * <p>Cubre:
@@ -47,7 +57,8 @@ import org.springframework.test.web.servlet.MvcResult;
  *   <li>Alta, consulta por ID, listado con filtros y actualización de prospectos.</li>
  *   <li>Transición flexible de estados en el pipeline comercial (avances y retrocesos).</li>
  *   <li>Registro de actividades y actualización reactiva de {@code lastContactAt}.</li>
- *   <li>Historial cronológico de interacciones.</li>
+ *   <li>Conversión de lead a paciente y programación opcional de cita (FASE5-03).</li>
+ *   <li>Idempotencia razonable en la conversión para evitar pacientes duplicados.</li>
  *   <li>Aislamiento multi-tenant estricto (§5 de AGENTS.md).</li>
  *   <li>Autorización y control de acceso por rol (§7 de AGENTS.md).</li>
  * </ul>
@@ -66,6 +77,15 @@ class LeadIntegrationTest extends AbstractIntegrationTest {
 
   @Autowired
   private JwtService jwtService;
+
+  @Autowired
+  private PatientRepository patientRepository;
+
+  @Autowired
+  private ProfessionalRepository professionalRepository;
+
+  @Autowired
+  private RoomRepository roomRepository;
 
   private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
@@ -371,5 +391,174 @@ class LeadIntegrationTest extends AbstractIntegrationTest {
     String json = result.getResponse().getContentAsString();
     JsonNode node = objectMapper.readTree(json);
     return UUID.fromString(node.get("id").asText());
+  }
+
+  @Test
+  void convertirLeadSinCitaCreaPacienteYActualizaLead() throws Exception {
+    UUID leadId = createLead("Camila Restrepo", "+573112223344", "camila@test.com", "meta_ads");
+
+    ConvertLeadRequest convertReq = new ConvertLeadRequest();
+    ConvertLeadPatientData patientData = new ConvertLeadPatientData();
+    patientData.setDocumentType("CC");
+    patientData.setDocumentNumber("10203040");
+    patientData.setAddress("Calle 10 # 20-30");
+    convertReq.setPatient(patientData);
+
+    MvcResult result = mockMvc.perform(post("/api/v1/leads/{id}/convert", leadId)
+            .header("Authorization", "Bearer " + tokenRecepcionA)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(convertReq)))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.alreadyConverted").value(false))
+        .andExpect(jsonPath("$.leadId").value(leadId.toString()))
+        .andExpect(jsonPath("$.patientId").isNotEmpty())
+        .andExpect(jsonPath("$.patient.firstName").value("Camila"))
+        .andExpect(jsonPath("$.patient.lastName").value("Restrepo"))
+        .andExpect(jsonPath("$.patient.documentType").value("CC"))
+        .andExpect(jsonPath("$.patient.documentNumber").value("10203040"))
+        .andExpect(jsonPath("$.patient.phone").value("+573112223344"))
+        .andExpect(jsonPath("$.patient.email").value("camila@test.com"))
+        .andExpect(jsonPath("$.appointmentId").doesNotExist())
+        .andReturn();
+
+    JsonNode respNode = objectMapper.readTree(result.getResponse().getContentAsString());
+    UUID createdPatientId = UUID.fromString(respNode.get("patientId").asText());
+
+    // Verificar que el lead quedó enlazado al paciente y con estado calificado
+    mockMvc.perform(get("/api/v1/leads/{id}", leadId)
+            .header("Authorization", "Bearer " + tokenRecepcionA))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.convertedPatientId").value(createdPatientId.toString()))
+        .andExpect(jsonPath("$.convertedPatientName").value("Camila Restrepo"))
+        .andExpect(jsonPath("$.status").value(LeadStatus.calificado.name()));
+
+    // Verificar que se registró una actividad de tipo nota indicando la conversión
+    mockMvc.perform(get("/api/v1/leads/{id}/activities", leadId)
+            .header("Authorization", "Bearer " + tokenRecepcionA))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", hasSize(1)))
+        .andExpect(jsonPath("$[0].activityType").value(LeadActivityType.nota.name()))
+        .andExpect(jsonPath("$[0].notes", Matchers.containsString("Lead convertido exitosamente a paciente: Camila Restrepo")));
+  }
+
+  @Test
+  void convertirLeadInferirNombresAutomaticamente() throws Exception {
+    UUID leadId = createLead("Andres Felipe Perez Gomez", "+573009988776", "andres@test.com", "google_ads");
+
+    // Conversión sin body
+    mockMvc.perform(post("/api/v1/leads/{id}/convert", leadId)
+            .header("Authorization", "Bearer " + tokenRecepcionA))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.alreadyConverted").value(false))
+        .andExpect(jsonPath("$.patient.firstName").value("Andres"))
+        .andExpect(jsonPath("$.patient.lastName").value("Felipe Perez Gomez"))
+        .andExpect(jsonPath("$.patient.phone").value("+573009988776"))
+        .andExpect(jsonPath("$.patient.email").value("andres@test.com"));
+  }
+
+  @Test
+  void convertirLeadConCitaInicial() throws Exception {
+    UUID leadId = createLead("Valentina Gomez", "+573155554433", "valentina@test.com", "instagram");
+
+    Professional professional = professionalRepository.save(new Professional(tenantA.getId(), "Dra. Carolina Dental"));
+    Room room = roomRepository.save(new Room(tenantA.getId(), "Consultorio 101"));
+
+    Instant start = Instant.now().plus(1, ChronoUnit.DAYS).truncatedTo(ChronoUnit.HOURS);
+    Instant end = start.plus(1, ChronoUnit.HOURS);
+
+    ConvertLeadRequest req = new ConvertLeadRequest();
+    ConvertLeadAppointmentData apptData = new ConvertLeadAppointmentData();
+    apptData.setProfessionalId(professional.getId());
+    apptData.setRoomId(room.getId());
+    apptData.setStartsAt(start);
+    apptData.setEndsAt(end);
+    apptData.setEstimatedValueCop(new BigDecimal("150000.00"));
+    apptData.setNotes("Valoración odontológica inicial");
+    req.setAppointment(apptData);
+
+    mockMvc.perform(post("/api/v1/leads/{id}/convert", leadId)
+            .header("Authorization", "Bearer " + tokenRecepcionA)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(req)))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.alreadyConverted").value(false))
+        .andExpect(jsonPath("$.patientId").isNotEmpty())
+        .andExpect(jsonPath("$.appointmentId").isNotEmpty())
+        .andExpect(jsonPath("$.appointment.professionalId").value(professional.getId().toString()))
+        .andExpect(jsonPath("$.appointment.roomId").value(room.getId().toString()))
+        .andExpect(jsonPath("$.appointment.status").value("programada"));
+
+    // Verificar que el lead pasó a cita_agendada
+    mockMvc.perform(get("/api/v1/leads/{id}", leadId)
+            .header("Authorization", "Bearer " + tokenRecepcionA))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value(LeadStatus.cita_agendada.name()));
+  }
+
+  @Test
+  void convertirLeadEsIdempotenteYNoDuplicaPaciente() throws Exception {
+    UUID leadId = createLead("David Idempotente", "+573201112233", "david@test.com", "referido");
+
+    long initialPatientCount = patientRepository.count();
+
+    // Primera invocación -> 201 Created
+    MvcResult firstResult = mockMvc.perform(post("/api/v1/leads/{id}/convert", leadId)
+            .header("Authorization", "Bearer " + tokenRecepcionA))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.alreadyConverted").value(false))
+        .andReturn();
+
+    UUID firstPatientId = UUID.fromString(
+        objectMapper.readTree(firstResult.getResponse().getContentAsString()).get("patientId").asText());
+
+    // Segunda invocación -> 200 OK e idempotencia
+    MvcResult secondResult = mockMvc.perform(post("/api/v1/leads/{id}/convert", leadId)
+            .header("Authorization", "Bearer " + tokenRecepcionA))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.alreadyConverted").value(true))
+        .andReturn();
+
+    UUID secondPatientId = UUID.fromString(
+        objectMapper.readTree(secondResult.getResponse().getContentAsString()).get("patientId").asText());
+
+    assertThat(secondPatientId).isEqualTo(firstPatientId);
+    assertThat(patientRepository.count()).isEqualTo(initialPatientCount + 1);
+  }
+
+  @Test
+  void aislamientoCrossTenantAlConvertirLead() throws Exception {
+    UUID leadAId = createLead("Paciente Secreto Alfa", "+573001234567", "secreto@alfa.test", "meta_ads");
+
+    // Intento de conversión desde Tenant B -> 404
+    mockMvc.perform(post("/api/v1/leads/{id}/convert", leadAId)
+            .header("Authorization", "Bearer " + tokenRecepcionB))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void rollbackAlFallarCreacionDeCita() throws Exception {
+    UUID leadId = createLead("Paciente Fallido", "+573007778899", "fallido@test.com", "google_ads");
+
+    Instant start = Instant.now().plus(2, ChronoUnit.DAYS);
+    Instant invalidEnd = start.minus(1, ChronoUnit.HOURS); // Fin antes de inicio -> inválido
+
+    ConvertLeadRequest req = new ConvertLeadRequest();
+    ConvertLeadAppointmentData apptData = new ConvertLeadAppointmentData();
+    apptData.setStartsAt(start);
+    apptData.setEndsAt(invalidEnd);
+    req.setAppointment(apptData);
+
+    mockMvc.perform(post("/api/v1/leads/{id}/convert", leadId)
+            .header("Authorization", "Bearer " + tokenRecepcionA)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(req)))
+        .andExpect(status().isBadRequest());
+
+    // Verificar que el lead sigue sin paciente convertido (rollback exitoso)
+    mockMvc.perform(get("/api/v1/leads/{id}", leadId)
+            .header("Authorization", "Bearer " + tokenRecepcionA))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.convertedPatientId").doesNotExist())
+        .andExpect(jsonPath("$.status").value(LeadStatus.nuevo.name()));
   }
 }

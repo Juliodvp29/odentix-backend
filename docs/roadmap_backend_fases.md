@@ -1526,17 +1526,19 @@ Evitar duplicar datos entre `Lead` y `Patient` al convertir.
 
 **Tareas:**
 
-- [ ] `POST /api/v1/leads/{id}/convert` — crea `Patient` (+
+- [x] `POST /api/v1/leads/{id}/convert` — crea `Patient` (+
       opcionalmente `Appointment`) a partir de los datos del lead.
-- [ ] El lead queda enlazado al paciente resultante
+- [x] El lead queda enlazado al paciente resultante
       (`converted_patient_id`) para trazabilidad de origen.
-- [ ] Test: convertir un lead no crea un paciente duplicado si se
+- [x] Test: convertir un lead no crea un paciente duplicado si se
       llama dos veces por error (idempotencia razonable).
 
 **Criterios de aceptación:**
 
-- [ ] Convertir un lead crea correctamente el paciente y la cita
-      asociada, y el lead queda enlazado a ese paciente.
+- [x] Convertir un lead crea correctamente el paciente y la cita
+      asociada, y el lead queda enlazado a ese paciente. Verificado con
+      `LeadIntegrationTest` (15/15 pruebas cubriendo conversión con/sin cita, inferencia
+      automática de nombres, idempotencia, aislamiento cross-tenant y rollback ante fallos).
 
 ---
 
