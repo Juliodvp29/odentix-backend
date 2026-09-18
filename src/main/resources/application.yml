@@ -61,4 +61,10 @@ security:
       max-failed-attempts: ${LOGIN_RATE_LIMIT_EMAIL_MAX_ATTEMPTS:5}
       lockout-duration-minutes: ${LOGIN_RATE_LIMIT_LOCKOUT_MINUTES:15}
 
+odentix:
+  jobs:
+    overdue-installments:
+      cron: ${OVERDUE_INSTALLMENTS_CRON:0 0 2 * * *}
+
+
 

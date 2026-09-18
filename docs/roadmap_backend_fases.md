@@ -1651,17 +1651,27 @@ aquí se conecta a un scheduler de Spring.
 
 **Tareas:**
 
-- [ ] Job diario con `@Scheduled` que invoca la lógica de marcar cuotas
+- [x] Job diario con `@Scheduled` que invoca la lógica de marcar cuotas
       vencidas (puede llamar la función SQL directamente o
       reimplementar la misma regla en Java — mantente consistente con
       lo que ya existe en la base para no duplicar lógica divergente).
-- [ ] Log o métrica de cuántas cuotas se marcaron vencidas en cada
+      (`OverdueInstallmentsJob.java` en `billing.service`; invoca la función nativa
+      `mark_overdue_installments()` vía `InstallmentRepository`; método `execute()`
+      invocable directamente y `@Scheduled(cron = "${odentix.jobs.overdue-installments.cron:0 0 2 * * *}")`).
+- [x] Log o métrica de cuántas cuotas se marcaron vencidas en cada
       corrida, útil para depurar en producción.
+      (`execute()` retorna el entero de filas afectadas y registra con SLF4J
+      `log.info("Job de cuotas vencidas completado: {} cuotas marcadas como vencidas.", afectadas)`).
 
 **Criterios de aceptación:**
 
-- [ ] Una cuota con `due_date` en el pasado y estado `pendiente`
+- [x] Una cuota con `due_date` en el pasado y estado `pendiente`
       cambia a `vencida` después de correr el job.
+      (Verificado con `OverdueInstallmentsJobIntegrationTest` 4/4 en verde:
+      cuota vencida en pendiente pasa a vencida, cuota futura permanece en pendiente,
+      cuota pagada no cambia, ejecución multi-tenant global y retorno exacto del conteo;
+      `./mvnw.cmd test -Dtest=OverdueInstallmentsJobIntegrationTest`: 4/4 sin fallos;
+      `clean verify`: 240/240 sin fallos).
 
 **Temas de Spring Boot:** `@Scheduled`, consideraciones de concurrencia
 si en el futuro hay múltiples instancias corriendo el mismo job
