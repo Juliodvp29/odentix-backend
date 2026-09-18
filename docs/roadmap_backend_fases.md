@@ -1383,16 +1383,18 @@ del doc de arquitectura).
 
 **Tareas:**
 
-- [ ] Entidades `Invoice`, `InvoiceItem`, `Payment` (ver `schema.sql`
+- [x] Entidades `Invoice`, `InvoiceItem`, `Payment` (ver `schema.sql`
       para la referencia exacta de columnas y constraints).
-- [ ] Relación `Invoice` → `TreatmentPlan` (opcional, puede facturarse
+- [x] Relación `Invoice` → `TreatmentPlan` (opcional, puede facturarse
       sin un plan asociado).
-- [ ] Migraciones Flyway correspondientes.
+- [x] Migraciones Flyway correspondientes.
 
 **Criterios de aceptación:**
 
-- [ ] Se puede persistir una factura con ítems y su total coincide con
+- [x] Se puede persistir una factura con ítems y su total coincide con
       la suma de los ítems.
+      (Verificado con `BillingModelIntegrationTest` 4/4 en verde;
+      `./mvnw.cmd clean verify`: 191/191 pruebas sin fallos).
 
 ---
 
