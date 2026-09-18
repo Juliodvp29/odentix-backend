@@ -1477,16 +1477,18 @@ Pipeline: `nuevo` → `contactado` → `calificado` → `cita_propuesta` →
 
 **Tareas:**
 
-- [ ] Entidad `Lead`: nombre, contacto, fuente, campaña, procedimiento
+- [x] Entidad `Lead`: nombre, contacto, fuente, campaña, procedimiento
       de interés, valor potencial, estado, responsable asignado
       (sección 8.7).
-- [ ] Entidad `LeadActivity` (historial de contactos: llamada,
+- [x] Entidad `LeadActivity` (historial de contactos: llamada,
       WhatsApp, email, nota).
-- [ ] Migraciones Flyway correspondientes.
+- [x] Migraciones Flyway correspondientes (`V17__create_leads.sql` con RLS,
+      triggers de consistencia multi-tenant e índice para motor de oportunidades).
 
 **Criterios de aceptación:**
 
-- [ ] Se puede registrar un lead y agregarle actividades de contacto.
+- [x] Se puede registrar un lead y agregarle actividades de contacto. Verificado
+      con `LeadRepositoryIntegrationTest` (5/5 pruebas sin fallos en PostgreSQL real).
 
 ---
 
