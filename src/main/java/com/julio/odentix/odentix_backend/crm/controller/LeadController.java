@@ -6,16 +6,20 @@ import com.julio.odentix.odentix_backend.crm.dto.ConvertLeadResponse;
 import com.julio.odentix.odentix_backend.crm.dto.CreateLeadActivityRequest;
 import com.julio.odentix.odentix_backend.crm.dto.CreateLeadRequest;
 import com.julio.odentix.odentix_backend.crm.dto.LeadActivityResponse;
+import com.julio.odentix.odentix_backend.crm.dto.LeadConversionMetricsResponse;
 import com.julio.odentix.odentix_backend.crm.dto.LeadResponse;
+import com.julio.odentix.odentix_backend.crm.dto.LeadResponseTimeMetricsResponse;
 import com.julio.odentix.odentix_backend.crm.dto.UpdateLeadRequest;
 import com.julio.odentix.odentix_backend.crm.dto.UpdateLeadStatusRequest;
 import com.julio.odentix.odentix_backend.crm.entity.LeadStatus;
+import com.julio.odentix.odentix_backend.crm.service.LeadMetricsService;
 import com.julio.odentix.odentix_backend.crm.service.LeadService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -37,7 +41,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 /**
- * Controlador REST para la gestión de prospectos comerciales y embudo CRM (FASE5-02).
+ * Controlador REST para la gestión de prospectos comerciales y embudo CRM (FASE5-02, FASE5-04).
  */
 @RestController
 @RequestMapping("/api/v1/leads")
@@ -47,9 +51,11 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 public class LeadController {
 
   private final LeadService leadService;
+  private final LeadMetricsService leadMetricsService;
 
-  public LeadController(LeadService leadService) {
+  public LeadController(LeadService leadService, LeadMetricsService leadMetricsService) {
     this.leadService = leadService;
+    this.leadMetricsService = leadMetricsService;
   }
 
   @PostMapping
@@ -154,5 +160,27 @@ public class LeadController {
       return ResponseEntity.ok(response);
     }
     return ResponseEntity.status(HttpStatus.CREATED).body(response);
+  }
+
+  @GetMapping("/metrics/conversion")
+  @Operation(
+      summary = "Métricas de conversión de leads",
+      description = "Devuelve indicadores de conversión comercial globales y desglosados por canal y por campaña para un rango de fechas opcional."
+  )
+  public ResponseEntity<LeadConversionMetricsResponse> getConversionMetrics(
+      @RequestParam(required = false) Instant from,
+      @RequestParam(required = false) Instant to) {
+    return ResponseEntity.ok(leadMetricsService.getConversionMetrics(from, to));
+  }
+
+  @GetMapping("/metrics/response-time")
+  @Operation(
+      summary = "Métricas de tiempo de respuesta a leads",
+      description = "Mide la velocidad de atención y tiempo promedio hasta la primera interacción registrada con los prospectos dentro de un rango de fechas opcional."
+  )
+  public ResponseEntity<LeadResponseTimeMetricsResponse> getResponseTimeMetrics(
+      @RequestParam(required = false) Instant from,
+      @RequestParam(required = false) Instant to) {
+    return ResponseEntity.ok(leadMetricsService.getResponseTimeMetrics(from, to));
   }
 }

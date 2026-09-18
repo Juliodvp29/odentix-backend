@@ -561,4 +561,145 @@ class LeadIntegrationTest extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.convertedPatientId").doesNotExist())
         .andExpect(jsonPath("$.status").value(LeadStatus.nuevo.name()));
   }
+
+  @Test
+  void obtenerMetricasDeConversionPorFuenteYCampana() throws Exception {
+    // 1. Lead 1: meta_ads / implantes -> Convertido
+    CreateLeadRequest req1 = new CreateLeadRequest("Lead Uno", "+573001111111", "uno@test.com", "meta_ads");
+    req1.setCampaign("implantes");
+    UUID lead1Id = createLeadWithRequest(req1);
+    mockMvc.perform(post("/api/v1/leads/{id}/convert", lead1Id)
+            .header("Authorization", "Bearer " + tokenRecepcionA))
+        .andExpect(status().isCreated());
+
+    // 2. Lead 2: meta_ads / implantes -> No convertido
+    CreateLeadRequest req2 = new CreateLeadRequest("Lead Dos", "+573002222222", "dos@test.com", "meta_ads");
+    req2.setCampaign("implantes");
+    createLeadWithRequest(req2);
+
+    // 3. Lead 3: google_ads / ortodoncia -> Convertido
+    CreateLeadRequest req3 = new CreateLeadRequest("Lead Tres", "+573003333333", "tres@test.com", "google_ads");
+    req3.setCampaign("ortodoncia");
+    UUID lead3Id = createLeadWithRequest(req3);
+    mockMvc.perform(post("/api/v1/leads/{id}/convert", lead3Id)
+            .header("Authorization", "Bearer " + tokenRecepcionA))
+        .andExpect(status().isCreated());
+
+    // Consultar métricas en Tenant A
+    mockMvc.perform(get("/api/v1/leads/metrics/conversion")
+            .header("Authorization", "Bearer " + tokenRecepcionA))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalLeads").value(3))
+        .andExpect(jsonPath("$.convertedLeads").value(2))
+        .andExpect(jsonPath("$.conversionRatePercentage").value(66.67))
+        .andExpect(jsonPath("$.bySource", hasSize(2)))
+        .andExpect(jsonPath("$.bySource[0].dimensionValue").value("meta_ads"))
+        .andExpect(jsonPath("$.bySource[0].totalLeads").value(2))
+        .andExpect(jsonPath("$.bySource[0].convertedLeads").value(1))
+        .andExpect(jsonPath("$.bySource[0].conversionRatePercentage").value(50.0))
+        .andExpect(jsonPath("$.bySource[1].dimensionValue").value("google_ads"))
+        .andExpect(jsonPath("$.bySource[1].totalLeads").value(1))
+        .andExpect(jsonPath("$.bySource[1].convertedLeads").value(1))
+        .andExpect(jsonPath("$.bySource[1].conversionRatePercentage").value(100.0))
+        .andExpect(jsonPath("$.byCampaign", hasSize(2)))
+        .andExpect(jsonPath("$.byCampaign[0].dimensionValue").value("implantes"))
+        .andExpect(jsonPath("$.byCampaign[0].totalLeads").value(2))
+        .andExpect(jsonPath("$.byCampaign[0].convertedLeads").value(1))
+        .andExpect(jsonPath("$.byCampaign[0].conversionRatePercentage").value(50.0))
+        .andExpect(jsonPath("$.byCampaign[1].dimensionValue").value("ortodoncia"))
+        .andExpect(jsonPath("$.byCampaign[1].totalLeads").value(1))
+        .andExpect(jsonPath("$.byCampaign[1].convertedLeads").value(1))
+        .andExpect(jsonPath("$.byCampaign[1].conversionRatePercentage").value(100.0));
+  }
+
+  @Test
+  void obtenerMetricasDeTiempoDePrimeraRespuesta() throws Exception {
+    // Lead con actividad de respuesta inmediata
+    UUID leadId = createLead("Lead Respondido", "+573005556677", "respondido@test.com", "instagram");
+    mockMvc.perform(post("/api/v1/leads/{id}/activities", leadId)
+            .header("Authorization", "Bearer " + tokenRecepcionA)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(new CreateLeadActivityRequest(LeadActivityType.llamada, "Contacto inicial"))))
+        .andExpect(status().isCreated());
+
+    // Lead sin respuesta
+    createLead("Lead Sin Respuesta", "+573008889900", "sinrespuesta@test.com", "instagram");
+
+    mockMvc.perform(get("/api/v1/leads/metrics/response-time")
+            .header("Authorization", "Bearer " + tokenRecepcionA))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalLeads").value(2))
+        .andExpect(jsonPath("$.respondedLeads").value(1))
+        .andExpect(jsonPath("$.unrespondedLeads").value(1))
+        .andExpect(jsonPath("$.responseRatePercentage").value(50.0))
+        .andExpect(jsonPath("$.averageResponseTimeMinutes").isNumber())
+        .andExpect(jsonPath("$.averageResponseTimeHours").isNumber());
+  }
+
+  @Test
+  void aislamientoCrossTenantEnMetricas() throws Exception {
+    // Lead en Tenant A convertido
+    UUID leadAId = createLead("Lead Alfa", "+573001110000", "alfa@test.com", "meta_ads");
+    mockMvc.perform(post("/api/v1/leads/{id}/convert", leadAId)
+            .header("Authorization", "Bearer " + tokenRecepcionA))
+        .andExpect(status().isCreated());
+
+    // Lead en Tenant B sin convertir
+    CreateLeadRequest reqB = new CreateLeadRequest("Lead Beta", "+573002220000", "beta@test.com", "google_ads");
+    mockMvc.perform(post("/api/v1/leads")
+            .header("Authorization", "Bearer " + tokenRecepcionB)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(reqB)))
+        .andExpect(status().isCreated());
+
+    // Métricas en Tenant B deben ver únicamente el lead de Tenant B
+    mockMvc.perform(get("/api/v1/leads/metrics/conversion")
+            .header("Authorization", "Bearer " + tokenRecepcionB))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalLeads").value(1))
+        .andExpect(jsonPath("$.convertedLeads").value(0))
+        .andExpect(jsonPath("$.conversionRatePercentage").value(0.0))
+        .andExpect(jsonPath("$.bySource", hasSize(1)))
+        .andExpect(jsonPath("$.bySource[0].dimensionValue").value("google_ads"))
+        .andExpect(jsonPath("$.bySource[0].totalLeads").value(1))
+        .andExpect(jsonPath("$.bySource[0].convertedLeads").value(0));
+  }
+
+  @Test
+  void metricasConRangoDeFechasVacioOInvalido() throws Exception {
+    Instant futureFrom = Instant.now().plus(300, ChronoUnit.DAYS);
+    Instant futureTo = futureFrom.plus(30, ChronoUnit.DAYS);
+
+    // Rango futuro sin datos
+    mockMvc.perform(get("/api/v1/leads/metrics/conversion")
+            .header("Authorization", "Bearer " + tokenRecepcionA)
+            .param("from", futureFrom.toString())
+            .param("to", futureTo.toString()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalLeads").value(0))
+        .andExpect(jsonPath("$.convertedLeads").value(0))
+        .andExpect(jsonPath("$.conversionRatePercentage").value(0.0))
+        .andExpect(jsonPath("$.bySource", hasSize(0)))
+        .andExpect(jsonPath("$.byCampaign", hasSize(0)));
+
+    // Rango inválido (from después de to)
+    mockMvc.perform(get("/api/v1/leads/metrics/conversion")
+            .header("Authorization", "Bearer " + tokenRecepcionA)
+            .param("from", futureTo.toString())
+            .param("to", futureFrom.toString()))
+        .andExpect(status().isBadRequest());
+  }
+
+  private UUID createLeadWithRequest(CreateLeadRequest req) throws Exception {
+    MvcResult result = mockMvc.perform(post("/api/v1/leads")
+            .header("Authorization", "Bearer " + tokenRecepcionA)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(objectMapper.writeValueAsString(req)))
+        .andExpect(status().isCreated())
+        .andReturn();
+
+    String json = result.getResponse().getContentAsString();
+    JsonNode node = objectMapper.readTree(json);
+    return UUID.fromString(node.get("id").asText());
+  }
 }

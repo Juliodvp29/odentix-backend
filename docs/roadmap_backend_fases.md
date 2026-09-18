@@ -1554,14 +1554,16 @@ frontend graficará esto después, aquí solo los endpoints de datos.
 
 **Tareas:**
 
-- [ ] Endpoint de conversión por fuente y por campaña (cuántos leads
+- [x] Endpoint de conversión por fuente y por campaña (cuántos leads
       llegaron vs. cuántos se convirtieron).
-- [ ] Endpoint de tiempo promedio de primera respuesta a un lead.
+- [x] Endpoint de tiempo promedio de primera respuesta a un lead.
 
 **Criterios de aceptación:**
 
-- [ ] Los endpoints devuelven estos indicadores para un rango de fechas
-      dado, filtrados correctamente por tenant.
+- [x] Los endpoints devuelven estos indicadores para un rango de fechas
+      dado, filtrados correctamente por tenant. Verificado con `LeadIntegrationTest`
+      (19/19 pruebas cubriendo métricas de conversión por dimensión, tiempo promedio de
+      respuesta, filtrado temporal, rangos vacíos y aislamiento cross-tenant).
 
 ---
 
