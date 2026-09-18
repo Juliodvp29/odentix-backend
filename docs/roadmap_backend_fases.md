@@ -1582,15 +1582,29 @@ frontend graficará esto después, aquí solo los endpoints de datos.
 
 **Tareas:**
 
-- [ ] Entidad `PaymentPlan` (asociada a un `TreatmentPlan`), entidad
+- [x] Entidad `PaymentPlan` (asociada a un `TreatmentPlan`), entidad
       `Installment` (cuotas con número, monto, fecha de vencimiento,
       estado).
-- [ ] Migraciones Flyway correspondientes.
+      (`PaymentPlan` extiende `TenantAwareEntity`, FK a `treatment_plans` como
+      UUID simple; `Installment` con `@ManyToOne` hacia `PaymentPlan`,
+      `dueDate` como `LocalDate`, `paidAt` como `Instant` nullable;
+      enum `InstallmentStatus` con `PostgreSQLEnumJdbcType` — mismo patrón
+      que `InvoiceStatus`).
+- [x] Migraciones Flyway correspondientes.
+      (`V18__create_payment_plans.sql`: tipo `installment_status`, tablas
+      `payment_plans` e `installments`, índices, triggers `set_updated_at`,
+      función `mark_overdue_installments()`, RLS con política `tenant_isolation`
+      en ambas tablas).
 
 **Criterios de aceptación:**
 
-- [ ] Se puede definir un plan de pago en cuotas y ver el estado de
+- [x] Se puede definir un plan de pago en cuotas y ver el estado de
       cada cuota (`pendiente`, `pagada`, `vencida`).
+      (Verificado con `PaymentPlanRepositoryIntegrationTest` 5/5 en verde:
+      cuotas nacen en estado `pendiente`, búsqueda por tratamiento,
+      constraint UNIQUE de cuota duplicada, y aislamiento cross-tenant
+      en `PaymentPlan` e `Installment`; `./mvnw.cmd test -Dtest=PaymentPlanRepositoryIntegrationTest`:
+      5/5 sin fallos, V18 aplicada correctamente por Flyway).
 
 ---
 
