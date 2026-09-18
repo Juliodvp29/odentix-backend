@@ -1759,16 +1759,29 @@ Extensión financiera de `Professional` para especialistas externos
 
 **Tareas:**
 
-- [ ] Lógica de cálculo de producción bruta de un especialista en un
+- [x] Lógica de cálculo de producción bruta de un especialista en un
       periodo (a partir de tratamientos/citas asociadas ya facturadas).
-- [ ] `POST /api/v1/specialists/{id}/settlements` (generar liquidación
+      (`SettlementService` + `InvoiceRepository.sumFacturadoPorProfesionalEnPeriodo`:
+      suma `total_cop` de facturas emitidas en el periodo vinculadas a tratamientos
+      del profesional, excluyendo `anulada` y facturas sin tratamiento; honorarios =
+      bruto × `fee_percentage` / 100 HALF_UP; límites del periodo en días calendario
+      de la zona horaria de la clínica.)
+- [x] `POST /api/v1/specialists/{id}/settlements` (generar liquidación
       para un periodo).
-- [ ] Test de aislamiento cross-tenant.
+      (`SettlementController` con `@Tag`/`@Operation`, 201 + `Location`;
+      solo `PROPIETARIO`; 409 si el periodo ya fue liquidado.)
+- [x] Test de aislamiento cross-tenant.
+      (`SettlementIntegrationTest`: especialista de otro tenant → 404;
+      recepción → 403; sin token → 401.)
 
 **Criterios de aceptación:**
 
-- [ ] Se puede calcular cuánto se le debe liquidar a un especialista en
+- [x] Se puede calcular cuánto se le debe liquidar a un especialista en
       un periodo dado, a partir de los tratamientos/citas asociadas.
+      (Verificado con `SettlementIntegrationTest` 7/7 en verde: cálculo exacto
+      bruto/honorarios con exclusiones de periodo, estado, profesional y facturas
+      sin tratamiento; idempotencia por periodo; `./mvnw.cmd clean verify`:
+      258/258 pruebas sin fallos).
 
 ---
 

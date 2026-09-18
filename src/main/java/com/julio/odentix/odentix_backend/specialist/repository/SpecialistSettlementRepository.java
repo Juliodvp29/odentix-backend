@@ -28,4 +28,10 @@ public interface SpecialistSettlementRepository extends JpaRepository<Specialist
    * @return liquidaciones del especialista en el tenant activo.
    */
   List<SpecialistSettlement> findBySpecialistIdOrderByPeriodStartAsc(UUID specialistId);
+
+  /**
+   * Indica si ya existe una liquidación para el especialista con el mismo inicio
+   * de periodo (política de idempotencia de FASE7-02: un periodo se liquida una vez).
+   */
+  boolean existsBySpecialistIdAndPeriodStart(UUID specialistId, java.time.LocalDate periodStart);
 }
