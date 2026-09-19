@@ -7,6 +7,16 @@ spring:
     password: ${DB_PASSWORD}
   jpa:
     show-sql: false
+    # Arranque diferido SOLO en prod (diagnosticado 2026-09-19): con 34
+    # repositorios, parsear/validar todas las queries JPQL al inicio tarda
+    # ~13 min en la CPU estrangulada del plan free y Render declara timeout
+    # sin puerto. En lazy el /health responde en segundos; las queries igual
+    # quedan verificadas porque la suite las ejercita todas (clean verify).
+    # Dev/test siguen eager (fail-fast).
+  data:
+    jpa:
+      repositories:
+        bootstrap-mode: lazy
 
 server:
   # En prod el proveedor asigna el puerto vía $PORT.
