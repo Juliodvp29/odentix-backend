@@ -2,6 +2,8 @@ package com.julio.odentix.odentix_backend.assistant.controller;
 
 import com.julio.odentix.odentix_backend.assistant.dto.AskRequest;
 import com.julio.odentix.odentix_backend.assistant.dto.AskResponse;
+import com.julio.odentix.odentix_backend.assistant.dto.SuggestMessageRequest;
+import com.julio.odentix.odentix_backend.assistant.dto.SuggestMessageResponse;
 import com.julio.odentix.odentix_backend.assistant.service.AssistantService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -45,5 +47,21 @@ public class AssistantController {
   )
   public ResponseEntity<AskResponse> ask(@Valid @RequestBody AskRequest request) {
     return ResponseEntity.ok(assistantService.ask(request));
+  }
+
+  /**
+   * Sugiere un mensaje para una cita sin enviarlo ni persistirlo: queda como
+   * borrador editable para confirmación humana.
+   */
+  @PostMapping("/suggest-message")
+  @PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
+  @Operation(
+      summary = "Sugerir mensaje",
+      description = "Genera un mensaje sugerido editable a partir de una cita. "
+          + "No envía ni registra nada por sí solo."
+  )
+  public ResponseEntity<SuggestMessageResponse> suggestMessage(
+      @Valid @RequestBody SuggestMessageRequest request) {
+    return ResponseEntity.ok(assistantService.suggestMessage(request));
   }
 }

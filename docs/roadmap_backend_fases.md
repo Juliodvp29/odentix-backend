@@ -2324,16 +2324,26 @@ por costo — mismo proveedor que se evaluó para Venti Shop).
 
 **Tareas:**
 
-- [ ] `POST /api/v1/assistant/suggest-message` — dado un contexto (ej.
+- [x] `POST /api/v1/assistant/suggest-message` — dado un contexto (ej.
       cita sin confirmar), genera un mensaje sugerido.
-- [ ] El mensaje generado queda como sugerencia editable — nunca se
+      (Módulo `assistant/`: cita del tenant + hint opcional → prompt de
+      redacción breve; responde `{message, suggestedChannel, model}` con canal
+      según contacto. Sin persistencia.)
+- [x] El mensaje generado queda como sugerencia editable — nunca se
       envía automáticamente sin pasar por el flujo de notificaciones de
       la Fase 8 con confirmación humana cuando aplique.
 
 **Criterios de aceptación:**
 
-- [ ] El endpoint devuelve el mensaje sugerido sin efectos secundarios
+- [x] El endpoint devuelve el mensaje sugerido sin efectos secundarios
       (no envía nada por sí solo).
+      (Verificado con `SuggestMessageIntegrationTest` 2/2: texto del proveedor,
+      canal WhatsApp, hint incluido, **cero filas** en `notifications`/`tasks`,
+      cita ajena 404; endpoint en `OpenApiDocsIntegrationTest`;
+      `./mvnw.cmd clean verify`: 332/332 pruebas sin fallos.
+      Incidente de infraestructura de tests: `too many clients` en PG al crecer
+      los contextos en caché —se subió `max_connections` a 200 en
+      `AbstractIntegrationTest`, sin tocar lógica.)
 
 ---
 

@@ -1,9 +1,14 @@
 package com.julio.odentix.odentix_backend.assistant.service;
 
+import com.julio.odentix.odentix_backend.appointment.entity.Appointment;
+import com.julio.odentix.odentix_backend.appointment.repository.AppointmentRepository;
 import com.julio.odentix.odentix_backend.assistant.client.GroqChatClient;
 import com.julio.odentix.odentix_backend.assistant.dto.AskRequest;
 import com.julio.odentix.odentix_backend.assistant.dto.AskResponse;
+import com.julio.odentix.odentix_backend.assistant.dto.SuggestMessageRequest;
+import com.julio.odentix.odentix_backend.assistant.dto.SuggestMessageResponse;
 import com.julio.odentix.odentix_backend.shared.context.TenantContext;
+import com.julio.odentix.odentix_backend.shared.exception.ResourceNotFoundException;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -28,13 +33,24 @@ public class AssistantService {
       Si los datos no alcanzan para responder, dilo y pide qué información falta.
       """;
 
+  static final String SUGGEST_PROMPT = """
+      Redactas mensajes cortos para una clínica odontológica. Responde SOLO con el
+      mensaje listo para enviar, en español, tono cordial, sin comillas ni
+      explicaciones. Usa únicamente los datos dados; está prohibido inventar
+      nombres, fechas u ofertas. Máximo 300 caracteres si el canal es whatsapp.
+      """;
+
   private final AssistantContextService contextService;
   private final GroqChatClient groqChatClient;
+  private final AppointmentRepository appointmentRepository;
 
   public AssistantService(
-      AssistantContextService contextService, GroqChatClient groqChatClient) {
+      AssistantContextService contextService,
+      GroqChatClient groqChatClient,
+      AppointmentRepository appointmentRepository) {
     this.contextService = contextService;
     this.groqChatClient = groqChatClient;
+    this.appointmentRepository = appointmentRepository;
   }
 
   /**
@@ -57,6 +73,62 @@ public class AssistantService {
 
     AskResponse response = new AskResponse();
     response.setAnswer(answer);
+    response.setModel(groqChatClient.getModel());
+    return response;
+  }
+
+  /**
+   * Sugiere un mensaje para una cita sin enviarlo ni persistirlo (FASE10-02).
+   *
+   * <p>Es solo una sugerencia editable: el envío pasa después por el flujo de
+   * notificaciones con confirmación humana. Verificable por ausencia de filas
+   * en `notifications` y `tasks` tras la llamada.
+   *
+   * @param request cita de contexto y matiz opcional.
+   * @return mensaje sugerido, canal sugerido y modelo usado.
+   */
+  @Transactional(readOnly = true)
+  public SuggestMessageResponse suggestMessage(SuggestMessageRequest request) {
+    UUID tenantId = TenantContext.getRequiredTenantId();
+    Appointment cita = request.getAppointmentId() != null
+        ? appointmentRepository.findByIdAndTenantId(request.getAppointmentId(), tenantId)
+            .orElseThrow(() -> new ResourceNotFoundException(
+                "Cita no encontrada: " + request.getAppointmentId()))
+        : null;
+
+    String nombre = "el paciente";
+    String telefono = null;
+    String email = null;
+    String detalleCita = "sin cita asociada";
+    if (cita != null) {
+      if (cita.getPatient() != null) {
+        nombre = (cita.getPatient().getFirstName() + " " + cita.getPatient().getLastName())
+            .strip();
+        telefono = cita.getPatient().getPhone();
+        email = cita.getPatient().getEmail();
+      }
+      detalleCita = "cita del " + cita.getStartsAt() + " (estado " + cita.getStatus() + ")";
+    }
+    String canal = telefono != null && !telefono.isBlank() ? "whatsapp"
+        : email != null && !email.isBlank() ? "email" : "whatsapp";
+
+    StringBuilder datos = new StringBuilder();
+    datos.append("Paciente: ").append(nombre).append(".\n");
+    datos.append("Contexto: ").append(detalleCita).append(".\n");
+    datos.append("Canal previsto: ").append(canal).append(".\n");
+    if (request.getHint() != null && !request.getHint().isBlank()) {
+      datos.append("Matiz pedido: ").append(request.getHint().strip()).append(".\n");
+    }
+
+    List<Map<String, String>> messages = List.of(
+        Map.of("role", "system", "content", SUGGEST_PROMPT),
+        Map.of("role", "user", "content", datos.toString()));
+
+    String message = groqChatClient.chat(messages, 0.5, 300);
+
+    SuggestMessageResponse response = new SuggestMessageResponse();
+    response.setMessage(message);
+    response.setSuggestedChannel(canal);
     response.setModel(groqChatClient.getModel());
     return response;
   }

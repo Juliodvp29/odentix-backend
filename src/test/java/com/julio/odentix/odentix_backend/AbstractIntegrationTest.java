@@ -24,7 +24,11 @@ public abstract class AbstractIntegrationTest {
   static final PostgreSQLContainer<?> POSTGRES;
 
   static {
-    POSTGRES = new PostgreSQLContainer<>("postgres:16");
+    POSTGRES = new PostgreSQLContainer<>("postgres:16")
+        // Cada clase con contexto propio (falsos con @DynamicPropertySource,
+        // @MockitoBean…) deja su pool Hikari abierto en la caché de Spring:
+        // con el default de 100 conexiones PG se agota ("too many clients").
+        .withCommand("postgres", "-c", "max_connections=200");
     POSTGRES.start();
   }
 
