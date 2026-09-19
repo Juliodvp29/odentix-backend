@@ -2072,14 +2072,23 @@ la notificación.
 
 **Tareas:**
 
-- [ ] Al cancelarse una cita de alto valor y existir candidatos
+- [x] Al cancelarse una cita de alto valor y existir candidatos
       compatibles en lista de espera, disparar automáticamente una
       tarea (FASE8-01) o notificación (FASE8-03) de recuperación.
+      (Evento `AppointmentCancelledEvent` publicado en transición real a
+      `cancelada` + `SlotRecoveryListener` en `task/service`: si la cita era
+      de alto valor (`risk_level = alto`, criterio FASE3-07) y hay candidatos,
+      crea tarea para recepción con fecha y candidatos; eventos de Spring para
+      no ciclar dependencias `appointment` ↔ `task`. Se eligió tarea sobre
+      notificación: el contacto lo hace recepción con criterio.)
 
 **Criterios de aceptación:**
 
-- [ ] Una cancelación de cita de alto valor genera automáticamente una
+- [x] Una cancelación de cita de alto valor genera automáticamente una
       tarea o notificación de recuperación, sin intervención manual.
+      (Verificado con `SlotRecoveryAutomationIntegrationTest` 4/4: crea con
+      candidato, nada con riesgo medio, nada sin candidatos, nada al confirmar;
+      `./mvnw.cmd clean verify`: 298/298 pruebas sin fallos.)
 
 ---
 

@@ -11,6 +11,7 @@ import com.julio.odentix.odentix_backend.appointment.entity.Professional;
 import com.julio.odentix.odentix_backend.appointment.entity.RiskLevel;
 import com.julio.odentix.odentix_backend.appointment.entity.Room;
 import com.julio.odentix.odentix_backend.appointment.entity.WaitlistStatus;
+import com.julio.odentix.odentix_backend.appointment.event.AppointmentCancelledEvent;
 import com.julio.odentix.odentix_backend.appointment.repository.AppointmentRepository;
 import com.julio.odentix.odentix_backend.appointment.repository.ProfessionalRepository;
 import com.julio.odentix.odentix_backend.appointment.repository.RoomRepository;
@@ -27,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +44,7 @@ public class AppointmentService {
   private final RoomRepository roomRepository;
   private final WaitlistEntryRepository waitlistEntryRepository;
   private final NotificationService notificationService;
+  private final ApplicationEventPublisher eventPublisher;
 
   /**
    * Transiciones de estado permitidas (FASE3-04, sección 8.6 del doc de
@@ -69,13 +72,15 @@ public class AppointmentService {
       ProfessionalRepository professionalRepository,
       RoomRepository roomRepository,
       WaitlistEntryRepository waitlistEntryRepository,
-      NotificationService notificationService) {
+      NotificationService notificationService,
+      ApplicationEventPublisher eventPublisher) {
     this.appointmentRepository = appointmentRepository;
     this.patientRepository = patientRepository;
     this.professionalRepository = professionalRepository;
     this.roomRepository = roomRepository;
     this.waitlistEntryRepository = waitlistEntryRepository;
     this.notificationService = notificationService;
+    this.eventPublisher = eventPublisher;
   }
 
   /**
@@ -213,6 +218,14 @@ public class AppointmentService {
     // para sugerir la recuperación del espacio liberado.
     if (destino == AppointmentStatus.cancelada) {
       response.setWaitlistCandidates(findCandidatesForAppointment(saved, currentTenantId));
+    }
+
+    // FASE8-06: en transición real a cancelada, publicar el evento para que la
+    // automatización de recuperación (módulo task) cree la tarea si aplica.
+    // Solo en transición real, no en no-op idempotente.
+    if (destino == AppointmentStatus.cancelada && !actual.equals(destino)) {
+      eventPublisher.publishEvent(
+          new AppointmentCancelledEvent(saved.getId(), currentTenantId));
     }
 
     // FASE8-04: al confirmar, enviar la confirmación por email. Solo en
