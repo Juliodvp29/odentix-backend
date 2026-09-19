@@ -15,7 +15,10 @@ public class S3StorageProperties {
   private String endpoint;
   private String accessKey;
   private String secretKey;
-  private boolean pathStyleAccessEnabled = false;
+  // Boolean objeto (no primitivo): una env var existente pero vacía en la
+  // plataforma se bindea como null en vez de explotar (diagnosticado 2026-09-19
+  // con AWS_S3_PATH_STYLE_ACCESS vacía en Render).
+  private Boolean pathStyleAccessEnabled = false;
 
   public String getBucket() {
     return bucket;
@@ -58,10 +61,10 @@ public class S3StorageProperties {
   }
 
   public boolean isPathStyleAccessEnabled() {
-    return pathStyleAccessEnabled;
+    return Boolean.TRUE.equals(pathStyleAccessEnabled);
   }
 
-  public void setPathStyleAccessEnabled(boolean pathStyleAccessEnabled) {
+  public void setPathStyleAccessEnabled(Boolean pathStyleAccessEnabled) {
     this.pathStyleAccessEnabled = pathStyleAccessEnabled;
   }
 }

@@ -31,10 +31,23 @@ public class JwtService {
 
   public JwtService(
       @Value("${jwt.secret}") String secret,
-      @Value("${jwt.expiration-minutes:1440}") long expirationMinutes) {
+      @Value("${jwt.expiration-minutes:1440}") String expirationMinutes) {
     // Convierte el secreto a clave HMAC-SHA256 (mínimo 256 bits / 32 bytes)
     this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-    this.expirationMinutes = expirationMinutes;
+    // String (no long): una env var existente pero vacía en la plataforma no
+    // debe tumbar el arranque —se usa el default (diagnosticado 2026-09-19).
+    this.expirationMinutes = numeroOrDefault(expirationMinutes, 1440L);
+  }
+
+  private static long numeroOrDefault(String valor, long defecto) {
+    if (valor == null || valor.isBlank()) {
+      return defecto;
+    }
+    try {
+      return Long.parseLong(valor.strip());
+    } catch (NumberFormatException e) {
+      return defecto;
+    }
   }
 
   /**
