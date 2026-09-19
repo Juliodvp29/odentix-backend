@@ -2557,23 +2557,40 @@ pasarela — Wompi, Stripe, etc.)
 
 **Tareas:**
 
-- [ ] Soporte de ciclo de facturación anual con el descuento ya
+- [x] Soporte de ciclo de facturación anual con el descuento ya
       definido en `plans.annual_price_cop`.
-- [ ] Endpoint/flujo para que un tenant elija entre mensual o anual al
+      (El checkout de FASE11-04 ya cobraba `annual_price_cop`; aquí quedó
+      blindado: test que afirma `annual < 12×monthly` en los 3 seeds —si un
+      seed futuro lo rompe, falla en vez de erosionar el descuento en silencio.)
+- [x] Endpoint/flujo para que un tenant elija entre mensual o anual al
       suscribirse.
+      (`POST /checkout` acepta `billingCycle` desde FASE11-04 y
+      `GET /api/v1/billing/subscription` expone ciclo, periodo y ambos precios
+      para mostrar y cambiar. Corrección incluida: la idempotencia del checkout
+      solo reutiliza el link pendiente del *mismo* ciclo —antes devolvía el
+      mensual al cambiar a anual.)
 
 **Criterios de aceptación:**
 
-- [ ] Un tenant puede elegir entre ciclo mensual o anual al momento de
+- [x] Un tenant puede elegir entre ciclo mensual o anual al momento de
       suscribirse, y el monto cobrado refleja el descuento correcto.
+      (Verificado con `BillingCycleIntegrationTest` 3/3: mensual 169900,
+      cambio a anual 1699000, suscripción visible, 404 sin suscripción;
+      endpoint en `OpenApiDocsIntegrationTest`;
+      `./mvnw.cmd clean verify`: 355/355 pruebas sin fallos.)
 
 ---
 
 ### ✅ Checklist de salida de Fase 11
 
-- [ ] El propio SaaS puede cobrar y gestionar sus planes de punta a
+- [x] El propio SaaS puede cobrar y gestionar sus planes de punta a
       punta: suscribirse, ser cobrado, y ver su acceso ajustado según
       el estado del pago.
+      (Checkout con Bold → link pagado → webhook activa/extiende; mora con
+      gracia → cancela; gating 403 y topes 429 ajustan el acceso. Verificado
+      punta a punta en tests con Bold falso; `./mvnw.cmd clean verify`:
+      355/355. Pendiente administrativo real: llaves de Bold y URL de webhook
+      en panel.bold.co + Render.)
 
 ---
 

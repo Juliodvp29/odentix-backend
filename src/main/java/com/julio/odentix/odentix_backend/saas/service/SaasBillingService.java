@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.julio.odentix.odentix_backend.saas.client.BoldClient;
 import com.julio.odentix.odentix_backend.saas.dto.CheckoutRequest;
 import com.julio.odentix.odentix_backend.saas.dto.CheckoutResponse;
+import com.julio.odentix.odentix_backend.saas.dto.SubscriptionResponse;
 import com.julio.odentix.odentix_backend.saas.entity.SaasPayment;
 import com.julio.odentix.odentix_backend.saas.entity.SaasPaymentStatus;
 import com.julio.odentix.odentix_backend.saas.repository.SaasPaymentRepository;
@@ -24,6 +25,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -119,9 +121,13 @@ public class SaasBillingService {
 
     List<SaasPayment> pendientes = paymentRepository.findBySubscriptionIdAndStatus(
         suscripcion.getId(), SaasPaymentStatus.pendiente);
-    if (!pendientes.isEmpty() && pendientes.get(0).getBoldPaymentLink() != null) {
-      SaasPayment existente = pendientes.get(0);
-      return respuestaCheckout(suscripcion, existente);
+    // Idempotencia por ciclo: solo se reutiliza si el pendiente es del mismo
+    // ciclo pedido (si cambió de plan/ciclo se genera uno nuevo con el monto).
+    Optional<SaasPayment> mismoCiclo = pendientes.stream()
+        .filter(p -> p.getBillingCycle() == cycle && p.getBoldPaymentLink() != null)
+        .findFirst();
+    if (mismoCiclo.isPresent()) {
+      return respuestaCheckout(suscripcion, mismoCiclo.get());
     }
 
     String referencia = "ODX-" + tenantId.toString().replace("-", "").substring(0, 8)
@@ -142,6 +148,29 @@ public class SaasBillingService {
     pago = paymentRepository.save(pago);
 
     return respuestaCheckout(suscripcion, pago);
+  }
+
+  /**
+   * Suscripción viva actual del tenant (FASE11-05): lo que el frontend muestra
+   * para elegir o cambiar plan/ciclo.
+   */
+  @Transactional(readOnly = true)
+  public SubscriptionResponse miSuscripcion() {
+    UUID tenantId = TenantContext.getRequiredTenantId();
+    TenantSubscription sub = subscriptionRepository.findLiveByTenantId(tenantId, ESTADOS_VIVOS)
+        .orElseThrow(() -> new ResourceNotFoundException(
+            "El tenant no tiene suscripción activa."));
+
+    SubscriptionResponse response = new SubscriptionResponse();
+    response.setId(sub.getId());
+    response.setPlanCode(sub.getPlan().getCode());
+    response.setBillingCycle(sub.getBillingCycle());
+    response.setStatus(sub.getStatus());
+    response.setCurrentPeriodStart(sub.getCurrentPeriodStart());
+    response.setCurrentPeriodEnd(sub.getCurrentPeriodEnd());
+    response.setMonthlyPriceCop(sub.getPlan().getMonthlyPriceCop());
+    response.setAnnualPriceCop(sub.getPlan().getAnnualPriceCop());
+    return response;
   }
 
   /**

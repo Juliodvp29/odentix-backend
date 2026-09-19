@@ -2,6 +2,7 @@ package com.julio.odentix.odentix_backend.saas.controller;
 
 import com.julio.odentix.odentix_backend.saas.dto.CheckoutRequest;
 import com.julio.odentix.odentix_backend.saas.dto.CheckoutResponse;
+import com.julio.odentix.odentix_backend.saas.dto.SubscriptionResponse;
 import com.julio.odentix.odentix_backend.saas.service.SaasBillingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -10,6 +11,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -44,6 +46,19 @@ public class SaasBillingController {
   public ResponseEntity<CheckoutResponse> checkout(
       @Valid @RequestBody CheckoutRequest request) {
     return ResponseEntity.ok(billingService.checkout(request));
+  }
+
+  /**
+   * Suscripción actual: plan, ciclo, estado y periodo (para mostrar y cambiar).
+   */
+  @GetMapping("/subscription")
+  @PreAuthorize("hasRole('PROPIETARIO')")
+  @Operation(
+      summary = "Ver suscripción",
+      description = "Suscripción viva actual con precios mensual/anual para elegir ciclo."
+  )
+  public ResponseEntity<SubscriptionResponse> miSuscripcion() {
+    return ResponseEntity.ok(billingService.miSuscripcion());
   }
 
   /**
