@@ -2324,16 +2324,26 @@ por costo — mismo proveedor que se evaluó para Venti Shop).
 
 **Tareas:**
 
-- [ ] `POST /api/v1/assistant/suggest-message` — dado un contexto (ej.
+- [x] `POST /api/v1/assistant/suggest-message` — dado un contexto (ej.
       cita sin confirmar), genera un mensaje sugerido.
-- [ ] El mensaje generado queda como sugerencia editable — nunca se
+      (Módulo `assistant/`: cita del tenant + hint opcional → prompt de
+      redacción breve; responde `{message, suggestedChannel, model}` con canal
+      según contacto. Sin persistencia.)
+- [x] El mensaje generado queda como sugerencia editable — nunca se
       envía automáticamente sin pasar por el flujo de notificaciones de
       la Fase 8 con confirmación humana cuando aplique.
 
 **Criterios de aceptación:**
 
-- [ ] El endpoint devuelve el mensaje sugerido sin efectos secundarios
+- [x] El endpoint devuelve el mensaje sugerido sin efectos secundarios
       (no envía nada por sí solo).
+      (Verificado con `SuggestMessageIntegrationTest` 2/2: texto del proveedor,
+      canal WhatsApp, hint incluido, **cero filas** en `notifications`/`tasks`,
+      cita ajena 404; endpoint en `OpenApiDocsIntegrationTest`;
+      `./mvnw.cmd clean verify`: 332/332 pruebas sin fallos.
+      Incidente de infraestructura de tests: `too many clients` en PG al crecer
+      los contextos en caché —se subió `max_connections` a 200 en
+      `AbstractIntegrationTest`, sin tocar lógica.)
 
 ---
 
@@ -2350,17 +2360,27 @@ fallo.
 
 **Tareas:**
 
-- [ ] Timeout corto configurado en el cliente HTTP del proveedor de IA.
-- [ ] Fallback a una plantilla fija cuando el proveedor no responde o
+- [x] Timeout corto configurado en el cliente HTTP del proveedor de IA.
+      (15s connect/read en `GroqChatClient` desde FASE10-01; endurecerlo más
+      rompería respuestas largas legítimas.)
+- [x] Fallback a una plantilla fija cuando el proveedor no responde o
       responde con error.
-- [ ] Registro del fallo (log estructurado o tabla, según lo que ya
+      (`ask` → resumen real del snapshot + `fallback:true`; `suggest-message`
+      → plantilla con nombre/fecha + `fallback:true`. Ambas 200, nada se rompe.)
+- [x] Registro del fallo (log estructurado o tabla, según lo que ya
       exista para WhatsApp).
+      (`log.warn` con operación, modelo, latencia y error truncado, sin PII;
+      no hay tabla porque no hay intento por paciente que auditar —a diferencia
+      de WhatsApp. El mapeo 502 queda para fallos fuera de estos flujos.)
 
 **Criterios de aceptación:**
 
-- [ ] Si se apaga la clave de API de IA, el sistema sigue operando con
+- [x] Si se apaga la clave de API de IA, el sistema sigue operando con
       plantillas fijas sin romper ningún flujo (test explícito
       simulando la caída del proveedor).
+      (Verificado con `AssistantFallbackIntegrationTest` 2/2 —proveedor HTTP 500:
+      ask y suggest responden 200 con plantilla y flag—; `./mvnw.cmd clean verify`:
+      334/334 pruebas sin fallos.)
 
 ---
 

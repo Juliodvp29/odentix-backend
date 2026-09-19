@@ -2,7 +2,7 @@
 
 > Documento vivo de arquitectura y decisiones del backend SaaS para clínicas
 > odontológicas (multi-tenant: cada clínica es un `tenant`).
-> **Estado:** documenta Fase 0 a Fase 9. Al cerrar cada fase este archivo debe
+> **Estado:** documenta Fase 0 a Fase 10. Al cerrar cada fase este archivo debe
 > actualizarse (regla en `AGENTS.md` §11: sin esa actualización la fase no se
 > considera cerrada).
 >
@@ -632,5 +632,22 @@ Módulo `opportunity` (el diferenciador del producto: detectar → proponer → 
 - **Ampliación de reglas (FASE9-02):** 5 jobs (`LeadUnrespondedJob` cada 2h/24h; `HighRiskAppointmentJob` diario programada+alto a 48h; `InactivePatientJob` diario sin citas ni planes en 6 meses; `OverdueInstallmentOpportunityJob` 02:30 tras el marcado; `CriticalInventoryJob` cada 6h) + `SlotOpportunityListener` (cancelación con candidatos). Queries candidatas en sus repos; prioridades y valores determinísticos por regla; idempotencia por entidad abierta; contexto de sistema multi-tenant. Verificado con `OpportunityRulesIntegrationTest` (6/6) y `SlotOpportunityListenerIntegrationTest` (2/2). Notas: `Instant` no soporta MONTHS (corte con `OffsetDateTime`); la guarda es por entidad no por tipo.
 - **Acciones recomendadas (FASE9-03):** `V24__create_opportunity_actions.sql` (con `channel` extra), entidad `OpportunityAction` (`action_type` TEXT sin enum PG; título de tarea en la primera línea de `suggested_message`), `OpportunityActionFactory` (tarea siempre + mensaje si hay destinatario), `POST /{id}/actions/{actionId}/execute` (tarea vinculada o mensaje vía `sendCustomMessage` nuevo; 409 ejecutada/sin destinatario), bandeja con `actions`. Retrofit en los 7 detectores. Verificado con `OpportunityActionIntegrationTest` (4/4).
 - **Valor recuperado (FASE9-04):** criterio de atribución en Javadoc (`resuelta` + acción ejecutada con `executedAt <= resolvedAt` + `resolvedAt` en periodo; sin acción es orgánica). `PATCH /{id}/status` (prerrequisito: fija/limpia `resolvedAt`) + `GET /recovered-value` agrupado por categoría. Verificado con `RecoveredValueIntegrationTest` (3/3). Limitación declarada: `resuelta` la marca un humano.
-- Total de pruebas del proyecto: **323/323 pruebas en verde** en `./mvnw.cmd clean verify`.
+- Total de pruebas del proyecto al cierre de Fase 9: **323/323 pruebas en verde** en `./mvnw.cmd clean verify`.
+
+### Fase 10 — IA administrativa (completada, FASE10-01–03)
+
+Módulo `assistant/` (preguntas y mensajes sobre datos reales de la clínica, vía Groq):
+- **Asistente administrativo (FASE10-01):**
+  - `GroqChatClient` (`RestClient` sin deps nuevas): `POST {base}/chat/completions` con Bearer `GROQ_API_KEY`; `GROQ_MODEL` configurable (default `openai/gpt-oss-20b`, ejemplo vigente de sus docs); timeouts 15s; errores → `AssistantException` mapeada a 502. Sin key responde 502 claro, nada se rompe.
+  - `AssistantContextService`: foto del tenant solo con `TenantContext` (oportunidades abiertas, planes sin decidir + total, citas 24h, cartera vencida + total, críticos con nombre, leads nuevos; top 5 por sección para acotar costo).
+  - `POST /api/v1/assistant/ask` (pregunta validada max 500, respuesta `{answer, model}`; system prompt anti-alucinación en código; roles amplios de lectura).
+  - Verificado con `AssistantIntegrationTest` (3/3: cuerpo al proveedor con Bearer/modelo/datos de A y nada de B; 400/401) y `GroqChatClientTest` (4/4: parseo, rechazo, malformada, sin key) contra servidor falso local. Notas: no hay bean `RestClient.Builder` (se usa `RestClient.builder()` estático); un fallo previo fue caché incremental (`clean` lo resolvió).
+- **Generación asistida de mensajes (FASE10-02):**
+  - `POST /api/v1/assistant/suggest-message` (cita del tenant + hint opcional): devuelve `{message, suggestedChannel, model}` como borrador editable. Generación pura, verificable por ausencia de filas en `notifications`/`tasks`.
+  - Verificado con `SuggestMessageIntegrationTest` (2/2).
+- **Resiliencia de IA (FASE10-03):**
+  - Fallback a plantilla fija con `fallback: true` (ask → resumen real del snapshot; suggest → plantilla con nombre/fecha), ambas 200. Registro con `log.warn` estructurado (operación, modelo, latencia, error truncado, sin PII); sin tabla porque no hay intento por paciente que auditar. Se mantienen los 15s (endurecer más rompería respuestas legítimas).
+  - Verificado con `AssistantFallbackIntegrationTest` (2/2, proveedor HTTP 500).
+- **Infraestructura de tests:** `max_connections=200` en el PG de `AbstractIntegrationTest` (los contextos en caché con pools propios agotaban el default de 100: `too many clients`).
+- Total de pruebas del proyecto: **334/334 pruebas en verde** en `./mvnw.cmd clean verify`.
 
