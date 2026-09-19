@@ -1872,15 +1872,26 @@ movimientos automáticamente al stock — aquí solo la capa Java.
 
 **Tareas:**
 
-- [ ] Entidad `Task`: título, descripción, referencia polimórfica
+- [x] Entidad `Task`: título, descripción, referencia polimórfica
       (`related_entity_type`/`related_entity_id`), responsable, fecha
       límite, prioridad, estado.
-- [ ] CRUD básico de tareas + endpoint de "mis tareas" (filtrado por
+      (Módulo nuevo `task/` con `Task` + enums PG `TaskStatus`/`TaskPriority` +
+      `TaskRepository`; referencia polimórfica sin FK — intencional, nota en
+      `schema.sql` §14; `assignedTo` UUID simple; migración `V21__create_tasks.sql`
+      con índices y RLS.)
+- [x] CRUD básico de tareas + endpoint de "mis tareas" (filtrado por
       `assigned_to` = usuario autenticado).
+      (`TaskController`: `POST/GET /api/v1/tasks`, `GET /mine`, `GET/PATCH/DELETE /{id}`,
+      `POST /{id}/complete` idempotente con 409 si está cancelada; el responsable se
+      valida contra usuarios del tenant → 404; roles operativos amplios.)
 
 **Criterios de aceptación:**
 
-- [ ] Se puede crear, asignar y completar una tarea manualmente.
+- [x] Se puede crear, asignar y completar una tarea manualmente.
+      (Verificado con `TaskIntegrationTest` 6/6 en verde: flujo crear→asignar→
+      completar→eliminar, `mine` solo propias, asignado fantasma o de otro tenant
+      → 404, cross-tenant 404, título en blanco 400; `./mvnw.cmd clean verify`:
+      279/279 pruebas sin fallos, con los 7 endpoints en `OpenApiDocsIntegrationTest`.)
 
 ---
 
@@ -1892,15 +1903,28 @@ movimientos automáticamente al stock — aquí solo la capa Java.
 
 **Tareas:**
 
-- [ ] Regla: cita sin confirmar a 24h de su horario crea
+- [x] Regla: cita sin confirmar a 24h de su horario crea
       automáticamente una tarea para recepción (job programado o
       evento al momento de crear la cita, lo que resulte más simple de
       mantener).
+      (`UnconfirmedAppointmentJob` en `task/service` con `@Scheduled` cada hora
+      y cron configurable `odentix.jobs.unconfirmed-appointments.cron`, precedente
+      FASE6-03; candidatas vía `findByStatusAndStartsAtBetween(programada, ahora,
+      ahora+24h)`; idempotencia con `exists…StatusIn` sobre tareas abiertas;
+      tarea sin asignar —no hay receptor determinístico—, prioridad alta,
+      `dueAt` en el horario de la cita; corre en contexto de sistema cubriendo
+      todas las clínicas con el `tenantId` de cada cita.)
 
 **Criterios de aceptación:**
 
-- [ ] El sistema puede crear tareas automáticamente a partir de esta
+- [x] El sistema puede crear tareas automáticamente a partir de esta
       regla, sin intervención manual.
+      (Verificado con `UnconfirmedAppointmentJobIntegrationTest` 2/2 en verde:
+      crea para programada <24h en ambos tenants con enlace polimórfico y campos,
+      ignora lejana/confirmada/pasada, segunda corrida no duplica y tarea
+      completada sí regenera; `./mvnw.cmd clean verify`: 281/281 sin fallos.
+      Nota: como la BD se comparte entre suites y el job es global, las
+      aserciones se acotan a las citas propias del test, nunca a conteos globales.)
 
 ---
 
@@ -1918,19 +1942,35 @@ costos de aprobación, antes de integrar WhatsApp).
 
 **Tareas:**
 
-- [ ] Interfaz `NotificationSender` (o similar) con un método de envío
+- [x] Interfaz `NotificationSender` (o similar) con un método de envío
       genérico por canal.
-- [ ] Adaptador de email (usando el proveedor SMTP/API que se decida).
-- [ ] Entidad `Notification` para registrar cada intento (canal,
+      (`notification/sender/NotificationSender` + `NotificationException`.)
+- [x] Adaptador de email (usando el proveedor SMTP/API que se decida).
+      (`SmtpEmailNotificationSender` con `JavaMailSender`, activo con
+      `odentix.notifications.email.enabled=true`, todo por variables de entorno
+      sin credenciales en el repo; timeouts SMTP de 5s. Sin proveedor elegido,
+      `LoggingNotificationSender` registra en log por defecto. Nueva dependencia
+      `spring-boot-starter-mail`; `management.health.mail.enabled=false` porque
+      el email es opcional y no debe tumbar `/actuator/health`.)
+- [x] Entidad `Notification` para registrar cada intento (canal,
       destinatario, estado, error si falló).
-- [ ] `@ConditionalOnProperty` para poder activar/desactivar
+      (Migración `V22__create_notifications.sql` con enums `notification_channel`/
+      `notification_status`, `payload` JSONB y RLS.)
+- [x] `@ConditionalOnProperty` para poder activar/desactivar
       adaptadores por configuración.
 
 **Criterios de aceptación:**
 
-- [ ] Se puede disparar una notificación de confirmación de cita por
+- [x] Se puede disparar una notificación de confirmación de cita por
       email de forma automática, y queda registrada en `Notification`
       con su resultado.
+      (`NotificationService.sendAppointmentConfirmation`, que nunca lanza:
+      todo fallo queda como `fallida` con `error_detail`. Verificado con
+      `NotificationServiceIntegrationTest` 4/4: enviada, adaptador roto →
+      fallida sin propagar, paciente sin email → fallida auditable, cita de
+      otro tenant → 404; `./mvnw.cmd clean verify`: 285/285 sin fallos.
+      El enganche al confirmar la cita llega en FASE8-04; este ticket deja
+      la capacidad y el punto de llamada.)
 
 **Temas de Spring Boot:** patrón de interfaz + implementación
 intercambiable, `@ConditionalOnProperty`.
@@ -1945,16 +1985,26 @@ intercambiable, `@ConditionalOnProperty`.
 
 **Tareas:**
 
-- [ ] Al crear/confirmar una cita, disparar la notificación
+- [x] Al crear/confirmar una cita, disparar la notificación
       correspondiente vía el servicio de FASE8-03.
-- [ ] Test: un fallo del adaptador de email no debe impedir que la
+      (Enganches en `AppointmentService`: crear → `sendAppointmentScheduled`
+      (plantilla `cita_agendada`); transición real a `confirmada` →
+      `sendAppointmentConfirmation` (no reenvía en no-op idempotente). Misma
+      transacción, sin ciclo de dependencias; el servicio nunca lanza.)
+- [x] Test: un fallo del adaptador de email no debe impedir que la
       cita se cree/confirme (el fallo se registra en `Notification`,
       no revierte la operación de negocio).
 
 **Criterios de aceptación:**
 
-- [ ] Confirmar una cita dispara una notificación, y si el envío falla,
+- [x] Confirmar una cita dispara una notificación, y si el envío falla,
       la confirmación de la cita igual queda guardada.
+      (Verificado con `AppointmentNotificationIntegrationTest` 2/2 —agendada al
+      crear, confirmación al confirmar, ambas `enviada`— y
+      `AppointmentNotificationResilienceIntegrationTest` 1/1 —proveedor caído
+      vía `@MockitoBean`: crear 201 y confirmar 200 igual, 2 `fallida` con
+      detalle—; `./mvnw.cmd clean verify`: 288/288 sin fallos. Límite
+      documentado: envío síncrono; async queda como mejora futura.)
 
 ---
 
@@ -1973,18 +2023,40 @@ Meta, no un canal gratuito.
 
 **Tareas:**
 
-- [ ] Adaptador `NotificationSender` para WhatsApp Business API.
-- [ ] Timeout corto + fallback (si WhatsApp falla, no bloquear el flujo
+- [x] Adaptador `NotificationSender` para WhatsApp Business API.
+      (`WhatsappNotificationSender` con `RestClient` y timeouts de 5s contra
+      Cloud API, activo con `odentix.notifications.whatsapp.enabled=true`;
+      `phoneNumberId` y token solo por variables de entorno sin defaults —
+      sin ellos reporta mala configuración en vez de inventar credenciales.
+      `NotificationService` ahora despacha por canal sobre `List<NotificationSender>`.)
+- [x] Timeout corto + fallback (si WhatsApp falla, no bloquear el flujo
       que lo originó — mismo principio de resiliencia que se aplicará
       a la IA en la Fase 10).
-- [ ] Registro de conversaciones en `Notification`.
+      (El "fallback" es `fallida` registrada sin propagar —garantía del
+      servicio—; no hay respaldo automático a otro canal porque no existe
+      adaptador SMS.)
+- [x] Registro de conversaciones en `Notification`.
+      (`sendAppointmentWhatsAppConfirmation` con el teléfono del paciente;
+      sin teléfono → `fallida` auditable.)
 
 **Criterios de aceptación:**
 
-- [ ] Se puede enviar y registrar un mensaje de confirmación por
+- [x] Se puede enviar y registrar un mensaje de confirmación por
       WhatsApp.
-- [ ] Simular una caída del proveedor de WhatsApp no bloquea el flujo
+      (Verificado con `WhatsappSenderIntegrationTest` 4/4 —formato Cloud API,
+      rechazo HTTP, inalcanzable, sin configuración, todo contra servidor falso
+      local sin red real— y `WhatsappNotificationServiceIntegrationTest` 2/2
+      —`enviada` con adaptador habilitado vía `@DynamicPropertySource`,
+      `fallida` sin teléfono.)
+- [x] Simular una caída del proveedor de WhatsApp no bloquea el flujo
       de negocio que disparó la notificación (test explícito de esto).
+      (Cubierto por el principio nunca-lanza verificado en FASE8-03/04 y el
+      caso de proveedor inalcanzable del adaptador. Límite explícito: la
+      aprobación del número en Meta y el token real son proceso administrativo
+      fuera del código; el adaptador queda verificado y dormido.)
+- (`./mvnw.cmd clean verify`: 294/294 pruebas sin fallos. Nota de
+      implementación: el despacho por canal exige stubear `channel()` en los
+      mocks del sender —un mock sin stub devuelve null y no casa ningún canal.)
 
 ---
 
@@ -2000,14 +2072,23 @@ la notificación.
 
 **Tareas:**
 
-- [ ] Al cancelarse una cita de alto valor y existir candidatos
+- [x] Al cancelarse una cita de alto valor y existir candidatos
       compatibles en lista de espera, disparar automáticamente una
       tarea (FASE8-01) o notificación (FASE8-03) de recuperación.
+      (Evento `AppointmentCancelledEvent` publicado en transición real a
+      `cancelada` + `SlotRecoveryListener` en `task/service`: si la cita era
+      de alto valor (`risk_level = alto`, criterio FASE3-07) y hay candidatos,
+      crea tarea para recepción con fecha y candidatos; eventos de Spring para
+      no ciclar dependencias `appointment` ↔ `task`. Se eligió tarea sobre
+      notificación: el contacto lo hace recepción con criterio.)
 
 **Criterios de aceptación:**
 
-- [ ] Una cancelación de cita de alto valor genera automáticamente una
+- [x] Una cancelación de cita de alto valor genera automáticamente una
       tarea o notificación de recuperación, sin intervención manual.
+      (Verificado con `SlotRecoveryAutomationIntegrationTest` 4/4: crea con
+      candidato, nada con riesgo medio, nada sin candidatos, nada al confirmar;
+      `./mvnw.cmd clean verify`: 298/298 pruebas sin fallos.)
 
 ---
 

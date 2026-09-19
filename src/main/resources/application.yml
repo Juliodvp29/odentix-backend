@@ -20,6 +20,23 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+  mail:
+    # Todo por variables de entorno; sin defaults operativos (ver nota en odentix.notifications).
+    host: ${MAIL_HOST:}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS:true}
+          # Timeouts cortos: un proveedor caído no bloquea el flujo que originó
+          # la notificación (principio de resiliencia, roadmap FASE8-05/10-03).
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
   servlet:
     multipart:
       max-file-size: 15MB
@@ -38,6 +55,11 @@ management:
   endpoint:
     health:
       show-details: never
+  health:
+    mail:
+      # El email es opcional (adaptador de log por defecto, FASE8-03): la
+      # ausencia de proveedor SMTP no debe marcar la app como DOWN.
+      enabled: false
 
 jwt:
   # Clave HMAC-SHA256 (al menos 256 bits = 32 caracteres). En prod se sobreescribe con JWT_SECRET.
@@ -65,6 +87,24 @@ odentix:
   jobs:
     overdue-installments:
       cron: ${OVERDUE_INSTALLMENTS_CRON:0 0 2 * * *}
+    unconfirmed-appointments:
+      cron: ${UNCONFIRMED_APPOINTMENTS_CRON:0 0 * * * *}
+  notifications:
+    email:
+      # Adaptador SMTP real (SmtpEmailNotificationSender). Apagado por defecto:
+      # sin proveedor elegido no hay credenciales que configurar (AGENTS.md §10),
+      # y los flujos usan el adaptador de registro en log.
+      enabled: ${NOTIFICATIONS_EMAIL_ENABLED:false}
+      from: ${NOTIFICATIONS_EMAIL_FROM:}
+    whatsapp:
+      # Adaptador WhatsApp Cloud API (WhatsappNotificationSender, FASE8-05).
+      # Apagado por defecto: requiere número aprobado por Meta + token real,
+      # proceso administrativo fuera del código. Sin configurar, los intentos
+      # por este canal quedan como fallida auditable, nunca bloquean nada.
+      enabled: ${NOTIFICATIONS_WHATSAPP_ENABLED:false}
+      api-base-url: ${WHATSAPP_API_BASE_URL:https://graph.facebook.com/v21.0}
+      phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
+      token: ${WHATSAPP_TOKEN:}
 
 
 

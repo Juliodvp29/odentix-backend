@@ -2,7 +2,7 @@
 
 > Documento vivo de arquitectura y decisiones del backend SaaS para clínicas
 > odontológicas (multi-tenant: cada clínica es un `tenant`).
-> **Estado:** documenta Fase 0, Fase 1, Fase 2, Fase 3, Fase 4, Fase 5, Fase 6 y Fase 7. Al cerrar cada fase este archivo debe
+> **Estado:** documenta Fase 0 a Fase 8. Al cerrar cada fase este archivo debe
 > actualizarse (regla en `AGENTS.md` §11: sin esa actualización la fase no se
 > considera cerrada).
 >
@@ -597,4 +597,31 @@ Módulos `specialist` e `inventory`:
       `GET/PATCH/DELETE /api/v1/inventory/items/{id}`,
       `POST /api/v1/inventory/items/{id}/movements`
 - Total de pruebas del proyecto: **273/273 pruebas en verde** en `./mvnw.cmd clean verify`.
+
+### Fase 8 — Automatizaciones, notificaciones y tareas (completada, FASE8-01–06)
+
+Módulos `task` y `notification`:
+- **Modelado de `Task` y CRUD básico (FASE8-01):**
+  - Entidad `Task` (extiende `TenantAwareEntity`; referencia polimórfica `related_entity_type/id` sin FK — intencional, nota en `schema.sql` §14; `assignedTo` UUID simple; `dueAt`; enums PG `TaskStatus`/`TaskPriority` con `@JdbcType(PostgreSQLEnumJdbcType.class)`).
+  - Migración `V21__create_tasks.sql` (índices `idx_tasks_tenant_assignee_status` e `idx_tasks_related_entity`, RLS).
+  - `TaskController` (`/api/v1/tasks`: crear con responsable validado contra el tenant → 404, listar, `GET /mine`, ver, PATCH sin estado, `POST /{id}/complete` idempotente con 409 si cancelada, DELETE).
+  - Verificado con `TaskIntegrationTest` (6/6 en verde).
+- **Regla automática de citas sin confirmar (FASE8-02):**
+  - `UnconfirmedAppointmentJob` (`@Scheduled` cada hora, cron configurable): citas `programada` con inicio <24h generan tarea de prioridad alta sin asignar; idempotencia vía tareas abiertas vinculadas; contexto de sistema multi-tenant con `tenantId` por cita.
+  - Verificado con `UnconfirmedAppointmentJobIntegrationTest` (2/2; aserciones por cita porque la BD se comparte entre suites y el job es global).
+- **Notificaciones desacopladas + email (FASE8-03):**
+  - Entidad `Notification` (canal, destinatario, `templateKey`, `payload` JSONB, estado, `sentAt`/`errorDetail`) + migración `V22__create_notifications.sql` (enums, RLS).
+  - Interfaz `NotificationSender` + `NotificationException`; `LoggingNotificationSender` por defecto y `SmtpEmailNotificationSender` con `enabled=true` (todo por env, timeouts 5s; nueva dependencia `spring-boot-starter-mail`; `management.health.mail.enabled=false` porque el email es opcional).
+  - `NotificationService`: núcleo común que nunca lanza (fallos → `fallida`); `sendAppointmentConfirmation` y `sendAppointmentScheduled`.
+  - Verificado con `NotificationServiceIntegrationTest` (4/4 en verde).
+- **Disparo desde eventos de cita (FASE8-04):**
+  - `AppointmentService`: crear → aviso de agendada; transición real a `confirmada` → confirmación (sin reenvío en no-op). Misma transacción, sin ciclos.
+  - Verificado con `AppointmentNotificationIntegrationTest` (2/2) y `AppointmentNotificationResilienceIntegrationTest` (1/1, proveedor caído vía `@MockitoBean`: 201/200 igual, 2 `fallida`).
+- **Adaptador WhatsApp (FASE8-05):**
+  - `WhatsappNotificationSender` (`RestClient`, timeouts 5s, Cloud API, credenciales solo por env) + despacho por canal en el servicio (`List<NotificationSender>`) + `sendAppointmentWhatsAppConfirmation` (teléfono del paciente).
+  - Verificado sin red real: `WhatsappSenderIntegrationTest` (4/4, servidor falso JDK) y `WhatsappNotificationServiceIntegrationTest` (2/2, `@DynamicPropertySource`). Pendiente administrativo: número aprobado por Meta + token real.
+- **Recuperación de espacio (FASE8-06):**
+  - `AppointmentCancelledEvent` + `SlotRecoveryListener`: cita cancelada de alto valor (`risk_level = alto`) con candidatos → tarea automática para recepción con el detalle; eventos de Spring para no ciclar `appointment` ↔ `task`.
+  - Verificado con `SlotRecoveryAutomationIntegrationTest` (4/4 en verde).
+- Total de pruebas del proyecto: **298/298 pruebas en verde** en `./mvnw.cmd clean verify`.
 

@@ -11,10 +11,12 @@ import com.julio.odentix.odentix_backend.appointment.entity.Professional;
 import com.julio.odentix.odentix_backend.appointment.entity.RiskLevel;
 import com.julio.odentix.odentix_backend.appointment.entity.Room;
 import com.julio.odentix.odentix_backend.appointment.entity.WaitlistStatus;
+import com.julio.odentix.odentix_backend.appointment.event.AppointmentCancelledEvent;
 import com.julio.odentix.odentix_backend.appointment.repository.AppointmentRepository;
 import com.julio.odentix.odentix_backend.appointment.repository.ProfessionalRepository;
 import com.julio.odentix.odentix_backend.appointment.repository.RoomRepository;
 import com.julio.odentix.odentix_backend.appointment.repository.WaitlistEntryRepository;
+import com.julio.odentix.odentix_backend.notification.service.NotificationService;
 import com.julio.odentix.odentix_backend.patient.entity.Patient;
 import com.julio.odentix.odentix_backend.patient.repository.PatientRepository;
 import com.julio.odentix.odentix_backend.shared.context.TenantContext;
@@ -26,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +43,8 @@ public class AppointmentService {
   private final ProfessionalRepository professionalRepository;
   private final RoomRepository roomRepository;
   private final WaitlistEntryRepository waitlistEntryRepository;
+  private final NotificationService notificationService;
+  private final ApplicationEventPublisher eventPublisher;
 
   /**
    * Transiciones de estado permitidas (FASE3-04, sección 8.6 del doc de
@@ -66,12 +71,16 @@ public class AppointmentService {
       PatientRepository patientRepository,
       ProfessionalRepository professionalRepository,
       RoomRepository roomRepository,
-      WaitlistEntryRepository waitlistEntryRepository) {
+      WaitlistEntryRepository waitlistEntryRepository,
+      NotificationService notificationService,
+      ApplicationEventPublisher eventPublisher) {
     this.appointmentRepository = appointmentRepository;
     this.patientRepository = patientRepository;
     this.professionalRepository = professionalRepository;
     this.roomRepository = roomRepository;
     this.waitlistEntryRepository = waitlistEntryRepository;
+    this.notificationService = notificationService;
+    this.eventPublisher = eventPublisher;
   }
 
   /**
@@ -121,6 +130,12 @@ public class AppointmentService {
     // Se usa saveAndFlush para disparar las constraints de BD (incluyendo no_overlapping_appointments)
     // de forma síncrona dentro del bloque transaccional.
     Appointment saved = appointmentRepository.saveAndFlush(appointment);
+
+    // FASE8-04: avisar que la cita quedó agendada. El servicio de
+    // notificaciones nunca lanza: si el proveedor falla, queda registrada
+    // como fallida sin revertir la creación de la cita.
+    notificationService.sendAppointmentScheduled(saved.getId());
+
     return AppointmentResponse.fromEntity(saved);
   }
 
@@ -203,6 +218,21 @@ public class AppointmentService {
     // para sugerir la recuperación del espacio liberado.
     if (destino == AppointmentStatus.cancelada) {
       response.setWaitlistCandidates(findCandidatesForAppointment(saved, currentTenantId));
+    }
+
+    // FASE8-06: en transición real a cancelada, publicar el evento para que la
+    // automatización de recuperación (módulo task) cree la tarea si aplica.
+    // Solo en transición real, no en no-op idempotente.
+    if (destino == AppointmentStatus.cancelada && !actual.equals(destino)) {
+      eventPublisher.publishEvent(
+          new AppointmentCancelledEvent(saved.getId(), currentTenantId));
+    }
+
+    // FASE8-04: al confirmar, enviar la confirmación por email. Solo en
+    // transición real (no en no-op idempotente) para no reenviar en reintentos.
+    // Nunca lanza: un fallo del proveedor no revierte el cambio de estado.
+    if (destino == AppointmentStatus.confirmada && !actual.equals(destino)) {
+      notificationService.sendAppointmentConfirmation(saved.getId());
     }
 
     return response;
