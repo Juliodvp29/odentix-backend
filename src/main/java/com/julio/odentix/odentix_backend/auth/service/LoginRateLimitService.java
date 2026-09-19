@@ -35,12 +35,37 @@ public class LoginRateLimitService {
   private final Map<String, AccountLockTracker> emailTrackers = new ConcurrentHashMap<>();
 
   public LoginRateLimitService(
-      @Value("${security.rate-limit.login.max-requests-per-minute:10}") int maxRequestsPerMinute,
-      @Value("${security.rate-limit.login.max-failed-attempts:5}") int maxFailedAttempts,
-      @Value("${security.rate-limit.login.lockout-duration-minutes:15}") long lockoutDurationMinutes) {
-    this.maxRequestsPerMinute = maxRequestsPerMinute;
-    this.maxFailedAttempts = maxFailedAttempts;
-    this.lockoutDurationMinutes = lockoutDurationMinutes;
+      @Value("${security.rate-limit.login.max-requests-per-minute:10}") String maxRequestsPerMinute,
+      @Value("${security.rate-limit.login.max-failed-attempts:5}") String maxFailedAttempts,
+      @Value("${security.rate-limit.login.lockout-duration-minutes:15}")
+      String lockoutDurationMinutes) {
+    // Strings (no primitivos): una env var existente pero vacía no debe tumbar
+    // el arranque —se usa el default (diagnosticado 2026-09-19).
+    this.maxRequestsPerMinute = enteroOrDefault(maxRequestsPerMinute, 10);
+    this.maxFailedAttempts = enteroOrDefault(maxFailedAttempts, 5);
+    this.lockoutDurationMinutes = largoOrDefault(lockoutDurationMinutes, 15L);
+  }
+
+  private static int enteroOrDefault(String valor, int defecto) {
+    if (valor == null || valor.isBlank()) {
+      return defecto;
+    }
+    try {
+      return Integer.parseInt(valor.strip());
+    } catch (NumberFormatException e) {
+      return defecto;
+    }
+  }
+
+  private static long largoOrDefault(String valor, long defecto) {
+    if (valor == null || valor.isBlank()) {
+      return defecto;
+    }
+    try {
+      return Long.parseLong(valor.strip());
+    } catch (NumberFormatException e) {
+      return defecto;
+    }
   }
 
   /**

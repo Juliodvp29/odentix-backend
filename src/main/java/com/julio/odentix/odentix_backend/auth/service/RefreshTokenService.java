@@ -33,9 +33,19 @@ public class RefreshTokenService {
 
   public RefreshTokenService(
       RefreshTokenRepository refreshTokenRepository,
-      @Value("${jwt.refresh-token-expiration-days:7}") long refreshTokenExpirationDays) {
+      @Value("${jwt.refresh-token-expiration-days:7}") String refreshTokenExpirationDays) {
     this.refreshTokenRepository = refreshTokenRepository;
-    this.refreshTokenExpirationDays = refreshTokenExpirationDays;
+    // String (no long): una env var existente pero vacía no debe tumbar el
+    // arranque —se usa el default (diagnosticado 2026-09-19).
+    long dias;
+    try {
+      dias = refreshTokenExpirationDays != null && !refreshTokenExpirationDays.isBlank()
+          ? Long.parseLong(refreshTokenExpirationDays.strip())
+          : 7L;
+    } catch (NumberFormatException e) {
+      dias = 7L;
+    }
+    this.refreshTokenExpirationDays = dias;
   }
 
   /**
