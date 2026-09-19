@@ -2436,17 +2436,33 @@ sección "Pricing y límites por plan" del roadmap.
 
 **Tareas:**
 
-- [ ] Anotación o aspecto (`@RequiresFeature("crm_leads")` o similar)
+- [x] Anotación o aspecto (`@RequiresFeature("crm_leads")` o similar)
       aplicable a endpoints, que valida contra `plan_features` del
       tenant activo antes de ejecutar el método.
-- [ ] Aplicar la anotación a los endpoints ya existentes que
+      (Mecanismo final: `@PreAuthorize` SpEL con `@subscriptionService.requireFeature`
+      junto a los roles —Boot 4.1 eliminó el starter AOP y `spring-aop` ni está
+      gestionado, así que el aspecto dedicado salía con versiones manuales;
+      misma expresividad, cero dependencias nuevas. Desviación del ticket
+      documentada aquí.)
+- [x] Aplicar la anotación a los endpoints ya existentes que
       correspondan (CRM de leads, cartera, especialistas, inventario,
       motor de oportunidades, IA).
+      (Leads→`crm_leads`; payment-plan/installments/portfolio→`cartera`
+      —facturación simple NO se toca, es Esencial—; settlements→`specialists`;
+      items/movimientos→`inventory` y `/critical`→`inventory_alerts` por método;
+      oportunidades→`opportunities_engine`; asistente→`ai_assistant`.
+      `AUTOMATIONS_FULL` queda reservada sin endpoint: las tareas básicas son
+      de todos los planes y las reglas corren como jobs de sistema.)
 
 **Criterios de aceptación:**
 
-- [ ] Un tenant en plan Esencial recibe `403` al intentar usar un
+- [x] Un tenant en plan Esencial recibe `403` al intentar usar un
       endpoint exclusivo de Profesional/Clínica (ej. CRM de leads).
+      (Verificado con `FeatureGateIntegrationTest` 4/4: Esencial 403 con mensaje
+      de upgrade en los 6 módulos; Profesional 200 en lo suyo y 403 en IA/alertas;
+      Clínica 200 en todo —la IA responde con fallback, que igual prueba el gate—;
+      tenant sin suscripción entra por fail-open pre-billing documentado;
+      `./mvnw.cmd clean verify`: 342/342 pruebas sin fallos.)
 
 **Temas de Spring Boot:** AOP (`@Aspect`), anotaciones personalizadas,
 `HandlerInterceptor` como alternativa si prefieres no usar AOP.

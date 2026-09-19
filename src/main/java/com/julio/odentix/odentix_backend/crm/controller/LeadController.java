@@ -47,7 +47,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 @RequestMapping("/api/v1/leads")
 @Tag(name = "CRM Leads", description = "Gestión de prospectos comerciales, embudo de ventas e historial de interacciones.")
 @SecurityRequirement(name = "bearerAuth")
-@PreAuthorize("hasAnyRole('PROPIETARIO', 'RECEPCION', 'ODONTOLOGO', 'AUXILIAR')")
+  @PreAuthorize("@subscriptionService.requireFeature('crm_leads') and hasAnyRole('PROPIETARIO', 'RECEPCION', 'ODONTOLOGO', 'AUXILIAR')")
 public class LeadController {
 
   private final LeadService leadService;

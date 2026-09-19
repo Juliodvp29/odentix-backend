@@ -39,7 +39,7 @@ public class AssistantController {
    * Responde una pregunta en lenguaje natural con datos reales del tenant.
    */
   @PostMapping("/ask")
-  @PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
+  @PreAuthorize("@subscriptionService.requireFeature('ai_assistant') and hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
   @Operation(
       summary = "Preguntar al asistente",
       description = "Responde con datos reales de la clínica (oportunidades, planes, "
@@ -54,7 +54,7 @@ public class AssistantController {
    * borrador editable para confirmación humana.
    */
   @PostMapping("/suggest-message")
-  @PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
+  @PreAuthorize("@subscriptionService.requireFeature('ai_assistant') and hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
   @Operation(
       summary = "Sugerir mensaje",
       description = "Genera un mensaje sugerido editable a partir de una cita. "
