@@ -1985,16 +1985,26 @@ intercambiable, `@ConditionalOnProperty`.
 
 **Tareas:**
 
-- [ ] Al crear/confirmar una cita, disparar la notificación
+- [x] Al crear/confirmar una cita, disparar la notificación
       correspondiente vía el servicio de FASE8-03.
-- [ ] Test: un fallo del adaptador de email no debe impedir que la
+      (Enganches en `AppointmentService`: crear → `sendAppointmentScheduled`
+      (plantilla `cita_agendada`); transición real a `confirmada` →
+      `sendAppointmentConfirmation` (no reenvía en no-op idempotente). Misma
+      transacción, sin ciclo de dependencias; el servicio nunca lanza.)
+- [x] Test: un fallo del adaptador de email no debe impedir que la
       cita se cree/confirme (el fallo se registra en `Notification`,
       no revierte la operación de negocio).
 
 **Criterios de aceptación:**
 
-- [ ] Confirmar una cita dispara una notificación, y si el envío falla,
+- [x] Confirmar una cita dispara una notificación, y si el envío falla,
       la confirmación de la cita igual queda guardada.
+      (Verificado con `AppointmentNotificationIntegrationTest` 2/2 —agendada al
+      crear, confirmación al confirmar, ambas `enviada`— y
+      `AppointmentNotificationResilienceIntegrationTest` 1/1 —proveedor caído
+      vía `@MockitoBean`: crear 201 y confirmar 200 igual, 2 `fallida` con
+      detalle—; `./mvnw.cmd clean verify`: 288/288 sin fallos. Límite
+      documentado: envío síncrono; async queda como mejora futura.)
 
 ---
 

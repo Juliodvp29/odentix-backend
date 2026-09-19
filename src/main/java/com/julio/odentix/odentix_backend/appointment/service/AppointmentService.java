@@ -15,6 +15,7 @@ import com.julio.odentix.odentix_backend.appointment.repository.AppointmentRepos
 import com.julio.odentix.odentix_backend.appointment.repository.ProfessionalRepository;
 import com.julio.odentix.odentix_backend.appointment.repository.RoomRepository;
 import com.julio.odentix.odentix_backend.appointment.repository.WaitlistEntryRepository;
+import com.julio.odentix.odentix_backend.notification.service.NotificationService;
 import com.julio.odentix.odentix_backend.patient.entity.Patient;
 import com.julio.odentix.odentix_backend.patient.repository.PatientRepository;
 import com.julio.odentix.odentix_backend.shared.context.TenantContext;
@@ -40,6 +41,7 @@ public class AppointmentService {
   private final ProfessionalRepository professionalRepository;
   private final RoomRepository roomRepository;
   private final WaitlistEntryRepository waitlistEntryRepository;
+  private final NotificationService notificationService;
 
   /**
    * Transiciones de estado permitidas (FASE3-04, sección 8.6 del doc de
@@ -66,12 +68,14 @@ public class AppointmentService {
       PatientRepository patientRepository,
       ProfessionalRepository professionalRepository,
       RoomRepository roomRepository,
-      WaitlistEntryRepository waitlistEntryRepository) {
+      WaitlistEntryRepository waitlistEntryRepository,
+      NotificationService notificationService) {
     this.appointmentRepository = appointmentRepository;
     this.patientRepository = patientRepository;
     this.professionalRepository = professionalRepository;
     this.roomRepository = roomRepository;
     this.waitlistEntryRepository = waitlistEntryRepository;
+    this.notificationService = notificationService;
   }
 
   /**
@@ -121,6 +125,12 @@ public class AppointmentService {
     // Se usa saveAndFlush para disparar las constraints de BD (incluyendo no_overlapping_appointments)
     // de forma síncrona dentro del bloque transaccional.
     Appointment saved = appointmentRepository.saveAndFlush(appointment);
+
+    // FASE8-04: avisar que la cita quedó agendada. El servicio de
+    // notificaciones nunca lanza: si el proveedor falla, queda registrada
+    // como fallida sin revertir la creación de la cita.
+    notificationService.sendAppointmentScheduled(saved.getId());
+
     return AppointmentResponse.fromEntity(saved);
   }
 
@@ -203,6 +213,13 @@ public class AppointmentService {
     // para sugerir la recuperación del espacio liberado.
     if (destino == AppointmentStatus.cancelada) {
       response.setWaitlistCandidates(findCandidatesForAppointment(saved, currentTenantId));
+    }
+
+    // FASE8-04: al confirmar, enviar la confirmación por email. Solo en
+    // transición real (no en no-op idempotente) para no reenviar en reintentos.
+    // Nunca lanza: un fallo del proveedor no revierte el cambio de estado.
+    if (destino == AppointmentStatus.confirmada && !actual.equals(destino)) {
+      notificationService.sendAppointmentConfirmation(saved.getId());
     }
 
     return response;
