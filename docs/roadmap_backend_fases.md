@@ -2477,16 +2477,32 @@ sección "Pricing y límites por plan" del roadmap.
 
 **Tareas:**
 
-- [ ] Validación de límites numéricos (`max_patients`, `max_users`,
+- [x] Validación de límites numéricos (`max_patients`, `max_users`,
       etc.) antes de crear el recurso correspondiente.
-- [ ] Contador de uso mensual para límites que se consumen (ej.
+      (`SubscriptionService.checkCapacity` + `LimitExceededException` → 429 con
+      plan/límite en el mensaje; enganches en `PatientService.create` sobre
+      activos y `UserService.createUser` sobre activos; NULL = ilimitado;
+      sin suscripción → fail-open. `max_sedes`/`max_specialists` sin endpoint
+      de creación y `opportunities_max_rules` interno: fuera de alcance
+      documentado, se activan con esos flujos.)
+- [x] Contador de uso mensual para límites que se consumen (ej.
       conversaciones de WhatsApp), reseteable al inicio de cada ciclo
       de facturación.
+      (Sin tabla nueva: cuenta `notifications` whatsapp+`enviada` desde
+      `current_period_start` —los fallidos no consumen; agotada → 429 con
+      `Retry-After` al fin del periodo; enganche en el núcleo de envío solo
+      para WhatsApp, email intacto.)
 
 **Criterios de aceptación:**
 
-- [ ] Un tenant que alcanza su límite numérico (ej. 150 pacientes)
+- [x] Un tenant que alcanza su límite numérico (ej. 150 pacientes)
       recibe un error claro al intentar crear el recurso 151.
+      (Verificado con `LimitEnforcementIntegrationTest` 5/5: paciente 151 en
+      Esencial → 429 sin `Retry-After`; 3er usuario → `LimitExceededException`
+      a nivel servicio —sin endpoint de usuarios—; WhatsApp Esencial (cuota 0)
+      → 429 con `Retry-After`; Profesional cuenta solo enviadas; Clínica NULL
+      pasa siempre; `./mvnw.cmd clean verify`: 347/347 pruebas sin fallos.
+      Nota: el keyword derivado es `GreaterThanEqual`, no `GreaterEqual`.)
 
 ---
 

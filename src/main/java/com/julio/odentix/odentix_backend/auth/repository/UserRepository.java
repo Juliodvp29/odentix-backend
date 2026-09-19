@@ -27,5 +27,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
   List<User> findAllByTenantId(UUID tenantId);
 
+  /**
+   * Conteo de usuarios activos (insumo del límite `max_users` de FASE11-03).
+   */
+  long countByTenantIdAndIsActiveTrue(UUID tenantId);
+
   List<User> findAllByTenantIdAndRole(UUID tenantId, UserRole role);
 }
