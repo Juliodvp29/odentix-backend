@@ -2,6 +2,7 @@ package com.julio.odentix.odentix_backend.appointment.repository;
 
 import com.julio.odentix.odentix_backend.appointment.entity.Appointment;
 import com.julio.odentix.odentix_backend.appointment.entity.AppointmentStatus;
+import com.julio.odentix.odentix_backend.appointment.entity.RiskLevel;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -52,6 +53,13 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
    */
   List<Appointment> findByStatusAndStartsAtBetween(
       AppointmentStatus status, Instant start, Instant end);
+
+  /**
+   * Citas en un estado y nivel de riesgo que inician en un rango (insumo de la
+   * regla `cita_alto_riesgo` de FASE9-02).
+   */
+  List<Appointment> findByStatusAndRiskLevelAndStartsAtBetween(
+      AppointmentStatus status, RiskLevel riskLevel, Instant start, Instant end);
 
   /**
    * Obtiene las citas asignadas a un consultorio específico.

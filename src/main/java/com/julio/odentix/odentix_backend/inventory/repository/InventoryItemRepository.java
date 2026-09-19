@@ -47,4 +47,15 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
         AND i.quantity <= i.minThreshold
       """)
   List<InventoryItem> findCritical(@Param("tenantId") UUID tenantId);
+
+  /**
+   * Ítems críticos de todos los tenants (insumo de la regla
+   * `inventario_critico` de FASE9-02, que corre en contexto de sistema).
+   * Usa el índice parcial `idx_inventory_items_critical`.
+   */
+  @Query("""
+      SELECT i FROM InventoryItem i
+      WHERE i.quantity <= i.minThreshold
+      """)
+  List<InventoryItem> findAllCritical();
 }
