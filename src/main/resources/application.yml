@@ -92,6 +92,15 @@ odentix:
   opportunities:
     lead-unresponded-hours: ${OPPORTUNITIES_LEAD_UNRESPONDED_HOURS:24}
     inactive-patient-months: ${OPPORTUNITIES_INACTIVE_PATIENT_MONTHS:6}
+  assistant:
+    groq:
+      # Clave del proveedor (GROQ_API_KEY, sin default): nunca hardcodeada.
+      # Sin ella el endpoint responde 502 claro; el fallback a plantilla fija
+      # llega en FASE10-03.
+      api-key: ${GROQ_API_KEY:}
+      # Modelo configurable porque rotan (default: ejemplo actual de sus docs).
+      model: ${GROQ_MODEL:openai/gpt-oss-20b}
+      base-url: ${GROQ_API_BASE_URL:https://api.groq.com/openai/v1}
   notifications:
     email:
       # Adaptador SMTP real (SmtpEmailNotificationSender). Apagado por defecto:

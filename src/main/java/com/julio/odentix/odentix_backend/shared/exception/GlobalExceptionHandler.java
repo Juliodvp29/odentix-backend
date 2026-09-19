@@ -127,7 +127,6 @@ public class GlobalExceptionHandler {
         request.getRequestURI());
     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
   }
-
   @ExceptionHandler(ConflictException.class)
   public ResponseEntity<ApiErrorResponse> handleConflict(
       ConflictException ex, HttpServletRequest request) {
@@ -137,6 +136,19 @@ public class GlobalExceptionHandler {
         ex.getMessage(),
         request.getRequestURI());
     return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+  }
+
+  @ExceptionHandler(com.julio.odentix.odentix_backend.assistant.AssistantException.class)
+  public ResponseEntity<ApiErrorResponse> handleAssistant(
+      RuntimeException ex, HttpServletRequest request) {
+    // 502, no 500: el backend está bien, el que falló fue el proveedor de IA
+    // (sin key, timeout o rechazo). El fallback a plantilla fija llega en FASE10-03.
+    ApiErrorResponse error = new ApiErrorResponse(
+        HttpStatus.BAD_GATEWAY.value(),
+        HttpStatus.BAD_GATEWAY.getReasonPhrase(),
+        ex.getMessage(),
+        request.getRequestURI());
+    return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(error);
   }
 
   @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
