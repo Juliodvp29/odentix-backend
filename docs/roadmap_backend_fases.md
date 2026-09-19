@@ -2408,14 +2408,18 @@ Las tablas `plans`, `plan_features`, `plan_limits` y
 
 **Tareas:**
 
-- [ ] Entidades `Plan`, `PlanFeature`, `PlanLimit`,
+- [x] Entidades `Plan`, `PlanFeature`, `PlanLimit`,
       `TenantSubscription` mapeadas 1:1 a las tablas existentes (no
       generar nuevas migraciones si `schema.sql` ya las tiene — verifica
       primero qué migraciones Flyway ya existen en el repo).
+      (Desviación documentada: V1–V24 no contenían estas tablas —solo
+      `schema.sql`—, así que se creó `V25__create_plans_and_subscriptions.sql`
+      con tablas + seeds. Verificado con `SubscriptionIntegrationTest` 4/4
+      y suite global 338/338 en `clean verify`, 19-sep-2026.)
 
 **Criterios de aceptación:**
 
-- [ ] Se puede leer, para un tenant dado, su plan activo, sus features
+- [x] Se puede leer, para un tenant dado, su plan activo, sus features
       habilitadas y sus límites numéricos.
 
 ---
