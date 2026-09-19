@@ -84,6 +84,10 @@ security:
       lockout-duration-minutes: ${LOGIN_RATE_LIMIT_LOCKOUT_MINUTES:15}
 
 odentix:
+  crypto:
+    # Llave AES-256 (32 bytes en base64) para secretos por tenant (tokens
+    # WhatsApp). Generar con: openssl rand -base64 32. Nunca en el repo.
+    key: ${DATA_ENCRYPTION_KEY:}
   jobs:
     overdue-installments:
       cron: ${OVERDUE_INSTALLMENTS_CRON:0 0 2 * * *}

@@ -33,6 +33,12 @@ class WhatsappSenderIntegrationTest {
     }
   }
 
+  // Los últimos dos null son TenantRepository y DataEncryptionService: sin
+  // TenantContext no se tocan (contexto de sistema → global directo).
+  private static WhatsappNotificationSender sender(String baseUrl, String numero, String token) {
+    return new WhatsappNotificationSender(baseUrl, numero, token, null, null);
+  }
+
   private int puertoLibre() throws IOException {
     try (var socket = new java.net.ServerSocket(0)) {
       return socket.getLocalPort();
@@ -62,8 +68,7 @@ class WhatsappSenderIntegrationTest {
     AtomicReference<String> cuerpo = new AtomicReference<>();
     String baseUrl = iniciarServidorFalso(200, "{\"messages\":[{\"id\":\"wamid.test\"}]}", cuerpo);
 
-    WhatsappNotificationSender sender =
-        new WhatsappNotificationSender(baseUrl, "999888", "token-falso");
+    WhatsappNotificationSender sender = sender(baseUrl, "999888", "token-falso");
     assertThat(sender.channel()).isEqualTo(NotificationChannel.whatsapp);
 
     sender.send("573001112233", "asunto ignorado", "Hola, tu cita quedó confirmada.");
@@ -79,8 +84,7 @@ class WhatsappSenderIntegrationTest {
     String baseUrl = iniciarServidorFalso(400,
         "{\"error\":{\"message\":\"número inválido\"}}", null);
 
-    WhatsappNotificationSender sender =
-        new WhatsappNotificationSender(baseUrl, "999888", "token-falso");
+    WhatsappNotificationSender sender = sender(baseUrl, "999888", "token-falso");
 
     assertThatThrownBy(() -> sender.send("no-un-numero", "", "Hola"))
         .isInstanceOf(NotificationException.class)
@@ -92,7 +96,7 @@ class WhatsappSenderIntegrationTest {
     int cerrado = puertoLibre();
 
     WhatsappNotificationSender sender =
-        new WhatsappNotificationSender("http://localhost:" + cerrado, "999888", "token-falso");
+        sender("http://localhost:" + cerrado, "999888", "token-falso");
 
     assertThatThrownBy(() -> sender.send("573001112233", "", "Hola"))
         .isInstanceOf(NotificationException.class)
@@ -101,8 +105,7 @@ class WhatsappSenderIntegrationTest {
 
   @Test
   void sinConfiguracionReportaErrorClaro() {
-    WhatsappNotificationSender sender =
-        new WhatsappNotificationSender("http://localhost:1", "", "");
+    WhatsappNotificationSender sender = sender("http://localhost:1", "", "");
 
     assertThatThrownBy(() -> sender.send("573001112233", "", "Hola"))
         .isInstanceOf(NotificationException.class)

@@ -46,6 +46,18 @@ public class Tenant {
   @Column(nullable = false)
   private String timezone = "America/Bogota";
 
+  @Column(name = "notification_email")
+  private String notificationEmail;
+
+  @Column(name = "notification_name")
+  private String notificationName;
+
+  @Column(name = "whatsapp_phone_number_id")
+  private String whatsappPhoneNumberId;
+
+  @Column(name = "whatsapp_token_cifrado", columnDefinition = "TEXT")
+  private String whatsappTokenCifrado;
+
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt;
 
@@ -122,6 +134,38 @@ public class Tenant {
 
   public void setTimezone(String timezone) {
     this.timezone = timezone;
+  }
+
+  public String getNotificationEmail() {
+    return notificationEmail;
+  }
+
+  public void setNotificationEmail(String notificationEmail) {
+    this.notificationEmail = notificationEmail;
+  }
+
+  public String getNotificationName() {
+    return notificationName;
+  }
+
+  public void setNotificationName(String notificationName) {
+    this.notificationName = notificationName;
+  }
+
+  public String getWhatsappPhoneNumberId() {
+    return whatsappPhoneNumberId;
+  }
+
+  public void setWhatsappPhoneNumberId(String whatsappPhoneNumberId) {
+    this.whatsappPhoneNumberId = whatsappPhoneNumberId;
+  }
+
+  public String getWhatsappTokenCifrado() {
+    return whatsappTokenCifrado;
+  }
+
+  public void setWhatsappTokenCifrado(String whatsappTokenCifrado) {
+    this.whatsappTokenCifrado = whatsappTokenCifrado;
   }
 
   public Instant getCreatedAt() {
