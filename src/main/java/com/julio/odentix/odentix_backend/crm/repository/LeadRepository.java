@@ -2,6 +2,7 @@ package com.julio.odentix.odentix_backend.crm.repository;
 
 import com.julio.odentix.odentix_backend.crm.entity.Lead;
 import com.julio.odentix.odentix_backend.crm.entity.LeadStatus;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -47,4 +48,18 @@ public interface LeadRepository extends JpaRepository<Lead, UUID>, JpaSpecificat
       WHERE l.id = :id AND l.tenantId = :tenantId
   """)
   Optional<Lead> findWithDetailsByIdAndTenantId(@Param("id") UUID id, @Param("tenantId") UUID tenantId);
+
+  /**
+   * Leads candidatos a `lead_sin_respuesta` (FASE9-02): en estado dado sin
+   * contacto desde el corte (usa `lastContactAt`, o `createdAt` si nunca hubo
+   * contacto). En contexto de sistema cubre todos los tenants (usa el índice
+   * `idx_leads_unresponded`).
+   */
+  @Query("""
+      SELECT l FROM Lead l
+      WHERE l.status = :status
+        AND COALESCE(l.lastContactAt, l.createdAt) < :cutoff
+      """)
+  List<Lead> findUnresponded(
+      @Param("status") LeadStatus status, @Param("cutoff") Instant cutoff);
 }

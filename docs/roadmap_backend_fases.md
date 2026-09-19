@@ -2143,17 +2143,38 @@ inventa nada nuevo, solo se conecta.
 
 **Tareas:**
 
-- [ ] Regla "lead sin respuesta" (usa `idx_leads_unresponded`).
-- [ ] Regla "cita de alto riesgo" (usa `risk_level` de `Appointment`).
-- [ ] Regla "espacio disponible" (conecta con la lógica de la Fase 3.7).
-- [ ] Regla "paciente inactivo" (sin citas/tratamientos en X tiempo).
-- [ ] Regla "saldo vencido" (usa el dashboard de cartera de la Fase 6).
-- [ ] Regla "inventario crítico" (usa `idx_inventory_items_critical`).
+- [x] Regla "lead sin respuesta" (usa `idx_leads_unresponded`).
+      (`LeadUnrespondedJob`: `nuevo` sin contacto en 24h configurables;
+      prioridad 4 con valor/fuente, 3 por defecto.)
+- [x] Regla "cita de alto riesgo" (usa `risk_level` de `Appointment`).
+      (`HighRiskAppointmentJob`: `programada` + `alto` dentro de 48h; prioridad 4.)
+- [x] Regla "espacio disponible" (conecta con la lógica de la Fase 3.7).
+      (`SlotOpportunityListener` sobre `AppointmentCancelledEvent`: con
+      candidatos → `espacio_disponible`; prioridad 4 si ≥ $500k, 3 si menor.)
+- [x] Regla "paciente inactivo" (sin citas/tratamientos en X tiempo).
+      (`InactivePatientJob`: activos sin citas ni planes en 6 meses
+      configurables; prioridad 2, valor cero.)
+- [x] Regla "saldo vencido" (usa el dashboard de cartera de la Fase 6).
+      (`OverdueInstallmentOpportunityJob` a las 02:30, tras el marcado de
+      FASE6-03: cuota `vencida` con su monto; prioridad 4 si mora ≥ $500k.)
+- [x] Regla "inventario crítico" (usa `idx_inventory_items_critical`).
+      (`CriticalInventoryJob` cada 6h: `quantity <= min_threshold`;
+      prioridad 4 si quiebre total, 3 si bajo umbral; valor cero.)
 
 **Criterios de aceptación:**
 
-- [ ] Cada regla implementada tiene al menos un test que genera el
+- [x] Cada regla implementada tiene al menos un test que genera el
       escenario y verifica que la `Opportunity` correspondiente se crea.
+      (`OpportunityRulesIntegrationTest` 6/6: detección + prioridad/valor por
+      regla, casos negativos, idempotencia en segunda corrida y aislamiento
+      cross-tenant; `SlotOpportunityListenerIntegrationTest` 2/2: cancelación
+      con/sin candidatos e idempotencia por transición real;
+      `./mvnw.cmd clean verify`: 316/316 pruebas sin fallos.
+      Notas: (1) `Instant` no soporta MONTHS — el corte de inactividad usa
+      `OffsetDateTime`. (2) La guarda de idempotencia es por entidad, no por
+      tipo: una cita con `cita_alto_riesgo` abierta no genera además
+      `espacio_disponible` al cancelarse — simplificación consciente, revisar
+      si se quiere una oportunidad por tipo en el futuro.)
 
 ---
 

@@ -89,6 +89,9 @@ odentix:
       cron: ${OVERDUE_INSTALLMENTS_CRON:0 0 2 * * *}
     unconfirmed-appointments:
       cron: ${UNCONFIRMED_APPOINTMENTS_CRON:0 0 * * * *}
+  opportunities:
+    lead-unresponded-hours: ${OPPORTUNITIES_LEAD_UNRESPONDED_HOURS:24}
+    inactive-patient-months: ${OPPORTUNITIES_INACTIVE_PATIENT_MONTHS:6}
   notifications:
     email:
       # Adaptador SMTP real (SmtpEmailNotificationSender). Apagado por defecto:
