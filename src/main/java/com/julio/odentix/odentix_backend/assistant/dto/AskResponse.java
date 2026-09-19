@@ -7,6 +7,7 @@ public class AskResponse {
 
   private String answer;
   private String model;
+  private boolean fallback = false;
 
   public AskResponse() {
   }
@@ -25,5 +26,13 @@ public class AskResponse {
 
   public void setModel(String model) {
     this.model = model;
+  }
+
+  public boolean isFallback() {
+    return fallback;
+  }
+
+  public void setFallback(boolean fallback) {
+    this.fallback = fallback;
   }
 }

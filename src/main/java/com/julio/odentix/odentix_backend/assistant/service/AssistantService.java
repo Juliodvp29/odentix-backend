@@ -3,15 +3,19 @@ package com.julio.odentix.odentix_backend.assistant.service;
 import com.julio.odentix.odentix_backend.appointment.entity.Appointment;
 import com.julio.odentix.odentix_backend.appointment.repository.AppointmentRepository;
 import com.julio.odentix.odentix_backend.assistant.client.GroqChatClient;
+import com.julio.odentix.odentix_backend.assistant.AssistantException;
 import com.julio.odentix.odentix_backend.assistant.dto.AskRequest;
 import com.julio.odentix.odentix_backend.assistant.dto.AskResponse;
 import com.julio.odentix.odentix_backend.assistant.dto.SuggestMessageRequest;
 import com.julio.odentix.odentix_backend.assistant.dto.SuggestMessageResponse;
 import com.julio.odentix.odentix_backend.shared.context.TenantContext;
 import com.julio.odentix.odentix_backend.shared.exception.ResourceNotFoundException;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class AssistantService {
+
+  private static final Logger log = LoggerFactory.getLogger(AssistantService.class);
 
   static final String SYSTEM_PROMPT = """
       Eres el asistente administrativo de una clínica odontológica. Responde en español,
@@ -69,12 +75,20 @@ public class AssistantService {
         Map.of("role", "user",
             "content", "Datos de mi clínica:\n" + foto + "\nPregunta: " + request.getQuestion()));
 
-    String answer = groqChatClient.chat(messages, 0.2, 500);
-
     AskResponse response = new AskResponse();
-    response.setAnswer(answer);
     response.setModel(groqChatClient.getModel());
-    return response;
+    Instant inicio = Instant.now();
+    try {
+      response.setAnswer(groqChatClient.chat(messages, 0.2, 500));
+      return response;
+    } catch (AssistantException e) {
+      // FASE10-03: sin proveedor no se rompe nada — plantilla fija con datos
+      // reales + flag, y el fallo queda registrado (ver registrarFallo).
+      registrarFallo("ask", inicio, e);
+      response.setAnswer("Proveedor de IA no disponible. Resumen actual de tu clínica:\n" + foto);
+      response.setFallback(true);
+      return response;
+    }
   }
 
   /**
@@ -124,12 +138,36 @@ public class AssistantService {
         Map.of("role", "system", "content", SUGGEST_PROMPT),
         Map.of("role", "user", "content", datos.toString()));
 
-    String message = groqChatClient.chat(messages, 0.5, 300);
-
     SuggestMessageResponse response = new SuggestMessageResponse();
-    response.setMessage(message);
     response.setSuggestedChannel(canal);
     response.setModel(groqChatClient.getModel());
-    return response;
+    Instant inicio = Instant.now();
+    try {
+      response.setMessage(groqChatClient.chat(messages, 0.5, 300));
+      return response;
+    } catch (AssistantException e) {
+      // FASE10-03: plantilla fija con los datos del contexto, sin propagar.
+      registrarFallo("suggest-message", inicio, e);
+      response.setMessage("Hola " + nombre + ", te recordamos tu " + detalleCita
+          + ". Confirma tu asistencia respondiendo este mensaje.");
+      response.setFallback(true);
+      return response;
+    }
+  }
+
+  /**
+   * Registra el fallo del proveedor (FASE10-03): log estructurado sin PII del
+   * paciente (modelo, latencia y error) para operar el endpoint en producción.
+   * No se persiste por paciente porque no hay un intento que auditar —el
+   * fallback ya responde con datos reales.
+   */
+  private void registrarFallo(String operacion, Instant inicio, AssistantException e) {
+    long latenciaMs = Instant.now().toEpochMilli() - inicio.toEpochMilli();
+    String detalle = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+    if (detalle.length() > 200) {
+      detalle = detalle.substring(0, 200);
+    }
+    log.warn("Asistente IA sin proveedor (operacion={}, modelo={}, latenciaMs={}): {}",
+        operacion, groqChatClient.getModel(), latenciaMs, detalle);
   }
 }

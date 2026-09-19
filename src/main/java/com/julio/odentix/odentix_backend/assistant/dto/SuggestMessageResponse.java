@@ -11,6 +11,7 @@ public class SuggestMessageResponse {
   private String message;
   private String suggestedChannel;
   private String model;
+  private boolean fallback = false;
 
   public SuggestMessageResponse() {
   }
@@ -37,5 +38,13 @@ public class SuggestMessageResponse {
 
   public void setModel(String model) {
     this.model = model;
+  }
+
+  public boolean isFallback() {
+    return fallback;
+  }
+
+  public void setFallback(boolean fallback) {
+    this.fallback = fallback;
   }
 }

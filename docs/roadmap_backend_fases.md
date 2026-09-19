@@ -2360,17 +2360,27 @@ fallo.
 
 **Tareas:**
 
-- [ ] Timeout corto configurado en el cliente HTTP del proveedor de IA.
-- [ ] Fallback a una plantilla fija cuando el proveedor no responde o
+- [x] Timeout corto configurado en el cliente HTTP del proveedor de IA.
+      (15s connect/read en `GroqChatClient` desde FASE10-01; endurecerlo más
+      rompería respuestas largas legítimas.)
+- [x] Fallback a una plantilla fija cuando el proveedor no responde o
       responde con error.
-- [ ] Registro del fallo (log estructurado o tabla, según lo que ya
+      (`ask` → resumen real del snapshot + `fallback:true`; `suggest-message`
+      → plantilla con nombre/fecha + `fallback:true`. Ambas 200, nada se rompe.)
+- [x] Registro del fallo (log estructurado o tabla, según lo que ya
       exista para WhatsApp).
+      (`log.warn` con operación, modelo, latencia y error truncado, sin PII;
+      no hay tabla porque no hay intento por paciente que auditar —a diferencia
+      de WhatsApp. El mapeo 502 queda para fallos fuera de estos flujos.)
 
 **Criterios de aceptación:**
 
-- [ ] Si se apaga la clave de API de IA, el sistema sigue operando con
+- [x] Si se apaga la clave de API de IA, el sistema sigue operando con
       plantillas fijas sin romper ningún flujo (test explícito
       simulando la caída del proveedor).
+      (Verificado con `AssistantFallbackIntegrationTest` 2/2 —proveedor HTTP 500:
+      ask y suggest responden 200 con plantilla y flag—; `./mvnw.cmd clean verify`:
+      334/334 pruebas sin fallos.)
 
 ---
 
