@@ -48,7 +48,7 @@ public class PaymentPlanController {
    * @return plan de pago creado con sus cuotas en estado {@code pendiente}.
    */
   @PostMapping("/{id}/payment-plan")
-  @PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
+  @PreAuthorize("@subscriptionService.requireFeature('cartera') and hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
   @Operation(
       summary = "Crear plan de pago",
       description = "Crea un plan de pago en N cuotas mensuales para un plan de tratamiento. "

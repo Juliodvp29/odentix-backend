@@ -7,6 +7,8 @@ import com.julio.odentix.odentix_backend.patient.entity.Patient;
 import com.julio.odentix.odentix_backend.patient.repository.PatientRepository;
 import com.julio.odentix.odentix_backend.shared.context.TenantContext;
 import com.julio.odentix.odentix_backend.shared.exception.ResourceNotFoundException;
+import com.julio.odentix.odentix_backend.subscription.entity.LimitKey;
+import com.julio.odentix.odentix_backend.subscription.service.SubscriptionService;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,15 +31,21 @@ import org.springframework.transaction.annotation.Transactional;
 public class PatientService {
 
   private final PatientRepository patientRepository;
+  private final SubscriptionService subscriptionService;
 
-  public PatientService(PatientRepository patientRepository) {
+  public PatientService(
+      PatientRepository patientRepository, SubscriptionService subscriptionService) {
     this.patientRepository = patientRepository;
+    this.subscriptionService = subscriptionService;
   }
 
   @Transactional
   public PatientResponse create(CreatePatientRequest request) {
     UUID tenantId = TenantContext.getRequiredTenantId();
 
+    // FASE11-03: el plan limita pacientes activos (150 Esencial, 800 Profesional).
+    subscriptionService.checkCapacity(tenantId, LimitKey.MAX_PATIENTS,
+        patientRepository.countByTenantIdAndIsActiveTrue(tenantId));
     Patient patient = new Patient(tenantId, request.getFirstName(), request.getLastName());
     patient.setDocumentType(request.getDocumentType());
     patient.setDocumentNumber(request.getDocumentNumber());

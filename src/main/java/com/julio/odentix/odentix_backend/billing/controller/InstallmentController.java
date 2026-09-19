@@ -39,7 +39,7 @@ public class InstallmentController {
    * @return cuota actualizada con estado {@code pagada} y {@code paidAt} registrado.
    */
   @PostMapping("/{id}/pay")
-  @PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
+  @PreAuthorize("@subscriptionService.requireFeature('cartera') and hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
   @Operation(
       summary = "Pagar cuota",
       description = "Marca la cuota como pagada y genera la factura e Invoice correspondientes. "

@@ -46,7 +46,7 @@ public class SettlementController {
    * @return liquidación creada en estado {@code pendiente}.
    */
   @PostMapping("/{id}/settlements")
-  @PreAuthorize("hasRole('PROPIETARIO')")
+  @PreAuthorize("@subscriptionService.requireFeature('specialists') and hasRole('PROPIETARIO')")
   @Operation(
       summary = "Generar liquidación",
       description = "Calcula la producción bruta facturada del especialista en el periodo "

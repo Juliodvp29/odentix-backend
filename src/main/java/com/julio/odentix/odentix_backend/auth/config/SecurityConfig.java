@@ -53,6 +53,9 @@ public class SecurityConfig {
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/actuator/health", "/actuator/info").permitAll()
             .requestMatchers("/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
+            // Webhook de Bold (FASE11-04): lo llama Bold sin JWT; se autentica
+            // por firma HMAC (x-bold-signature) en el propio endpoint.
+            .requestMatchers("/api/v1/billing/webhooks/**").permitAll()
             // Documentación interactiva (deshabilitada en prod vía application-prod.yml).
             .requestMatchers("/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
             .anyRequest().authenticated()

@@ -3,6 +3,8 @@ package com.julio.odentix.odentix_backend.auth.service;
 import com.julio.odentix.odentix_backend.auth.entity.User;
 import com.julio.odentix.odentix_backend.auth.entity.UserRole;
 import com.julio.odentix.odentix_backend.auth.repository.UserRepository;
+import com.julio.odentix.odentix_backend.subscription.entity.LimitKey;
+import com.julio.odentix.odentix_backend.subscription.service.SubscriptionService;
 import com.julio.odentix.odentix_backend.tenant.entity.Tenant;
 import com.julio.odentix.odentix_backend.tenant.repository.TenantRepository;
 import java.util.UUID;
@@ -25,14 +27,17 @@ public class UserService {
   private final UserRepository userRepository;
   private final TenantRepository tenantRepository;
   private final PasswordEncoder passwordEncoder;
+  private final SubscriptionService subscriptionService;
 
   public UserService(
       UserRepository userRepository,
       TenantRepository tenantRepository,
-      PasswordEncoder passwordEncoder) {
+      PasswordEncoder passwordEncoder,
+      SubscriptionService subscriptionService) {
     this.userRepository = userRepository;
     this.tenantRepository = tenantRepository;
     this.passwordEncoder = passwordEncoder;
+    this.subscriptionService = subscriptionService;
   }
 
   /**
@@ -54,6 +59,9 @@ public class UserService {
     if (userRepository.existsByTenantIdAndEmail(tenantId, email)) {
       throw new IllegalStateException("Ya existe un usuario con ese email en el tenant");
     }
+    // FASE11-03: el plan limita usuarios activos (2 Esencial, 6 Profesional).
+    subscriptionService.checkCapacity(tenantId, LimitKey.MAX_USERS,
+        userRepository.countByTenantIdAndIsActiveTrue(tenantId));
     User user = new User(tenant, email, passwordEncoder.encode(rawPassword), fullName, role);
     return userRepository.save(user);
   }

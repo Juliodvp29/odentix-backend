@@ -32,7 +32,7 @@ public class PortfolioController {
    * @return indicadores de cartera total, vencida, por vencer y al día.
    */
   @GetMapping("/summary")
-  @PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
+  @PreAuthorize("@subscriptionService.requireFeature('cartera') and hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
   @Operation(
       summary = "Resumen de cartera",
       description = "Devuelve los totales financieros consolidados de cartera para la clínica: "

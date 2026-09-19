@@ -52,7 +52,7 @@ public class InventoryController {
    * Crea un ítem de inventario (el stock nace en cero).
    */
   @PostMapping("/items")
-  @PreAuthorize(ROLES_OPERATIVOS)
+  @PreAuthorize("@subscriptionService.requireFeature('inventory') and hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
   @Operation(
       summary = "Crear insumo",
       description = "Crea un ítem de inventario con stock inicial en cero. "
@@ -73,7 +73,7 @@ public class InventoryController {
    * Lista todos los ítems del tenant activo.
    */
   @GetMapping("/items")
-  @PreAuthorize(ROLES_OPERATIVOS)
+  @PreAuthorize("@subscriptionService.requireFeature('inventory') and hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
   @Operation(summary = "Listar insumos", description = "Lista todos los ítems de inventario.")
   public ResponseEntity<List<InventoryItemResponse>> listarItems() {
     return ResponseEntity.ok(inventoryService.listarItems());
@@ -83,7 +83,7 @@ public class InventoryController {
    * Ítems con stock en o por debajo del umbral mínimo.
    */
   @GetMapping("/critical")
-  @PreAuthorize(ROLES_OPERATIVOS)
+  @PreAuthorize("@subscriptionService.requireFeature('inventory_alerts') and hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
   @Operation(
       summary = "Insumos críticos",
       description = "Ítems con quantity menor o igual a min_threshold (alerta de reposición)."
@@ -96,7 +96,7 @@ public class InventoryController {
    * Obtiene un ítem por ID.
    */
   @GetMapping("/items/{id}")
-  @PreAuthorize(ROLES_OPERATIVOS)
+  @PreAuthorize("@subscriptionService.requireFeature('inventory') and hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
   @Operation(summary = "Ver insumo", description = "Obtiene un ítem con su stock actual.")
   public ResponseEntity<InventoryItemResponse> obtenerItem(@PathVariable UUID id) {
     return ResponseEntity.ok(inventoryService.obtenerItem(id));
@@ -106,7 +106,7 @@ public class InventoryController {
    * Actualiza nombre, unidad y/o umbral de un ítem.
    */
   @PatchMapping("/items/{id}")
-  @PreAuthorize(ROLES_OPERATIVOS)
+  @PreAuthorize("@subscriptionService.requireFeature('inventory') and hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
   @Operation(
       summary = "Actualizar insumo",
       description = "Actualiza nombre, unidad y/o umbral mínimo. El stock no se edita por aquí."
@@ -121,7 +121,7 @@ public class InventoryController {
    * Elimina un ítem solo si no tiene movimientos registrados.
    */
   @DeleteMapping("/items/{id}")
-  @PreAuthorize(ROLES_OPERATIVOS)
+  @PreAuthorize("@subscriptionService.requireFeature('inventory') and hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
   @Operation(
       summary = "Eliminar insumo",
       description = "Elimina un ítem sin movimientos. Devuelve 409 si tiene historial de stock."
@@ -135,7 +135,7 @@ public class InventoryController {
    * Registra un movimiento de stock (entrada positiva, salida negativa).
    */
   @PostMapping("/items/{id}/movements")
-  @PreAuthorize(ROLES_OPERATIVOS)
+  @PreAuthorize("@subscriptionService.requireFeature('inventory') and hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
   @Operation(
       summary = "Registrar movimiento",
       description = "Registra una entrada o salida de stock. "

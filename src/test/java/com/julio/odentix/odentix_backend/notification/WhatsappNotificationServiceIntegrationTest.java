@@ -14,6 +14,7 @@ import com.julio.odentix.odentix_backend.notification.service.NotificationServic
 import com.julio.odentix.odentix_backend.patient.entity.Patient;
 import com.julio.odentix.odentix_backend.patient.repository.PatientRepository;
 import com.julio.odentix.odentix_backend.shared.context.TenantContext;
+import com.julio.odentix.odentix_backend.shared.crypto.DataEncryptionService;
 import com.julio.odentix.odentix_backend.tenant.entity.Tenant;
 import com.julio.odentix.odentix_backend.tenant.repository.TenantRepository;
 import com.sun.net.httpserver.HttpServer;
@@ -22,6 +23,8 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Base64;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,6 +47,7 @@ class WhatsappNotificationServiceIntegrationTest extends AbstractIntegrationTest
 
   private static HttpServer servidorFalso;
   private static int puertoFalso;
+  private static final AtomicReference<String> rutaRecibida = new AtomicReference<>();
 
   @Autowired
   private NotificationService notificationService;
@@ -60,6 +64,9 @@ class WhatsappNotificationServiceIntegrationTest extends AbstractIntegrationTest
   @Autowired
   private TenantRepository tenantRepository;
 
+  @Autowired
+  private DataEncryptionService encryptionService;
+
   private Tenant tenantA;
   private Appointment citaConTelefono;
   private Appointment citaSinTelefono;
@@ -68,6 +75,7 @@ class WhatsappNotificationServiceIntegrationTest extends AbstractIntegrationTest
   static void iniciarServidorFalso() throws IOException {
     servidorFalso = HttpServer.create(new InetSocketAddress(0), 0);
     servidorFalso.createContext("/", intercambio -> {
+      rutaRecibida.set(intercambio.getRequestURI().getPath());
       byte[] bytes = "{\"messages\":[{\"id\":\"wamid.test\"}]}".getBytes(StandardCharsets.UTF_8);
       intercambio.getResponseHeaders().set("Content-Type", "application/json");
       intercambio.sendResponseHeaders(200, bytes.length);
@@ -92,6 +100,9 @@ class WhatsappNotificationServiceIntegrationTest extends AbstractIntegrationTest
         () -> "http://localhost:" + puertoFalso);
     registry.add("odentix.notifications.whatsapp.phone-number-id", () -> "999888");
     registry.add("odentix.notifications.whatsapp.token", () -> "token-falso");
+    // Llave fija de 32 bytes en base64 para cifrar el token propio en tests.
+    registry.add("odentix.crypto.key", () ->
+        Base64.getEncoder().encodeToString(new byte[32]));
   }
 
   @BeforeEach
@@ -138,8 +149,7 @@ class WhatsappNotificationServiceIntegrationTest extends AbstractIntegrationTest
   }
 
   @Test
-  void pacienteSinTelefonoRegistraFallida() {
-    TenantContext.setTenantId(tenantA.getId());
+  void pacienteSinTelefonoRegistraFallida() {    TenantContext.setTenantId(tenantA.getId());
     Notification intento;
     try {
       intento = notificationService.sendAppointmentWhatsAppConfirmation(citaSinTelefono.getId());
@@ -149,5 +159,31 @@ class WhatsappNotificationServiceIntegrationTest extends AbstractIntegrationTest
 
     assertThat(intento.getStatus()).isEqualTo(NotificationStatus.fallida);
     assertThat(intento.getErrorDetail()).contains("teléfono");
+  }
+
+  @Test
+  void conNumeroPropioEnviaDesdeEseNumero() {
+    // La clínica configura su número+token: el envío sale por ahí, no por el global.
+    TenantContext.setTenantId(tenantA.getId());
+    try {
+      Tenant tenant = tenantRepository.findById(tenantA.getId()).orElseThrow();
+      tenant.setWhatsappPhoneNumberId("111222333");
+      tenant.setWhatsappTokenCifrado(encryptionService.cifrar("token-propio"));
+      tenantRepository.saveAndFlush(tenant);
+    } finally {
+      TenantContext.clear();
+    }
+
+    TenantContext.setTenantId(tenantA.getId());
+    try {
+      Notification intento =
+          notificationService.sendAppointmentWhatsAppConfirmation(citaConTelefono.getId());
+      assertThat(intento.getStatus()).isEqualTo(NotificationStatus.enviada);
+    } finally {
+      TenantContext.clear();
+    }
+
+    assertThat(rutaRecibida.get()).contains("111222333");
+    assertThat(rutaRecibida.get()).doesNotContain("999888");
   }
 }

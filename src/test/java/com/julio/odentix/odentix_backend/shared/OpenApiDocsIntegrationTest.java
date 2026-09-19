@@ -105,6 +105,13 @@ class OpenApiDocsIntegrationTest extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.paths./api/v1/opportunities/{id}/actions/{actionId}/execute.post").exists())
         // asistente administrativo (FASE10-01, FASE10-02).
         .andExpect(jsonPath("$.paths./api/v1/assistant/ask.post").exists())
-        .andExpect(jsonPath("$.paths./api/v1/assistant/suggest-message.post").exists());
+        .andExpect(jsonPath("$.paths./api/v1/assistant/suggest-message.post").exists())
+        // facturación SaaS con Bold (FASE11-04, FASE11-05).
+        .andExpect(jsonPath("$.paths./api/v1/billing/checkout.post").exists())
+        .andExpect(jsonPath("$.paths./api/v1/billing/subscription.get").exists())
+        .andExpect(jsonPath("$.paths./api/v1/billing/webhooks/bold.post").exists())
+        // ajustes de la clínica (pre-Fase 12).
+        .andExpect(jsonPath("$.paths./api/v1/tenant/settings.get").exists())
+        .andExpect(jsonPath("$.paths./api/v1/tenant/settings.patch").exists());
   }
 }

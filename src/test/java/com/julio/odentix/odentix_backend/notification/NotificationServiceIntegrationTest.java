@@ -47,6 +47,10 @@ class NotificationServiceIntegrationTest extends AbstractIntegrationTest {
   private NotificationService notificationService;
 
   @Autowired
+  private com.julio.odentix.odentix_backend.subscription.service.SubscriptionService
+      subscriptionService;
+
+  @Autowired
   private NotificationSender notificationSender;
 
   @Autowired
@@ -155,7 +159,8 @@ class NotificationServiceIntegrationTest extends AbstractIntegrationTest {
       }
     };
     NotificationService servicioSinProveedor =
-        new NotificationService(java.util.List.of(roto), notificationRepository, appointmentRepository);
+        new NotificationService(java.util.List.of(roto), notificationRepository,
+            appointmentRepository, subscriptionService);
 
     TenantContext.setTenantId(tenantA.getId());
     Notification intento;

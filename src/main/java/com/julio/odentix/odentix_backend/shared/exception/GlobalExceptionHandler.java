@@ -151,6 +151,39 @@ public class GlobalExceptionHandler {
     return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(error);
   }
 
+  @ExceptionHandler(
+      com.julio.odentix.odentix_backend.subscription.exception.FeatureNotAvailableException.class)
+  public ResponseEntity<ApiErrorResponse> handleFeatureNotAvailable(
+      RuntimeException ex, HttpServletRequest request) {
+    // 403 con mensaje de upgrade (FASE11-02): el usuario está autenticado y
+    // autorizado por rol, pero su plan no incluye el feature.
+    ApiErrorResponse error = new ApiErrorResponse(
+        HttpStatus.FORBIDDEN.value(),
+        HttpStatus.FORBIDDEN.getReasonPhrase(),
+        ex.getMessage(),
+        request.getRequestURI());
+    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
+  }
+
+  @ExceptionHandler(
+      com.julio.odentix.odentix_backend.subscription.exception.LimitExceededException.class)
+  public ResponseEntity<ApiErrorResponse> handleLimitExceeded(
+      com.julio.odentix.odentix_backend.subscription.exception.LimitExceededException ex,
+      HttpServletRequest request) {
+    // 429 con mensaje de plan/límite (FASE11-03): cuota agotada, no error del
+    // cliente. Con Retry-After cuando el límite se renueva (cuota mensual).
+    ApiErrorResponse error = new ApiErrorResponse(
+        HttpStatus.TOO_MANY_REQUESTS.value(),
+        HttpStatus.TOO_MANY_REQUESTS.getReasonPhrase(),
+        ex.getMessage(),
+        request.getRequestURI());
+    ResponseEntity.BodyBuilder builder = ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS);
+    if (ex.getRetryAfterSeconds() != null) {
+      builder.header("Retry-After", String.valueOf(ex.getRetryAfterSeconds()));
+    }
+    return builder.body(error);
+  }
+
   @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
   public ResponseEntity<ApiErrorResponse> handleBadRequest(
       RuntimeException ex, HttpServletRequest request) {

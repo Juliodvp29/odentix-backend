@@ -10,6 +10,8 @@ import com.julio.odentix.odentix_backend.notification.sender.NotificationExcepti
 import com.julio.odentix.odentix_backend.notification.sender.NotificationSender;
 import com.julio.odentix.odentix_backend.shared.context.TenantContext;
 import com.julio.odentix.odentix_backend.shared.exception.ResourceNotFoundException;
+import com.julio.odentix.odentix_backend.subscription.service.SubscriptionService;
+import com.julio.odentix.odentix_backend.shared.exception.ResourceNotFoundException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -42,14 +44,17 @@ public class NotificationService {
   private final List<NotificationSender> notificationSenders;
   private final NotificationRepository notificationRepository;
   private final AppointmentRepository appointmentRepository;
+  private final SubscriptionService subscriptionService;
 
   public NotificationService(
       List<NotificationSender> notificationSenders,
       NotificationRepository notificationRepository,
-      AppointmentRepository appointmentRepository) {
+      AppointmentRepository appointmentRepository,
+      SubscriptionService subscriptionService) {
     this.notificationSenders = List.copyOf(notificationSenders);
     this.notificationRepository = notificationRepository;
     this.appointmentRepository = appointmentRepository;
+    this.subscriptionService = subscriptionService;
   }
 
   /**
@@ -197,6 +202,12 @@ public class NotificationService {
       UUID tenantId, UUID patientId, Map<String, String> payload,
       NotificationChannel channel, String destinatario,
       String templateKey, String asunto, String cuerpo) {
+    // FASE11-03: la cuota mensual de WhatsApp se verifica antes de enviar.
+    // Si está agotada lanza 429 (no se registra intento: no hubo consumo).
+    // El email no tiene cuota y pasa directo.
+    if (channel == NotificationChannel.whatsapp) {
+      subscriptionService.checkWhatsAppQuota(tenantId);
+    }
     Notification intento = nuevoIntento(tenantId, patientId, payload, channel, destinatario);
     intento.setTemplateKey(templateKey);
 

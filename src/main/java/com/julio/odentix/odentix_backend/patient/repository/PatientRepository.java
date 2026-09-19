@@ -27,6 +27,12 @@ public interface PatientRepository extends JpaRepository<Patient, UUID> {
 
   Optional<Patient> findByIdAndTenantId(UUID id, UUID tenantId);
 
+  /**
+   * Conteo de pacientes activos (insumo del límite `max_patients` de FASE11-03:
+   * el plan limita pacientes activos, no filas históricas).
+   */
+  long countByTenantIdAndIsActiveTrue(UUID tenantId);
+
   Page<Patient> findAllByTenantIdAndIsActiveTrue(UUID tenantId, Pageable pageable);
 
   @Query("""

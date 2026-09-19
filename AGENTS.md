@@ -323,8 +323,8 @@ que quede desactualizada visiblemente a que no exista.)_
   4. Distinción granular de errores JWT (`JwtValidationResult`, `JwtAuthenticationEntryPoint`): cabecera RFC 6750 `WWW-Authenticate` y códigos JSON (`token_expired`, `token_invalid`, `user_inactive`, `token_missing`) para optimizar el refresco automático de sesión en frontend.
 - Fase completada: **Fase 5 — CRM de leads** (todos los tickets FASE5-01 a FASE5-04 completados; checklist de salida verificado y `ARCHITECTURE.md` actualizado).
 - Fase completada: **Fase 6 — Cartera y pagos por etapas** (todos los tickets FASE6-01 a FASE6-04 completados; checklist de salida verificado y `ARCHITECTURE.md` actualizado).
-- Fase completada: **Fase 10 — IA administrativa** (todos los tickets FASE10-01 a FASE10-03 completados; `ARCHITECTURE.md` actualizado).
-- Última verificación local: `./mvnw.cmd clean verify` el **19 de septiembre de 2026**, con **334/334 pruebas sin fallos** (incluyendo suites del asistente, mensajes sugeridos y fallback, más todas las previas). Este resultado no implica verificación en CI ni despliegue a producción.
-- Fase siguiente: **Fase 11 — Suscripciones y planes** (siguiente ticket: **FASE11-01 — Entidades de planes y suscripción**).
+- Fase completada: **Fase 11 — Suscripciones y planes** (todos los tickets FASE11-01 a FASE11-05 completados; checklist de salida verificado y `ARCHITECTURE.md` actualizado).
+- Última verificación local: `./mvnw.cmd clean verify` el **19 de septiembre de 2026**, con **355/355 pruebas sin fallos** (incluyendo suites de gating, límites, Bold y ciclo anual, más todas las previas). Este resultado no implica verificación en CI ni despliegue a producción.
+- Fase siguiente: **Fase 12 — Endurecimiento y producción** (siguiente ticket: **FASE12-01 — Rate limiting y revisión de seguridad**).
 - Documentación interactiva: Swagger UI activo en dev/test (`/swagger-ui.html`, JSON en `/v3/api-docs`) con `springdoc-openapi` 3.1.1 y esquema `bearerAuth` JWT; deshabilitado en prod. Regla vigente (§4): todo endpoint nuevo se anota con `@Tag`/`@Operation` y cada cierre de fase verifica la UI. Cobertura de endpoints verificada en `OpenApiDocsIntegrationTest` incluyendo `GET /api/v1/opportunities`.
 

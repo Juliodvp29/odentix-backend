@@ -2408,14 +2408,18 @@ Las tablas `plans`, `plan_features`, `plan_limits` y
 
 **Tareas:**
 
-- [ ] Entidades `Plan`, `PlanFeature`, `PlanLimit`,
+- [x] Entidades `Plan`, `PlanFeature`, `PlanLimit`,
       `TenantSubscription` mapeadas 1:1 a las tablas existentes (no
       generar nuevas migraciones si `schema.sql` ya las tiene — verifica
       primero qué migraciones Flyway ya existen en el repo).
+      (Desviación documentada: V1–V24 no contenían estas tablas —solo
+      `schema.sql`—, así que se creó `V25__create_plans_and_subscriptions.sql`
+      con tablas + seeds. Verificado con `SubscriptionIntegrationTest` 4/4
+      y suite global 338/338 en `clean verify`, 19-sep-2026.)
 
 **Criterios de aceptación:**
 
-- [ ] Se puede leer, para un tenant dado, su plan activo, sus features
+- [x] Se puede leer, para un tenant dado, su plan activo, sus features
       habilitadas y sus límites numéricos.
 
 ---
@@ -2432,17 +2436,33 @@ sección "Pricing y límites por plan" del roadmap.
 
 **Tareas:**
 
-- [ ] Anotación o aspecto (`@RequiresFeature("crm_leads")` o similar)
+- [x] Anotación o aspecto (`@RequiresFeature("crm_leads")` o similar)
       aplicable a endpoints, que valida contra `plan_features` del
       tenant activo antes de ejecutar el método.
-- [ ] Aplicar la anotación a los endpoints ya existentes que
+      (Mecanismo final: `@PreAuthorize` SpEL con `@subscriptionService.requireFeature`
+      junto a los roles —Boot 4.1 eliminó el starter AOP y `spring-aop` ni está
+      gestionado, así que el aspecto dedicado salía con versiones manuales;
+      misma expresividad, cero dependencias nuevas. Desviación del ticket
+      documentada aquí.)
+- [x] Aplicar la anotación a los endpoints ya existentes que
       correspondan (CRM de leads, cartera, especialistas, inventario,
       motor de oportunidades, IA).
+      (Leads→`crm_leads`; payment-plan/installments/portfolio→`cartera`
+      —facturación simple NO se toca, es Esencial—; settlements→`specialists`;
+      items/movimientos→`inventory` y `/critical`→`inventory_alerts` por método;
+      oportunidades→`opportunities_engine`; asistente→`ai_assistant`.
+      `AUTOMATIONS_FULL` queda reservada sin endpoint: las tareas básicas son
+      de todos los planes y las reglas corren como jobs de sistema.)
 
 **Criterios de aceptación:**
 
-- [ ] Un tenant en plan Esencial recibe `403` al intentar usar un
+- [x] Un tenant en plan Esencial recibe `403` al intentar usar un
       endpoint exclusivo de Profesional/Clínica (ej. CRM de leads).
+      (Verificado con `FeatureGateIntegrationTest` 4/4: Esencial 403 con mensaje
+      de upgrade en los 6 módulos; Profesional 200 en lo suyo y 403 en IA/alertas;
+      Clínica 200 en todo —la IA responde con fallback, que igual prueba el gate—;
+      tenant sin suscripción entra por fail-open pre-billing documentado;
+      `./mvnw.cmd clean verify`: 342/342 pruebas sin fallos.)
 
 **Temas de Spring Boot:** AOP (`@Aspect`), anotaciones personalizadas,
 `HandlerInterceptor` como alternativa si prefieres no usar AOP.
@@ -2457,16 +2477,32 @@ sección "Pricing y límites por plan" del roadmap.
 
 **Tareas:**
 
-- [ ] Validación de límites numéricos (`max_patients`, `max_users`,
+- [x] Validación de límites numéricos (`max_patients`, `max_users`,
       etc.) antes de crear el recurso correspondiente.
-- [ ] Contador de uso mensual para límites que se consumen (ej.
+      (`SubscriptionService.checkCapacity` + `LimitExceededException` → 429 con
+      plan/límite en el mensaje; enganches en `PatientService.create` sobre
+      activos y `UserService.createUser` sobre activos; NULL = ilimitado;
+      sin suscripción → fail-open. `max_sedes`/`max_specialists` sin endpoint
+      de creación y `opportunities_max_rules` interno: fuera de alcance
+      documentado, se activan con esos flujos.)
+- [x] Contador de uso mensual para límites que se consumen (ej.
       conversaciones de WhatsApp), reseteable al inicio de cada ciclo
       de facturación.
+      (Sin tabla nueva: cuenta `notifications` whatsapp+`enviada` desde
+      `current_period_start` —los fallidos no consumen; agotada → 429 con
+      `Retry-After` al fin del periodo; enganche en el núcleo de envío solo
+      para WhatsApp, email intacto.)
 
 **Criterios de aceptación:**
 
-- [ ] Un tenant que alcanza su límite numérico (ej. 150 pacientes)
+- [x] Un tenant que alcanza su límite numérico (ej. 150 pacientes)
       recibe un error claro al intentar crear el recurso 151.
+      (Verificado con `LimitEnforcementIntegrationTest` 5/5: paciente 151 en
+      Esencial → 429 sin `Retry-After`; 3er usuario → `LimitExceededException`
+      a nivel servicio —sin endpoint de usuarios—; WhatsApp Esencial (cuota 0)
+      → 429 con `Retry-After`; Profesional cuenta solo enviadas; Clínica NULL
+      pasa siempre; `./mvnw.cmd clean verify`: 347/347 pruebas sin fallos.
+      Nota: el keyword derivado es `GreaterThanEqual`, no `GreaterEqual`.)
 
 ---
 
@@ -2479,16 +2515,37 @@ pasarela — Wompi, Stripe, etc.)
 
 **Tareas:**
 
-- [ ] Integración con la pasarela elegida para cobro recurrente
+- [x] Integración con la pasarela elegida para cobro recurrente
       mensual/anual.
-- [ ] Webhook de confirmación de pago que activa/suspende el acceso
+      (Bold.co vía API Link de pagos —verificado en `developers.bold.co`:
+      Bold.co ≠ Bold Commerce y no tiene recurrencia nativa, así que cada ciclo
+      se cobra con un link. `BoldClient` solo implementa lo documentado:
+      `POST /online/link/v1`, `GET /online/link/v1/{id}`, auth `x-api-key`,
+      todo por env sin defaults para credenciales. `POST /api/v1/billing/checkout`
+      fija plan+ciclo y devuelve la URL —incluye ciclo anual con `annual_price_cop`,
+      cubriendo gran parte de FASE11-05. Módulo `saas/` separado del `billing/`
+      clínico; `V26__create_saas_payments.sql` con idempotencia por referencia
+      y notification id.)
+- [x] Webhook de confirmación de pago que activa/suspende el acceso
       del tenant.
+      (`POST /api/v1/billing/webhooks/bold`, público con firma HMAC
+      `hex(HMAC-SHA256(Base64(rawBody)))` vs `x-bold-signature` —400 si mala—,
+      200 inmediato, idempotencia por notification id. `SALE_APPROVED` → `active`
+      + periodo extendido; `SALE_REJECTED`/`VOID_APPROVED` → `past_due`;
+      job diario: `past_due` + 7 días de gracia → `cancelled`, y auto-crea link
+      de renovación a ≤3 días del vencimiento.)
 
 **Criterios de aceptación:**
 
-- [ ] Un pago exitoso activa el tenant; un pago fallido/vencido
+- [x] Un pago exitoso activa el tenant; un pago fallido/vencido
       suspende el acceso según la política definida (con periodo de
       gracia a definir).
+      (Verificado con `SaasBillingIntegrationTest` 5/5 contra Bold falso local
+      con HMAC real: checkout idempotente, aprobada activa+extiende, duplicada
+      idempotente, firma mala 400, rechazada en mora, job cancela tras gracia y
+      renueva; endpoints en `OpenApiDocsIntegrationTest`;
+      `./mvnw.cmd clean verify`: 352/352 pruebas sin fallos.
+      Nota: sin bean `ObjectMapper` en el contexto —instancia propia en el servicio.)
 
 ---
 
@@ -2500,23 +2557,40 @@ pasarela — Wompi, Stripe, etc.)
 
 **Tareas:**
 
-- [ ] Soporte de ciclo de facturación anual con el descuento ya
+- [x] Soporte de ciclo de facturación anual con el descuento ya
       definido en `plans.annual_price_cop`.
-- [ ] Endpoint/flujo para que un tenant elija entre mensual o anual al
+      (El checkout de FASE11-04 ya cobraba `annual_price_cop`; aquí quedó
+      blindado: test que afirma `annual < 12×monthly` en los 3 seeds —si un
+      seed futuro lo rompe, falla en vez de erosionar el descuento en silencio.)
+- [x] Endpoint/flujo para que un tenant elija entre mensual o anual al
       suscribirse.
+      (`POST /checkout` acepta `billingCycle` desde FASE11-04 y
+      `GET /api/v1/billing/subscription` expone ciclo, periodo y ambos precios
+      para mostrar y cambiar. Corrección incluida: la idempotencia del checkout
+      solo reutiliza el link pendiente del *mismo* ciclo —antes devolvía el
+      mensual al cambiar a anual.)
 
 **Criterios de aceptación:**
 
-- [ ] Un tenant puede elegir entre ciclo mensual o anual al momento de
+- [x] Un tenant puede elegir entre ciclo mensual o anual al momento de
       suscribirse, y el monto cobrado refleja el descuento correcto.
+      (Verificado con `BillingCycleIntegrationTest` 3/3: mensual 169900,
+      cambio a anual 1699000, suscripción visible, 404 sin suscripción;
+      endpoint en `OpenApiDocsIntegrationTest`;
+      `./mvnw.cmd clean verify`: 355/355 pruebas sin fallos.)
 
 ---
 
 ### ✅ Checklist de salida de Fase 11
 
-- [ ] El propio SaaS puede cobrar y gestionar sus planes de punta a
+- [x] El propio SaaS puede cobrar y gestionar sus planes de punta a
       punta: suscribirse, ser cobrado, y ver su acceso ajustado según
       el estado del pago.
+      (Checkout con Bold → link pagado → webhook activa/extiende; mora con
+      gracia → cancela; gating 403 y topes 429 ajustan el acceso. Verificado
+      punta a punta en tests con Bold falso; `./mvnw.cmd clean verify`:
+      355/355. Pendiente administrativo real: llaves de Bold y URL de webhook
+      en panel.bold.co + Render.)
 
 ---
 

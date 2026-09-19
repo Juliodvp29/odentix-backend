@@ -2,7 +2,7 @@
 
 > Documento vivo de arquitectura y decisiones del backend SaaS para clínicas
 > odontológicas (multi-tenant: cada clínica es un `tenant`).
-> **Estado:** documenta Fase 0 a Fase 10. Al cerrar cada fase este archivo debe
+> **Estado:** documenta Fase 0 a Fase 11. Al cerrar cada fase este archivo debe
 > actualizarse (regla en `AGENTS.md` §11: sin esa actualización la fase no se
 > considera cerrada).
 >
@@ -612,6 +612,9 @@ Módulos `task` y `notification`:
 - **Notificaciones desacopladas + email (FASE8-03):**
   - Entidad `Notification` (canal, destinatario, `templateKey`, `payload` JSONB, estado, `sentAt`/`errorDetail`) + migración `V22__create_notifications.sql` (enums, RLS).
   - Interfaz `NotificationSender` + `NotificationException`; `LoggingNotificationSender` por defecto y `SmtpEmailNotificationSender` con `enabled=true` (todo por env, timeouts 5s; nueva dependencia `spring-boot-starter-mail`; `management.health.mail.enabled=false` porque el email es opcional).
+  - Actualización post-cierre (remitente por clínica): `V27__tenant_notification_email.sql` (`tenants.notification_email/name`); el `From` sale de la clínica con fallback al global y `Reply-To` a la clínica. Nota de proveedor: el `From` variable exige SMTP con múltiples remitentes verificados (Gmail no sirve). Verificado con `SmtpSenderIntegrationTest` (3/3). Sin endpoint de tenants: el correo se carga por BD/consola por ahora.
+  - Ajustes autogestionados (pre-Fase 12): `GET/PATCH /api/v1/tenant/settings` (solo propietario, siempre su clínica) para ver y cambiar el remitente; vacío vuelve al global. Verificado con `TenantSettingsIntegrationTest` (3/3 + WhatsApp propio sin exponer token).
+  - WhatsApp por clínica (pre-Fase 12): `V28` (`whatsapp_phone_number_id` + token **cifrado** AES-GCM vía `DataEncryptionService` con `DATA_ENCRYPTION_KEY`); `PATCH /tenant/settings` guarda número + token write-only (el GET jamás lo devuelve); el adaptador envía desde el número propio con fallback al global; credencial a medias no sale por ningún lado. Verificado con `DataEncryptionServiceTest` (4/4) y envío con número propio. Límite declarado: recibir respuestas sigue sin existir.
   - `NotificationService`: núcleo común que nunca lanza (fallos → `fallida`); `sendAppointmentConfirmation` y `sendAppointmentScheduled`.
   - Verificado con `NotificationServiceIntegrationTest` (4/4 en verde).
 - **Disparo desde eventos de cita (FASE8-04):**
@@ -649,5 +652,15 @@ Módulo `assistant/` (preguntas y mensajes sobre datos reales de la clínica, v�
   - Fallback a plantilla fija con `fallback: true` (ask → resumen real del snapshot; suggest → plantilla con nombre/fecha), ambas 200. Registro con `log.warn` estructurado (operación, modelo, latencia, error truncado, sin PII); sin tabla porque no hay intento por paciente que auditar. Se mantienen los 15s (endurecer más rompería respuestas legítimas).
   - Verificado con `AssistantFallbackIntegrationTest` (2/2, proveedor HTTP 500).
 - **Infraestructura de tests:** `max_connections=200` en el PG de `AbstractIntegrationTest` (los contextos en caché con pools propios agotaban el default de 100: `too many clients`).
-- Total de pruebas del proyecto: **334/334 pruebas en verde** en `./mvnw.cmd clean verify`.
+- Total de pruebas del proyecto al cierre de Fase 10: **334/334 pruebas en verde** en `./mvnw.cmd clean verify`.
+
+### Fase 11 — Suscripciones y planes (completada, FASE11-01–05)
+
+El propio SaaS cobra y gobierna el acceso (módulos `subscription/` y `saas/`):
+- **Entidades (FASE11-01):** `Plan`, `PlanFeature`/`FeatureKey`, `PlanLimit`/`LimitKey`, `TenantSubscription` + `V25__create_plans_and_subscriptions.sql` con seeds (verificado con `SubscriptionIntegrationTest` 4/4).
+- **Feature-gating (FASE11-02):** `@PreAuthorize` SpEL con `@subscriptionService.requireFeature` junto a roles (Boot 4.1 eliminó el starter AOP: sin aspecto, cero deps). Matriz: leads, cartera (no facturación simple), settlements, inventario vs alertas por método, oportunidades, IA. 403 con mensaje de upgrade; fail-open sin suscripción (pre-billing). Verificado con `FeatureGateIntegrationTest` (4/4).
+- **Límites numéricos (FASE11-03):** `LimitExceededException` → 429 (+`Retry-After` en cuota). `max_patients`/`max_users` sobre activos; cuota WhatsApp desde `notifications` enviadas del periodo; NULL = ilimitado. Verificado con `LimitEnforcementIntegrationTest` (5/5).
+- **Bold (FASE11-04):** `BoldClient` solo con lo documentado (links + consulta, `x-api-key`); checkout idempotente por ciclo; webhook HMAC + 200 rápido + idempotencia (`SALE_APPROVED`→active+extiende, rechazada/anulada→past_due); job diario (gracia 7 días→cancelled, renovación a ≤3 días). `V26__create_saas_payments.sql`. Verificado con `SaasBillingIntegrationTest` (5/5, HMAC real contra falso local). Pendiente administrativo: llaves y URL en panel.bold.co + Render.
+- **Ciclo anual (FASE11-05):** `GET /billing/subscription` + descuento blindado (`annual < 12×monthly` en seeds) + cambio de ciclo (idempotencia solo mismo ciclo). Verificado con `BillingCycleIntegrationTest` (3/3).
+- Total de pruebas del proyecto: **355/355 pruebas en verde** en `./mvnw.cmd clean verify`.
 

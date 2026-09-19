@@ -42,9 +42,6 @@ import org.springframework.web.bind.annotation.RestController;
 @SecurityRequirement(name = "bearerAuth")
 public class OpportunityController {
 
-  private static final String ROLES_OPORTUNIDADES =
-      "hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')";
-
   private final OpportunityService opportunityService;
   private final OpportunityActionService actionService;
 
@@ -61,7 +58,7 @@ public class OpportunityController {
    * Resultado ordenado por prioridad descendente y fecha de detección descendente.
    */
   @GetMapping
-  @PreAuthorize(ROLES_OPORTUNIDADES)
+  @PreAuthorize("@subscriptionService.requireFeature('opportunities_engine') and hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
   @Operation(
       summary = "Listar oportunidades",
       description = "Lista las oportunidades detectadas para el tenant activo, "
@@ -79,7 +76,7 @@ public class OpportunityController {
    * canal guardado. Una acción ejecutada devuelve 409 al reintentarse.
    */
   @PostMapping("/{id}/actions/{actionId}/execute")
-  @PreAuthorize(ROLES_OPORTUNIDADES)
+  @PreAuthorize("@subscriptionService.requireFeature('opportunities_engine') and hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
   @Operation(
       summary = "Ejecutar acción",
       description = "Ejecuta una acción sugerida: crea la tarea o envía el mensaje. "
@@ -98,7 +95,7 @@ public class OpportunityController {
    * resolución que usa la métrica de valor recuperado).
    */
   @PatchMapping("/{id}/status")
-  @PreAuthorize(ROLES_OPORTUNIDADES)
+  @PreAuthorize("@subscriptionService.requireFeature('opportunities_engine') and hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
   @Operation(
       summary = "Cambiar estado",
       description = "Cambia el estado de una oportunidad. Al resolver fija resolvedAt."
@@ -114,7 +111,7 @@ public class OpportunityController {
    * atribución documentado en el servicio (resuelta + acción ejecutada previa).
    */
   @GetMapping("/recovered-value")
-  @PreAuthorize(ROLES_OPORTUNIDADES)
+  @PreAuthorize("@subscriptionService.requireFeature('opportunities_engine') and hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
   @Operation(
       summary = "Valor recuperado",
       description = "Suma por categoría el valor estimado de las oportunidades "
