@@ -1942,19 +1942,35 @@ costos de aprobación, antes de integrar WhatsApp).
 
 **Tareas:**
 
-- [ ] Interfaz `NotificationSender` (o similar) con un método de envío
+- [x] Interfaz `NotificationSender` (o similar) con un método de envío
       genérico por canal.
-- [ ] Adaptador de email (usando el proveedor SMTP/API que se decida).
-- [ ] Entidad `Notification` para registrar cada intento (canal,
+      (`notification/sender/NotificationSender` + `NotificationException`.)
+- [x] Adaptador de email (usando el proveedor SMTP/API que se decida).
+      (`SmtpEmailNotificationSender` con `JavaMailSender`, activo con
+      `odentix.notifications.email.enabled=true`, todo por variables de entorno
+      sin credenciales en el repo; timeouts SMTP de 5s. Sin proveedor elegido,
+      `LoggingNotificationSender` registra en log por defecto. Nueva dependencia
+      `spring-boot-starter-mail`; `management.health.mail.enabled=false` porque
+      el email es opcional y no debe tumbar `/actuator/health`.)
+- [x] Entidad `Notification` para registrar cada intento (canal,
       destinatario, estado, error si falló).
-- [ ] `@ConditionalOnProperty` para poder activar/desactivar
+      (Migración `V22__create_notifications.sql` con enums `notification_channel`/
+      `notification_status`, `payload` JSONB y RLS.)
+- [x] `@ConditionalOnProperty` para poder activar/desactivar
       adaptadores por configuración.
 
 **Criterios de aceptación:**
 
-- [ ] Se puede disparar una notificación de confirmación de cita por
+- [x] Se puede disparar una notificación de confirmación de cita por
       email de forma automática, y queda registrada en `Notification`
       con su resultado.
+      (`NotificationService.sendAppointmentConfirmation`, que nunca lanza:
+      todo fallo queda como `fallida` con `error_detail`. Verificado con
+      `NotificationServiceIntegrationTest` 4/4: enviada, adaptador roto →
+      fallida sin propagar, paciente sin email → fallida auditable, cita de
+      otro tenant → 404; `./mvnw.cmd clean verify`: 285/285 sin fallos.
+      El enganche al confirmar la cita llega en FASE8-04; este ticket deja
+      la capacidad y el punto de llamada.)
 
 **Temas de Spring Boot:** patrón de interfaz + implementación
 intercambiable, `@ConditionalOnProperty`.
