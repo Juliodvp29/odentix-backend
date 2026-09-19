@@ -1,15 +1,29 @@
 package com.julio.odentix.odentix_backend.opportunity.controller;
 
+import com.julio.odentix.odentix_backend.auth.dto.AuthenticatedUser;
+import com.julio.odentix.odentix_backend.opportunity.dto.OpportunityActionResponse;
 import com.julio.odentix.odentix_backend.opportunity.dto.OpportunityResponse;
+import com.julio.odentix.odentix_backend.opportunity.dto.RecoveredValueResponse;
+import com.julio.odentix.odentix_backend.opportunity.dto.UpdateOpportunityStatusRequest;
 import com.julio.odentix.odentix_backend.opportunity.entity.OpportunityStatus;
+import com.julio.odentix.odentix_backend.opportunity.service.OpportunityActionService;
 import com.julio.odentix.odentix_backend.opportunity.service.OpportunityService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,9 +46,12 @@ public class OpportunityController {
       "hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')";
 
   private final OpportunityService opportunityService;
+  private final OpportunityActionService actionService;
 
-  public OpportunityController(OpportunityService opportunityService) {
+  public OpportunityController(
+      OpportunityService opportunityService, OpportunityActionService actionService) {
     this.opportunityService = opportunityService;
+    this.actionService = actionService;
   }
 
   /**
@@ -53,5 +70,59 @@ public class OpportunityController {
   public ResponseEntity<List<OpportunityResponse>> listarOportunidades(
       @RequestParam(required = false) OpportunityStatus status) {
     return ResponseEntity.ok(opportunityService.listarOportunidades(status));
+  }
+
+  /**
+   * Ejecuta una acción sugerida de una oportunidad.
+   *
+   * <p>`crear_tarea` crea la tarea vinculada; `enviar_mensaje` envía por el
+   * canal guardado. Una acción ejecutada devuelve 409 al reintentarse.
+   */
+  @PostMapping("/{id}/actions/{actionId}/execute")
+  @PreAuthorize(ROLES_OPORTUNIDADES)
+  @Operation(
+      summary = "Ejecutar acción",
+      description = "Ejecuta una acción sugerida: crea la tarea o envía el mensaje. "
+          + "Devuelve 409 si ya fue ejecutada o si ya no hay destinatario."
+  )
+  public ResponseEntity<OpportunityActionResponse> ejecutarAccion(
+      @PathVariable UUID id,
+      @PathVariable UUID actionId,
+      @AuthenticationPrincipal AuthenticatedUser authUser) {
+    UUID currentUserId = (authUser != null) ? authUser.getUserId() : null;
+    return ResponseEntity.ok(actionService.execute(id, actionId, currentUserId));
+  }
+
+  /**
+   * Cambia el estado de una oportunidad (al resolver fija la fecha de
+   * resolución que usa la métrica de valor recuperado).
+   */
+  @PatchMapping("/{id}/status")
+  @PreAuthorize(ROLES_OPORTUNIDADES)
+  @Operation(
+      summary = "Cambiar estado",
+      description = "Cambia el estado de una oportunidad. Al resolver fija resolvedAt."
+  )
+  public ResponseEntity<OpportunityResponse> actualizarEstado(
+      @PathVariable UUID id,
+      @Valid @RequestBody UpdateOpportunityStatusRequest request) {
+    return ResponseEntity.ok(opportunityService.actualizarEstado(id, request));
+  }
+
+  /**
+   * Valor recuperado por categoría en un periodo, según el criterio de
+   * atribución documentado en el servicio (resuelta + acción ejecutada previa).
+   */
+  @GetMapping("/recovered-value")
+  @PreAuthorize(ROLES_OPORTUNIDADES)
+  @Operation(
+      summary = "Valor recuperado",
+      description = "Suma por categoría el valor estimado de las oportunidades "
+          + "recuperadas (resueltas con acción ejecutada previa) en el periodo."
+  )
+  public ResponseEntity<List<RecoveredValueResponse>> valorRecuperado(
+      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+      @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
+    return ResponseEntity.ok(opportunityService.valorRecuperado(from, to));
   }
 }

@@ -2190,17 +2190,38 @@ Principio de la sección 5.2 del doc de producto: "detectar → entender
 
 **Tareas:**
 
-- [ ] Entidad `OpportunityAction` (mensaje sugerido o tarea sugerida).
-- [ ] Cada regla de FASE9-01/02 genera también su acción sugerida
+- [x] Entidad `OpportunityAction` (mensaje sugerido o tarea sugerida).
+      (`opportunity_actions` vía `V24`: `action_type` TEXT con CHECK,
+      `channel` TEXT nullable extra —el esquema no lo trae pero
+      `enviar_mensaje` lo necesita—, `executed`/`executed_at`/`executed_by`,
+      RLS; entidad + repositorio.)
+- [x] Cada regla de FASE9-01/02 genera también su acción sugerida
       correspondiente.
-- [ ] `POST /api/v1/opportunities/{id}/actions/{actionId}/execute` —
+      (`OpportunityActionFactory`: todas las reglas generan `crear_tarea`
+      contextual; con destinatario directo además `enviar_mensaje`
+      (teléfono→WhatsApp, si no email). Espacio e inventario → solo tarea.
+      Retrofit en los 6 jobs + listener de FASE9-01/02.)
+- [x] `POST /api/v1/opportunities/{id}/actions/{actionId}/execute` —
       ejecuta la acción (envía el mensaje vía FASE8-03 o crea la tarea
       vía FASE8-01).
+      (`OpportunityActionService`: 404 si es de otro tenant o no pertenece,
+      409 si ya ejecutada o sin destinatario fresco, 400 si el canal es
+      inválido; la tarea queda vinculada a la oportunidad; el mensaje usa
+      `sendCustomMessage` nuevo en `NotificationService`; la bandeja
+      `GET /opportunities` ya incluye `actions`.)
 
 **Criterios de aceptación:**
 
-- [ ] Una oportunidad detectada trae asociada al menos una acción
+- [x] Una oportunidad detectada trae asociada al menos una acción
       ejecutable directamente vía API.
+      (Verificado con `OpportunityActionIntegrationTest` 4/4: bandeja con
+      tarea+mensaje, ejecutar tarea crea `Task` + 409 al repetir, ejecutar
+      mensaje registra `Notification`, mensaje sin contacto → 409, cross-tenant
+      404; endpoint en `OpenApiDocsIntegrationTest`; `./mvnw.cmd clean verify`:
+      320/320 pruebas sin fallos.
+      Notas: (1) `action_type` es TEXT real —sin `PostgreSQLEnumJdbcType`,
+      que solo aplica a enums PG. (2) El título de la tarea va en la primera
+      línea de `suggested_message` —el esquema no trae columna de título.)
 
 ---
 
@@ -2216,18 +2237,31 @@ Sección 10 del doc de arquitectura. La regla de qué cuenta como
 
 **Tareas:**
 
-- [ ] Definir y documentar (en un comentario/Javadoc, no solo en este
+- [x] Definir y documentar (en un comentario/Javadoc, no solo en este
       roadmap) el criterio de atribución: por ejemplo, una oportunidad
       cuenta como "recuperada" si se resuelve y el evento de negocio
       asociado ocurre dentro de una ventana de tiempo razonable después
       de ejecutar la acción.
-- [ ] `GET /api/v1/opportunities/recovered-value` — valor recuperado
+      (En `OpportunityService.valorRecuperado`: `resuelta` + acción ejecutada
+      con `executedAt <= resolvedAt` + `resolvedAt` en el periodo; sin acción
+      previa es orgánica y no cuenta. Incluyó `PATCH /{id}/status` —sin él
+      nada podía llegar a `resuelta`.)
+- [x] `GET /api/v1/opportunities/recovered-value` — valor recuperado
       por categoría en un periodo.
+      (Query con filtro explícito de tenant + `EXISTS` de acción previa;
+      agrupa en Java por tipo con monto y conteo; `from` inclusivo/`to`
+      exclusivo, 400 si el periodo es inválido.)
 
 **Criterios de aceptación:**
 
-- [ ] Existe un endpoint que devuelve el valor recuperado por categoría
+- [x] Existe un endpoint que devuelve el valor recuperado por categoría
       en un periodo, con la regla de cálculo documentada en el código.
+      (Verificado con `RecoveredValueIntegrationTest` 3/3: suma con acción
+      previa, exclusión de orgánica/tardía/fuera de periodo, cross-tenant,
+      periodo inválido 400; endpoints en `OpenApiDocsIntegrationTest`;
+      `./mvnw.cmd clean verify`: 323/323 pruebas sin fallos.
+      Limitación declarada: `resuelta` la marca un humano; la resolución
+      automática por evento queda como mejora futura.)
 
 ---
 

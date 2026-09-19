@@ -5,6 +5,8 @@ import com.julio.odentix.odentix_backend.opportunity.entity.OpportunityStatus;
 import com.julio.odentix.odentix_backend.opportunity.entity.OpportunityType;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -23,6 +25,7 @@ public class OpportunityResponse {
   private OpportunityStatus status;
   private Instant detectedAt;
   private Instant resolvedAt;
+  private List<OpportunityActionResponse> actions = new ArrayList<>();
 
   public OpportunityResponse() {
   }
@@ -116,5 +119,13 @@ public class OpportunityResponse {
 
   public void setResolvedAt(Instant resolvedAt) {
     this.resolvedAt = resolvedAt;
+  }
+
+  public List<OpportunityActionResponse> getActions() {
+    return actions;
+  }
+
+  public void setActions(List<OpportunityActionResponse> actions) {
+    this.actions = actions != null ? actions : new ArrayList<>();
   }
 }

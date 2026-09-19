@@ -46,12 +46,15 @@ public class CriticalInventoryJob {
 
   private final InventoryItemRepository inventoryItemRepository;
   private final OpportunityRepository opportunityRepository;
+  private final OpportunityActionFactory actionFactory;
 
   public CriticalInventoryJob(
       InventoryItemRepository inventoryItemRepository,
-      OpportunityRepository opportunityRepository) {
+      OpportunityRepository opportunityRepository,
+      OpportunityActionFactory actionFactory) {
     this.inventoryItemRepository = inventoryItemRepository;
     this.opportunityRepository = opportunityRepository;
+    this.actionFactory = actionFactory;
   }
 
   /**
@@ -85,6 +88,8 @@ public class CriticalInventoryJob {
       oportunidad.setEstimatedValueCop(BigDecimal.ZERO);
 
       opportunityRepository.save(oportunidad);
+      // FASE9-03: cada oportunidad trae sus acciones sugeridas.
+      actionFactory.paraInventoryItem(oportunidad, item);
       creadas++;
     }
 

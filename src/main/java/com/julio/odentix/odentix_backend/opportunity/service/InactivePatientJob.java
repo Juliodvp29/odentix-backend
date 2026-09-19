@@ -46,6 +46,7 @@ public class InactivePatientJob {
 
   private final PatientRepository patientRepository;
   private final OpportunityRepository opportunityRepository;
+  private final OpportunityActionFactory actionFactory;
 
   /** Meses sin interacción para considerar un paciente "inactivo". */
   private final int inactiveMonths;
@@ -53,9 +54,11 @@ public class InactivePatientJob {
   public InactivePatientJob(
       PatientRepository patientRepository,
       OpportunityRepository opportunityRepository,
+      OpportunityActionFactory actionFactory,
       @Value("${odentix.opportunities.inactive-patient-months:6}") int inactiveMonths) {
     this.patientRepository = patientRepository;
     this.opportunityRepository = opportunityRepository;
+    this.actionFactory = actionFactory;
     this.inactiveMonths = inactiveMonths;
   }
 
@@ -90,6 +93,8 @@ public class InactivePatientJob {
       oportunidad.setEstimatedValueCop(BigDecimal.ZERO);
 
       opportunityRepository.save(oportunidad);
+      // FASE9-03: cada oportunidad trae sus acciones sugeridas.
+      actionFactory.paraPatient(oportunidad, paciente);
       creadas++;
     }
 

@@ -49,12 +49,15 @@ public class HighRiskAppointmentJob {
 
   private final AppointmentRepository appointmentRepository;
   private final OpportunityRepository opportunityRepository;
+  private final OpportunityActionFactory actionFactory;
 
   public HighRiskAppointmentJob(
       AppointmentRepository appointmentRepository,
-      OpportunityRepository opportunityRepository) {
+      OpportunityRepository opportunityRepository,
+      OpportunityActionFactory actionFactory) {
     this.appointmentRepository = appointmentRepository;
     this.opportunityRepository = opportunityRepository;
+    this.actionFactory = actionFactory;
   }
 
   /**
@@ -93,6 +96,8 @@ public class HighRiskAppointmentJob {
       oportunidad.setEstimatedValueCop(valor);
 
       opportunityRepository.save(oportunidad);
+      // FASE9-03: cada oportunidad trae sus acciones sugeridas.
+      actionFactory.paraAppointment(oportunidad, cita);
       creadas++;
     }
 
