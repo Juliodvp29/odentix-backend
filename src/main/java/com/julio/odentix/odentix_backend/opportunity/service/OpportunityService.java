@@ -1,7 +1,10 @@
 package com.julio.odentix.odentix_backend.opportunity.service;
 
+import com.julio.odentix.odentix_backend.opportunity.dto.OpportunityActionResponse;
 import com.julio.odentix.odentix_backend.opportunity.dto.OpportunityResponse;
+import com.julio.odentix.odentix_backend.opportunity.entity.Opportunity;
 import com.julio.odentix.odentix_backend.opportunity.entity.OpportunityStatus;
+import com.julio.odentix.odentix_backend.opportunity.repository.OpportunityActionRepository;
 import com.julio.odentix.odentix_backend.opportunity.repository.OpportunityRepository;
 import com.julio.odentix.odentix_backend.shared.context.TenantContext;
 import java.util.List;
@@ -19,9 +22,13 @@ import org.springframework.transaction.annotation.Transactional;
 public class OpportunityService {
 
   private final OpportunityRepository opportunityRepository;
+  private final OpportunityActionRepository actionRepository;
 
-  public OpportunityService(OpportunityRepository opportunityRepository) {
+  public OpportunityService(
+      OpportunityRepository opportunityRepository,
+      OpportunityActionRepository actionRepository) {
     this.opportunityRepository = opportunityRepository;
+    this.actionRepository = actionRepository;
   }
 
   /**
@@ -38,14 +45,22 @@ public class OpportunityService {
       return opportunityRepository
           .findByTenantIdAndStatusOrderByPriorityDescDetectedAtDesc(tenantId, status)
           .stream()
-          .map(OpportunityResponse::fromEntity)
+          .map(this::aResponse)
           .toList();
     }
 
     return opportunityRepository
         .findAllByTenantIdOrderByPriorityDescDetectedAtDesc(tenantId)
         .stream()
-        .map(OpportunityResponse::fromEntity)
+        .map(this::aResponse)
         .toList();
+  }
+
+  private OpportunityResponse aResponse(Opportunity oportunidad) {
+    OpportunityResponse response = OpportunityResponse.fromEntity(oportunidad);
+    response.setActions(actionRepository.findByOpportunityId(oportunidad.getId()).stream()
+        .map(OpportunityActionResponse::fromEntity)
+        .toList());
+    return response;
   }
 }

@@ -3,10 +3,13 @@ package com.julio.odentix.odentix_backend.opportunity.service;
 import com.julio.odentix.odentix_backend.billing.entity.Installment;
 import com.julio.odentix.odentix_backend.billing.entity.InstallmentStatus;
 import com.julio.odentix.odentix_backend.billing.repository.InstallmentRepository;
+import com.julio.odentix.odentix_backend.billing.repository.PaymentPlanRepository;
 import com.julio.odentix.odentix_backend.opportunity.entity.Opportunity;
 import com.julio.odentix.odentix_backend.opportunity.entity.OpportunityStatus;
 import com.julio.odentix.odentix_backend.opportunity.entity.OpportunityType;
 import com.julio.odentix.odentix_backend.opportunity.repository.OpportunityRepository;
+import com.julio.odentix.odentix_backend.patient.entity.Patient;
+import com.julio.odentix.odentix_backend.treatmentplan.repository.TreatmentPlanRepository;
 import java.math.BigDecimal;
 import java.util.List;
 import org.slf4j.Logger;
@@ -50,12 +53,21 @@ public class OverdueInstallmentOpportunityJob {
 
   private final InstallmentRepository installmentRepository;
   private final OpportunityRepository opportunityRepository;
+  private final OpportunityActionFactory actionFactory;
+  private final PaymentPlanRepository paymentPlanRepository;
+  private final TreatmentPlanRepository treatmentPlanRepository;
 
   public OverdueInstallmentOpportunityJob(
       InstallmentRepository installmentRepository,
-      OpportunityRepository opportunityRepository) {
+      OpportunityRepository opportunityRepository,
+      OpportunityActionFactory actionFactory,
+      PaymentPlanRepository paymentPlanRepository,
+      TreatmentPlanRepository treatmentPlanRepository) {
     this.installmentRepository = installmentRepository;
     this.opportunityRepository = opportunityRepository;
+    this.actionFactory = actionFactory;
+    this.paymentPlanRepository = paymentPlanRepository;
+    this.treatmentPlanRepository = treatmentPlanRepository;
   }
 
   /**
@@ -92,11 +104,30 @@ public class OverdueInstallmentOpportunityJob {
       oportunidad.setEstimatedValueCop(monto);
 
       opportunityRepository.save(oportunidad);
+      // FASE9-03: cada oportunidad trae sus acciones sugeridas (paciente
+      // resuelto por la cadena cuota → plan de pago → tratamiento).
+      actionFactory.paraInstallment(oportunidad, cuota, resolverPaciente(cuota));
       creadas++;
     }
 
     log.info("Job de saldos vencidos completado: {} oportunidades creadas.", creadas);
     return creadas;
+  }
+
+  /**
+   * Resuelve el paciente de la cuota para la acción sugerida. Si la cadena se
+   * rompió (plan o tratamiento borrados), devuelve null y la sugerencia queda
+   * solo con tarea.
+   */
+  private Patient resolverPaciente(Installment cuota) {
+    if (cuota.getPaymentPlan() == null) {
+      return null;
+    }
+    return paymentPlanRepository.findById(cuota.getPaymentPlan().getId())
+        .map(plan -> treatmentPlanRepository.findById(plan.getTreatmentPlanId())
+            .map(t -> t.getPatient())
+            .orElse(null))
+        .orElse(null);
   }
 
   /**

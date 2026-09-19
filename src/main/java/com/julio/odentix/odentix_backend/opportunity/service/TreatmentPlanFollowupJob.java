@@ -63,6 +63,7 @@ public class TreatmentPlanFollowupJob {
 
   private final TreatmentPlanRepository treatmentPlanRepository;
   private final OpportunityRepository opportunityRepository;
+  private final OpportunityActionFactory actionFactory;
 
   /** Número de días sin contacto para considerar un plan "sin seguimiento". */
   private final int followupDays;
@@ -70,9 +71,11 @@ public class TreatmentPlanFollowupJob {
   public TreatmentPlanFollowupJob(
       TreatmentPlanRepository treatmentPlanRepository,
       OpportunityRepository opportunityRepository,
+      OpportunityActionFactory actionFactory,
       @Value("${odentix.opportunities.treatment-followup-days:3}") int followupDays) {
     this.treatmentPlanRepository = treatmentPlanRepository;
     this.opportunityRepository = opportunityRepository;
+    this.actionFactory = actionFactory;
     this.followupDays = followupDays;
   }
 
@@ -109,6 +112,8 @@ public class TreatmentPlanFollowupJob {
       oportunidad.setEstimatedValueCop(plan.getTotalPriceCop());
 
       opportunityRepository.save(oportunidad);
+      // FASE9-03: cada oportunidad trae sus acciones sugeridas.
+      actionFactory.paraTreatmentPlan(oportunidad, plan);
       creadas++;
     }
 

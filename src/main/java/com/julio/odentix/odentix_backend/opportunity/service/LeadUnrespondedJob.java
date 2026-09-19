@@ -49,6 +49,7 @@ public class LeadUnrespondedJob {
 
   private final LeadRepository leadRepository;
   private final OpportunityRepository opportunityRepository;
+  private final OpportunityActionFactory actionFactory;
 
   /** Horas sin respuesta para considerar un lead "sin respuesta". */
   private final int unrespondedHours;
@@ -56,9 +57,11 @@ public class LeadUnrespondedJob {
   public LeadUnrespondedJob(
       LeadRepository leadRepository,
       OpportunityRepository opportunityRepository,
+      OpportunityActionFactory actionFactory,
       @Value("${odentix.opportunities.lead-unresponded-hours:24}") int unrespondedHours) {
     this.leadRepository = leadRepository;
     this.opportunityRepository = opportunityRepository;
+    this.actionFactory = actionFactory;
     this.unrespondedHours = unrespondedHours;
   }
 
@@ -100,6 +103,8 @@ public class LeadUnrespondedJob {
       oportunidad.setEstimatedValueCop(valor);
 
       opportunityRepository.save(oportunidad);
+      // FASE9-03: cada oportunidad trae sus acciones sugeridas.
+      actionFactory.paraLead(oportunidad, lead);
       creadas++;
     }
 

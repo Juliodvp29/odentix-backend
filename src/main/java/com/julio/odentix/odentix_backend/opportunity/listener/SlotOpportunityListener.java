@@ -9,6 +9,7 @@ import com.julio.odentix.odentix_backend.opportunity.entity.Opportunity;
 import com.julio.odentix.odentix_backend.opportunity.entity.OpportunityStatus;
 import com.julio.odentix.odentix_backend.opportunity.entity.OpportunityType;
 import com.julio.odentix.odentix_backend.opportunity.repository.OpportunityRepository;
+import com.julio.odentix.odentix_backend.opportunity.service.OpportunityActionFactory;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
@@ -56,14 +57,17 @@ public class SlotOpportunityListener {
   private final AppointmentRepository appointmentRepository;
   private final WaitlistEntryRepository waitlistEntryRepository;
   private final OpportunityRepository opportunityRepository;
+  private final OpportunityActionFactory actionFactory;
 
   public SlotOpportunityListener(
       AppointmentRepository appointmentRepository,
       WaitlistEntryRepository waitlistEntryRepository,
-      OpportunityRepository opportunityRepository) {
+      OpportunityRepository opportunityRepository,
+      OpportunityActionFactory actionFactory) {
     this.appointmentRepository = appointmentRepository;
     this.waitlistEntryRepository = waitlistEntryRepository;
     this.opportunityRepository = opportunityRepository;
+    this.actionFactory = actionFactory;
   }
 
   /**
@@ -111,6 +115,8 @@ public class SlotOpportunityListener {
     oportunidad.setRelatedEntityId(cita.getId());
     oportunidad.setEstimatedValueCop(valor);
     opportunityRepository.save(oportunidad);
+    // FASE9-03: cada oportunidad trae sus acciones sugeridas.
+    actionFactory.paraEspacio(oportunidad, cita);
 
     log.info("Oportunidad de espacio disponible creada para la cita cancelada {}.", cita.getId());
   }

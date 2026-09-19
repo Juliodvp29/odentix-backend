@@ -98,7 +98,8 @@ class OpenApiDocsIntegrationTest extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.paths./api/v1/tasks/{id}.patch").exists())
         .andExpect(jsonPath("$.paths./api/v1/tasks/{id}.delete").exists())
         .andExpect(jsonPath("$.paths./api/v1/tasks/{id}/complete.post").exists())
-        // oportunidades (FASE9-01).
-        .andExpect(jsonPath("$.paths./api/v1/opportunities.get").exists());
+        // oportunidades y ejecución de acciones (FASE9-01, FASE9-03).
+        .andExpect(jsonPath("$.paths./api/v1/opportunities.get").exists())
+        .andExpect(jsonPath("$.paths./api/v1/opportunities/{id}/actions/{actionId}/execute.post").exists());
   }
 }

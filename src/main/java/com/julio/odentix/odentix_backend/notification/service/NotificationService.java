@@ -70,7 +70,9 @@ public class NotificationService {
 
     String email = cita.getPatient() != null ? cita.getPatient().getEmail() : null;
     if (email == null || email.isBlank()) {
-      Notification intento = nuevoIntento(tenantId, cita, NotificationChannel.email, "");
+      Notification intento = nuevoIntento(tenantId,
+          cita.getPatient() != null ? cita.getPatient().getId() : null, null,
+          NotificationChannel.email, "");
       intento.setTemplateKey(TEMPLATE_CONFIRMACION_CITA);
       return registrarFallida(intento, "El paciente no tiene email registrado.");
     }
@@ -103,7 +105,9 @@ public class NotificationService {
 
     String email = cita.getPatient() != null ? cita.getPatient().getEmail() : null;
     if (email == null || email.isBlank()) {
-      Notification intento = nuevoIntento(tenantId, cita, NotificationChannel.email, "");
+      Notification intento = nuevoIntento(tenantId,
+          cita.getPatient() != null ? cita.getPatient().getId() : null, null,
+          NotificationChannel.email, "");
       intento.setTemplateKey(TEMPLATE_CITA_AGENDADA);
       return registrarFallida(intento, "El paciente no tiene email registrado.");
     }
@@ -136,7 +140,8 @@ public class NotificationService {
 
     String telefono = cita.getPatient() != null ? cita.getPatient().getPhone() : null;
     if (telefono == null || telefono.isBlank()) {
-      Notification intento = nuevoIntento(tenantId, cita,
+      Notification intento = nuevoIntento(tenantId,
+          cita.getPatient() != null ? cita.getPatient().getId() : null, null,
           NotificationChannel.whatsapp, "");
       intento.setTemplateKey(TEMPLATE_CONFIRMACION_CITA);
       return registrarFallida(intento, "El paciente no tiene teléfono registrado.");
@@ -152,13 +157,47 @@ public class NotificationService {
   }
 
   /**
+   * Envía un mensaje libre por un canal y registra el intento (FASE9-03).
+   *
+   * <p>Lo usa la ejecución de acciones de oportunidad: el mensaje sugerido se
+   * congela al detectar, pero el envío y el registro pasan por aquí con la
+   * misma garantía de nunca lanzar.
+   */
+  @Transactional
+  public Notification sendCustomMessage(
+      UUID tenantId,
+      NotificationChannel channel,
+      String destinatario,
+      String asunto,
+      String cuerpo,
+      String templateKey,
+      UUID patientId,
+      Map<String, String> payload) {
+    return enviarGenerico(tenantId, patientId, payload, channel,
+        destinatario, templateKey, asunto, cuerpo);
+  }
+
+  /**
    * Núcleo común de envío: construye el intento, lo envía por el adaptador del
    * canal y registra el resultado. Nunca lanza (ver garantía de la clase).
    */
   private Notification enviar(
       Appointment cita, NotificationChannel channel, String destinatario,
       String templateKey, String asunto, String cuerpo) {
-    Notification intento = nuevoIntento(cita.getTenantId(), cita, channel, destinatario);
+    return enviarGenerico(
+        cita.getTenantId(),
+        cita.getPatient() != null ? cita.getPatient().getId() : null,
+        Map.of(
+            "appointmentId", cita.getId().toString(),
+            "startsAt", cita.getStartsAt().toString()),
+        channel, destinatario, templateKey, asunto, cuerpo);
+  }
+
+  private Notification enviarGenerico(
+      UUID tenantId, UUID patientId, Map<String, String> payload,
+      NotificationChannel channel, String destinatario,
+      String templateKey, String asunto, String cuerpo) {
+    Notification intento = nuevoIntento(tenantId, patientId, payload, channel, destinatario);
     intento.setTemplateKey(templateKey);
 
     NotificationSender sender;
@@ -188,12 +227,11 @@ public class NotificationService {
   }
 
   private Notification nuevoIntento(
-      UUID tenantId, Appointment cita, NotificationChannel channel, String destinatario) {
+      UUID tenantId, UUID patientId, Map<String, String> payload,
+      NotificationChannel channel, String destinatario) {
     Notification intento = new Notification(tenantId, channel, destinatario);
-    intento.setPatientId(cita.getPatient() != null ? cita.getPatient().getId() : null);
-    intento.setPayload(Map.of(
-        "appointmentId", cita.getId().toString(),
-        "startsAt", cita.getStartsAt().toString()));
+    intento.setPatientId(patientId);
+    intento.setPayload(payload != null ? new java.util.HashMap<>(payload) : null);
     return intento;
   }
 
