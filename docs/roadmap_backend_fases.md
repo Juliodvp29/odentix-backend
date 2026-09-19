@@ -2285,17 +2285,34 @@ por costo — mismo proveedor que se evaluó para Venti Shop).
 
 **Tareas:**
 
-- [ ] Cliente HTTP hacia el proveedor de LLM elegido, configurado por
+- [x] Cliente HTTP hacia el proveedor de LLM elegido, configurado por
       variable de entorno (API key nunca hardcodeada).
-- [ ] `POST /api/v1/assistant/ask` — recibe una pregunta en lenguaje
+      (`GroqChatClient` con `RestClient`: base `https://api.groq.com/openai/v1`
+      verificada en sus docs, `POST /chat/completions`, Bearer `GROQ_API_KEY`;
+      `GROQ_MODEL` configurable con default `openai/gpt-oss-20b`; timeouts 15s;
+      errores → `AssistantException` mapeada a 502.)
+- [x] `POST /api/v1/assistant/ask` — recibe una pregunta en lenguaje
       natural, arma el contexto a partir de datos del tenant activo, y
       devuelve la respuesta del proveedor.
+      (Módulo `assistant/`: `AssistantContextService` arma la foto solo con
+      `TenantContext` —oportunidades, planes sin decidir, citas 24h, cartera
+      vencida, críticos, leads; top 5 por sección—; system prompt en código que
+      prohíbe inventar cifras; `AskRequest` validado, `AskResponse{answer, model}`.)
 
 **Criterios de aceptación:**
 
-- [ ] Preguntas como "¿qué tratamientos están pendientes de
+- [x] Preguntas como "¿qué tratamientos están pendientes de
       seguimiento?" devuelven una respuesta correcta basada en datos
       reales del tenant, nunca de otro tenant.
+      (Verificado con `AssistantIntegrationTest` 3/3 —cuerpo al proveedor con
+      Bearer, modelo, pregunta y datos de A; nada de B; 400/401— y
+      `GroqChatClientTest` 4/4 —parseo, rechazo, malformada, sin key— contra
+      servidor falso local, cero red real; endpoint en `OpenApiDocsIntegrationTest`;
+      `./mvnw.cmd clean verify`: 330/330 pruebas sin fallos.
+      Notas: (1) no hay bean `RestClient.Builder` —se usa `RestClient.builder()`
+      como el adaptador WhatsApp. (2) Un fallo previo fue caché de compilación
+      incremental; `clean` lo resolvió. Sin key responde 502; el fallback a
+      plantilla fija llega en FASE10-03.)
 
 ---
 

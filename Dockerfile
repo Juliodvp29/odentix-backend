@@ -23,4 +23,9 @@ EXPOSE 8080
 # (sin defaults: falla al arrancar antes que conectarse a una BD
 # equivocada) y lee el puerto de $PORT (default 8080).
 ENV SPRING_PROFILES_ACTIVE=prod
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Memoria JVM dimensionada al contenedor (Render free = 512MB → heap ~384MB).
+# Sin esto la JVM usa MaxRAMPercentage=25% (~128MB) y muere con OutOfMemoryError
+# al arrancar Hibernate (diagnosticado 2026-09-19). Sobre-escribible desde la
+# plataforma con JAVA_OPTS.
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0"
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]
