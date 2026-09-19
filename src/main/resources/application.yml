@@ -101,6 +101,15 @@ odentix:
       # Modelo configurable porque rotan (default: ejemplo actual de sus docs).
       model: ${GROQ_MODEL:openai/gpt-oss-20b}
       base-url: ${GROQ_API_BASE_URL:https://api.groq.com/openai/v1}
+  saas:
+    bold:
+      # Llave de identidad de Bold (panel.bold.co → Integraciones). Sin default:
+      # sin ella el checkout responde error claro en vez de inventar cobros.
+      api-key: ${BOLD_API_KEY:}
+      base-url: ${BOLD_API_BASE_URL:https://integrations.api.bold.co}
+      # Secreto para verificar x-bold-signature (vacío en sandbox, como indica
+      # su documentación para ambiente de pruebas).
+      webhook-secret: ${BOLD_WEBHOOK_SECRET:}
   notifications:
     email:
       # Adaptador SMTP real (SmtpEmailNotificationSender). Apagado por defecto:

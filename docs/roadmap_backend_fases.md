@@ -2515,16 +2515,37 @@ pasarela — Wompi, Stripe, etc.)
 
 **Tareas:**
 
-- [ ] Integración con la pasarela elegida para cobro recurrente
+- [x] Integración con la pasarela elegida para cobro recurrente
       mensual/anual.
-- [ ] Webhook de confirmación de pago que activa/suspende el acceso
+      (Bold.co vía API Link de pagos —verificado en `developers.bold.co`:
+      Bold.co ≠ Bold Commerce y no tiene recurrencia nativa, así que cada ciclo
+      se cobra con un link. `BoldClient` solo implementa lo documentado:
+      `POST /online/link/v1`, `GET /online/link/v1/{id}`, auth `x-api-key`,
+      todo por env sin defaults para credenciales. `POST /api/v1/billing/checkout`
+      fija plan+ciclo y devuelve la URL —incluye ciclo anual con `annual_price_cop`,
+      cubriendo gran parte de FASE11-05. Módulo `saas/` separado del `billing/`
+      clínico; `V26__create_saas_payments.sql` con idempotencia por referencia
+      y notification id.)
+- [x] Webhook de confirmación de pago que activa/suspende el acceso
       del tenant.
+      (`POST /api/v1/billing/webhooks/bold`, público con firma HMAC
+      `hex(HMAC-SHA256(Base64(rawBody)))` vs `x-bold-signature` —400 si mala—,
+      200 inmediato, idempotencia por notification id. `SALE_APPROVED` → `active`
+      + periodo extendido; `SALE_REJECTED`/`VOID_APPROVED` → `past_due`;
+      job diario: `past_due` + 7 días de gracia → `cancelled`, y auto-crea link
+      de renovación a ≤3 días del vencimiento.)
 
 **Criterios de aceptación:**
 
-- [ ] Un pago exitoso activa el tenant; un pago fallido/vencido
+- [x] Un pago exitoso activa el tenant; un pago fallido/vencido
       suspende el acceso según la política definida (con periodo de
       gracia a definir).
+      (Verificado con `SaasBillingIntegrationTest` 5/5 contra Bold falso local
+      con HMAC real: checkout idempotente, aprobada activa+extiende, duplicada
+      idempotente, firma mala 400, rechazada en mora, job cancela tras gracia y
+      renueva; endpoints en `OpenApiDocsIntegrationTest`;
+      `./mvnw.cmd clean verify`: 352/352 pruebas sin fallos.
+      Nota: sin bean `ObjectMapper` en el contexto —instancia propia en el servicio.)
 
 ---
 

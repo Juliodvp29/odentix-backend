@@ -42,4 +42,10 @@ public interface TenantSubscriptionRepository extends JpaRepository<TenantSubscr
   Optional<TenantSubscription> findLiveByTenantId(
       @Param("tenantId") UUID tenantId,
       @Param("statuses") Collection<SubscriptionStatus> statuses);
+
+  /**
+   * Suscripciones vivas globales (insumo del job de renovación de FASE11-04,
+   * que corre en contexto de sistema).
+   */
+  List<TenantSubscription> findByStatusIn(Collection<SubscriptionStatus> statuses);
 }
