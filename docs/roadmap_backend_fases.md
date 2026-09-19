@@ -1872,15 +1872,26 @@ movimientos automáticamente al stock — aquí solo la capa Java.
 
 **Tareas:**
 
-- [ ] Entidad `Task`: título, descripción, referencia polimórfica
+- [x] Entidad `Task`: título, descripción, referencia polimórfica
       (`related_entity_type`/`related_entity_id`), responsable, fecha
       límite, prioridad, estado.
-- [ ] CRUD básico de tareas + endpoint de "mis tareas" (filtrado por
+      (Módulo nuevo `task/` con `Task` + enums PG `TaskStatus`/`TaskPriority` +
+      `TaskRepository`; referencia polimórfica sin FK — intencional, nota en
+      `schema.sql` §14; `assignedTo` UUID simple; migración `V21__create_tasks.sql`
+      con índices y RLS.)
+- [x] CRUD básico de tareas + endpoint de "mis tareas" (filtrado por
       `assigned_to` = usuario autenticado).
+      (`TaskController`: `POST/GET /api/v1/tasks`, `GET /mine`, `GET/PATCH/DELETE /{id}`,
+      `POST /{id}/complete` idempotente con 409 si está cancelada; el responsable se
+      valida contra usuarios del tenant → 404; roles operativos amplios.)
 
 **Criterios de aceptación:**
 
-- [ ] Se puede crear, asignar y completar una tarea manualmente.
+- [x] Se puede crear, asignar y completar una tarea manualmente.
+      (Verificado con `TaskIntegrationTest` 6/6 en verde: flujo crear→asignar→
+      completar→eliminar, `mine` solo propias, asignado fantasma o de otro tenant
+      → 404, cross-tenant 404, título en blanco 400; `./mvnw.cmd clean verify`:
+      279/279 pruebas sin fallos, con los 7 endpoints en `OpenApiDocsIntegrationTest`.)
 
 ---
 

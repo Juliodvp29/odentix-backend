@@ -89,6 +89,14 @@ class OpenApiDocsIntegrationTest extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.paths./api/v1/inventory/items/{id}.get").exists())
         .andExpect(jsonPath("$.paths./api/v1/inventory/items/{id}.patch").exists())
         .andExpect(jsonPath("$.paths./api/v1/inventory/items/{id}.delete").exists())
-        .andExpect(jsonPath("$.paths./api/v1/inventory/items/{id}/movements.post").exists());
+        .andExpect(jsonPath("$.paths./api/v1/inventory/items/{id}/movements.post").exists())
+        // tareas (FASE8-01).
+        .andExpect(jsonPath("$.paths./api/v1/tasks.post").exists())
+        .andExpect(jsonPath("$.paths./api/v1/tasks.get").exists())
+        .andExpect(jsonPath("$.paths./api/v1/tasks/mine.get").exists())
+        .andExpect(jsonPath("$.paths./api/v1/tasks/{id}.get").exists())
+        .andExpect(jsonPath("$.paths./api/v1/tasks/{id}.patch").exists())
+        .andExpect(jsonPath("$.paths./api/v1/tasks/{id}.delete").exists())
+        .andExpect(jsonPath("$.paths./api/v1/tasks/{id}/complete.post").exists());
   }
 }
