@@ -32,4 +32,12 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
    * deben duplicar tareas ya abiertas para el mismo evento).
    */
   List<Task> findByStatus(TaskStatus status);
+
+  /**
+   * Indica si ya existe una tarea abierta (no completada ni cancelada) para
+   * una entidad de negocio — evita que las reglas automáticas dupliquen
+   * tareas en cada corrida (idempotencia de FASE8-02 y FASE9-01).
+   */
+  boolean existsByRelatedEntityTypeAndRelatedEntityIdAndStatusIn(
+      String relatedEntityType, UUID relatedEntityId, List<TaskStatus> statuses);
 }

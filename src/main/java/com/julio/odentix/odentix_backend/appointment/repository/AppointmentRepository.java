@@ -47,6 +47,13 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
   List<Appointment> findByStartsAtBetween(Instant start, Instant end);
 
   /**
+   * Citas en un estado que inician dentro de un rango (insumo de la regla
+   * automática de FASE8-02: citas sin confirmar próximas a su horario).
+   */
+  List<Appointment> findByStatusAndStartsAtBetween(
+      AppointmentStatus status, Instant start, Instant end);
+
+  /**
    * Obtiene las citas asignadas a un consultorio específico.
    *
    * @param roomId identificador del consultorio.

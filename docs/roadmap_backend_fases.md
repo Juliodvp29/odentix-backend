@@ -1903,15 +1903,28 @@ movimientos automáticamente al stock — aquí solo la capa Java.
 
 **Tareas:**
 
-- [ ] Regla: cita sin confirmar a 24h de su horario crea
+- [x] Regla: cita sin confirmar a 24h de su horario crea
       automáticamente una tarea para recepción (job programado o
       evento al momento de crear la cita, lo que resulte más simple de
       mantener).
+      (`UnconfirmedAppointmentJob` en `task/service` con `@Scheduled` cada hora
+      y cron configurable `odentix.jobs.unconfirmed-appointments.cron`, precedente
+      FASE6-03; candidatas vía `findByStatusAndStartsAtBetween(programada, ahora,
+      ahora+24h)`; idempotencia con `exists…StatusIn` sobre tareas abiertas;
+      tarea sin asignar —no hay receptor determinístico—, prioridad alta,
+      `dueAt` en el horario de la cita; corre en contexto de sistema cubriendo
+      todas las clínicas con el `tenantId` de cada cita.)
 
 **Criterios de aceptación:**
 
-- [ ] El sistema puede crear tareas automáticamente a partir de esta
+- [x] El sistema puede crear tareas automáticamente a partir de esta
       regla, sin intervención manual.
+      (Verificado con `UnconfirmedAppointmentJobIntegrationTest` 2/2 en verde:
+      crea para programada <24h en ambos tenants con enlace polimórfico y campos,
+      ignora lejana/confirmada/pasada, segunda corrida no duplica y tarea
+      completada sí regenera; `./mvnw.cmd clean verify`: 281/281 sin fallos.
+      Nota: como la BD se comparte entre suites y el job es global, las
+      aserciones se acotan a las citas propias del test, nunca a conteos globales.)
 
 ---
 
