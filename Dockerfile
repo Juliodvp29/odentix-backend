@@ -23,9 +23,12 @@ EXPOSE 8080
 # (sin defaults: falla al arrancar antes que conectarse a una BD
 # equivocada) y lee el puerto de $PORT (default 8080).
 ENV SPRING_PROFILES_ACTIVE=prod
-# Memoria JVM dimensionada al contenedor (Render free = 512MB → heap ~384MB).
-# Sin esto la JVM usa MaxRAMPercentage=25% (~128MB) y muere con OutOfMemoryError
-# al arrancar Hibernate (diagnosticado 2026-09-19). Sobre-escribible desde la
-# plataforma con JAVA_OPTS.
-ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0"
+# Memoria JVM dimensionada al contenedor (Render free = 512MB).
+# La app (Spring Boot + Hibernate, 240 clases) no cabe con defaults: el heap
+# solo ya superaba el 25% (~128MB) y con 75% el RSS total excedía los 512MB
+# (diagnosticado 2026-09-19: OOM-kill de Render tras inicializar Hibernate).
+# Esta combinación apunta a ~450MB totales: heap 50%, metaspace acotado, GC
+# serial (menor huella que G1) y stacks reducidos. Sobre-escribible con JAVA_OPTS.
+# Si Render sigue matando el proceso, el camino es subir de plan (Starter 1GB+).
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=50.0 -XX:MaxMetaspaceSize=128m -XX:+UseSerialGC -Xss512k"
 ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]
