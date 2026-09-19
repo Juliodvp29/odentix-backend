@@ -2237,18 +2237,31 @@ Sección 10 del doc de arquitectura. La regla de qué cuenta como
 
 **Tareas:**
 
-- [ ] Definir y documentar (en un comentario/Javadoc, no solo en este
+- [x] Definir y documentar (en un comentario/Javadoc, no solo en este
       roadmap) el criterio de atribución: por ejemplo, una oportunidad
       cuenta como "recuperada" si se resuelve y el evento de negocio
       asociado ocurre dentro de una ventana de tiempo razonable después
       de ejecutar la acción.
-- [ ] `GET /api/v1/opportunities/recovered-value` — valor recuperado
+      (En `OpportunityService.valorRecuperado`: `resuelta` + acción ejecutada
+      con `executedAt <= resolvedAt` + `resolvedAt` en el periodo; sin acción
+      previa es orgánica y no cuenta. Incluyó `PATCH /{id}/status` —sin él
+      nada podía llegar a `resuelta`.)
+- [x] `GET /api/v1/opportunities/recovered-value` — valor recuperado
       por categoría en un periodo.
+      (Query con filtro explícito de tenant + `EXISTS` de acción previa;
+      agrupa en Java por tipo con monto y conteo; `from` inclusivo/`to`
+      exclusivo, 400 si el periodo es inválido.)
 
 **Criterios de aceptación:**
 
-- [ ] Existe un endpoint que devuelve el valor recuperado por categoría
+- [x] Existe un endpoint que devuelve el valor recuperado por categoría
       en un periodo, con la regla de cálculo documentada en el código.
+      (Verificado con `RecoveredValueIntegrationTest` 3/3: suma con acción
+      previa, exclusión de orgánica/tardía/fuera de periodo, cross-tenant,
+      periodo inválido 400; endpoints en `OpenApiDocsIntegrationTest`;
+      `./mvnw.cmd clean verify`: 323/323 pruebas sin fallos.
+      Limitación declarada: `resuelta` la marca un humano; la resolución
+      automática por evento queda como mejora futura.)
 
 ---
 

@@ -2,10 +2,13 @@ package com.julio.odentix.odentix_backend.opportunity.repository;
 
 import com.julio.odentix.odentix_backend.opportunity.entity.Opportunity;
 import com.julio.odentix.odentix_backend.opportunity.entity.OpportunityStatus;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -44,4 +47,28 @@ public interface OpportunityRepository extends JpaRepository<Opportunity, UUID> 
    * descendente y fecha de detección descendente.
    */
   List<Opportunity> findAllByTenantIdOrderByPriorityDescDetectedAtDesc(UUID tenantId);
+
+  /**
+   * Oportunidades recuperadas en un periodo (FASE9-04): `resuelta` con
+   * `resolvedAt` en el rango y al menos una acción ejecutada antes o al
+   * resolver (orden causal). Con filtro explícito de `tenantId` además del
+   * automático @TenantId (defensa en profundidad, regla §5.2 de AGENTS.md).
+   */
+  @Query("""
+      SELECT o FROM Opportunity o
+      WHERE o.tenantId = :tenantId
+        AND o.status = :status
+        AND o.resolvedAt >= :from
+        AND o.resolvedAt < :to
+        AND EXISTS (
+          SELECT 1 FROM OpportunityAction a
+          WHERE a.opportunity = o
+            AND a.executed = true
+            AND a.executedAt <= o.resolvedAt)
+      """)
+  List<Opportunity> findRecoveredInPeriod(
+      @Param("tenantId") UUID tenantId,
+      @Param("status") OpportunityStatus status,
+      @Param("from") Instant from,
+      @Param("to") Instant to);
 }

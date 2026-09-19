@@ -323,8 +323,8 @@ que quede desactualizada visiblemente a que no exista.)_
   4. Distinción granular de errores JWT (`JwtValidationResult`, `JwtAuthenticationEntryPoint`): cabecera RFC 6750 `WWW-Authenticate` y códigos JSON (`token_expired`, `token_invalid`, `user_inactive`, `token_missing`) para optimizar el refresco automático de sesión en frontend.
 - Fase completada: **Fase 5 — CRM de leads** (todos los tickets FASE5-01 a FASE5-04 completados; checklist de salida verificado y `ARCHITECTURE.md` actualizado).
 - Fase completada: **Fase 6 — Cartera y pagos por etapas** (todos los tickets FASE6-01 a FASE6-04 completados; checklist de salida verificado y `ARCHITECTURE.md` actualizado).
-- Fase completada: **Fase 8 — Automatizaciones, notificaciones y tareas** (todos los tickets FASE8-01 a FASE8-06 completados; `ARCHITECTURE.md` actualizado).
-- Última verificación local: `./mvnw.cmd clean verify` el **19 de septiembre de 2026**, con **308/308 pruebas sin fallos** (incluyendo suites de oportunidades, tareas, jobs, notificaciones email/WhatsApp y recuperación de espacio, más todas las previas). Este resultado no implica verificación en CI ni despliegue a producción.
-- Fase en progreso: **Fase 9 — Motor de oportunidades** (ticket completado: **FASE9-01 — Modelar `Opportunity` y primera regla de detección**; siguiente ticket: **FASE9-02 — Ampliar reglas de detección**).
+- Fase completada: **Fase 9 — Motor de oportunidades** (todos los tickets FASE9-01 a FASE9-04 completados; `ARCHITECTURE.md` actualizado).
+- Última verificación local: `./mvnw.cmd clean verify` el **19 de septiembre de 2026**, con **323/323 pruebas sin fallos** (incluyendo suites de oportunidades, acciones, valor recuperado, más todas las previas). Este resultado no implica verificación en CI ni despliegue a producción.
+- Fase siguiente: **Fase 10 — IA administrativa** (siguiente ticket: **FASE10-01 — Asistente administrativo**).
 - Documentación interactiva: Swagger UI activo en dev/test (`/swagger-ui.html`, JSON en `/v3/api-docs`) con `springdoc-openapi` 3.1.1 y esquema `bearerAuth` JWT; deshabilitado en prod. Regla vigente (§4): todo endpoint nuevo se anota con `@Tag`/`@Operation` y cada cierre de fase verifica la UI. Cobertura de endpoints verificada en `OpenApiDocsIntegrationTest` incluyendo `GET /api/v1/opportunities`.
 

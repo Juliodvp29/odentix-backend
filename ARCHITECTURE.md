@@ -2,7 +2,7 @@
 
 > Documento vivo de arquitectura y decisiones del backend SaaS para clínicas
 > odontológicas (multi-tenant: cada clínica es un `tenant`).
-> **Estado:** documenta Fase 0 a Fase 8. Al cerrar cada fase este archivo debe
+> **Estado:** documenta Fase 0 a Fase 9. Al cerrar cada fase este archivo debe
 > actualizarse (regla en `AGENTS.md` §11: sin esa actualización la fase no se
 > considera cerrada).
 >
@@ -623,5 +623,14 @@ Módulos `task` y `notification`:
 - **Recuperación de espacio (FASE8-06):**
   - `AppointmentCancelledEvent` + `SlotRecoveryListener`: cita cancelada de alto valor (`risk_level = alto`) con candidatos → tarea automática para recepción con el detalle; eventos de Spring para no ciclar `appointment` ↔ `task`.
   - Verificado con `SlotRecoveryAutomationIntegrationTest` (4/4 en verde).
-- Total de pruebas del proyecto: **298/298 pruebas en verde** en `./mvnw.cmd clean verify`.
+- Total de pruebas del proyecto al cierre de Fase 8: **298/298 pruebas en verde** en `./mvnw.cmd clean verify`.
+
+### Fase 9 — Motor de oportunidades (completada, FASE9-01–04)
+
+Módulo `opportunity` (el diferenciador del producto: detectar → proponer → ejecutar → medir):
+- **Modelado y primera regla (FASE9-01):** entidad `Opportunity` (tipo, referencia polimórfica sin FK, valor estimado, prioridad 1–5, estado, `detectedAt`/`resolvedAt`) + migración `V23__create_opportunities.sql` + job `TreatmentPlanFollowupJob` (plan presentado/en decisión sin contacto en 3 días, idempotente) + bandeja `GET /api/v1/opportunities`.
+- **Ampliación de reglas (FASE9-02):** 5 jobs (`LeadUnrespondedJob` cada 2h/24h; `HighRiskAppointmentJob` diario programada+alto a 48h; `InactivePatientJob` diario sin citas ni planes en 6 meses; `OverdueInstallmentOpportunityJob` 02:30 tras el marcado; `CriticalInventoryJob` cada 6h) + `SlotOpportunityListener` (cancelación con candidatos). Queries candidatas en sus repos; prioridades y valores determinísticos por regla; idempotencia por entidad abierta; contexto de sistema multi-tenant. Verificado con `OpportunityRulesIntegrationTest` (6/6) y `SlotOpportunityListenerIntegrationTest` (2/2). Notas: `Instant` no soporta MONTHS (corte con `OffsetDateTime`); la guarda es por entidad no por tipo.
+- **Acciones recomendadas (FASE9-03):** `V24__create_opportunity_actions.sql` (con `channel` extra), entidad `OpportunityAction` (`action_type` TEXT sin enum PG; título de tarea en la primera línea de `suggested_message`), `OpportunityActionFactory` (tarea siempre + mensaje si hay destinatario), `POST /{id}/actions/{actionId}/execute` (tarea vinculada o mensaje vía `sendCustomMessage` nuevo; 409 ejecutada/sin destinatario), bandeja con `actions`. Retrofit en los 7 detectores. Verificado con `OpportunityActionIntegrationTest` (4/4).
+- **Valor recuperado (FASE9-04):** criterio de atribución en Javadoc (`resuelta` + acción ejecutada con `executedAt <= resolvedAt` + `resolvedAt` en periodo; sin acción es orgánica). `PATCH /{id}/status` (prerrequisito: fija/limpia `resolvedAt`) + `GET /recovered-value` agrupado por categoría. Verificado con `RecoveredValueIntegrationTest` (3/3). Limitación declarada: `resuelta` la marca un humano.
+- Total de pruebas del proyecto: **323/323 pruebas en verde** en `./mvnw.cmd clean verify`.
 
