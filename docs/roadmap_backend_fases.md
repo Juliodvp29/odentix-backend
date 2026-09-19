@@ -779,8 +779,7 @@ Antes de pasar a la Fase 2, verificar:
       CI.
 - [x] La convención `TenantAwareEntity` (FASE1-04) está lista para que
       las entidades de la Fase 2 la usen desde su primera migración.
-      (Clase base + `TenantAwareEntityTest` + sección en `ARCHITECTURE.md`
-      + uso real probado con tabla y filtro automático en los tests de
+      (Clase base + `TenantAwareEntityTest` + sección en `ARCHITECTURE.md` + uso real probado con tabla y filtro automático en los tests de
       FASE1-09/10.)
 
 ---
@@ -1837,7 +1836,7 @@ movimientos automáticamente al stock — aquí solo la capa Java.
       `POST /api/v1/inventory/items/{id}/movements`; DELETE solo sin movimientos → 409;
       `created_by` desde el usuario autenticado, precedente `LeadController`.)
 - [x] `GET /api/v1/inventory/critical` — ítems con `quantity <=
-    min_threshold` (usa el índice parcial ya definido en
+min_threshold` (usa el índice parcial ya definido en
       `schema.sql`).
       (Vía `InventoryItemRepository.findCritical` con JPQL explícito — las queries
       derivadas no comparan dos columnas.)
@@ -1910,7 +1909,7 @@ movimientos automáticamente al stock — aquí solo la capa Java.
       (`UnconfirmedAppointmentJob` en `task/service` con `@Scheduled` cada hora
       y cron configurable `odentix.jobs.unconfirmed-appointments.cron`, precedente
       FASE6-03; candidatas vía `findByStatusAndStartsAtBetween(programada, ahora,
-      ahora+24h)`; idempotencia con `exists…StatusIn` sobre tareas abiertas;
+  ahora+24h)`; idempotencia con `exists…StatusIn` sobre tareas abiertas;
       tarea sin asignar —no hay receptor determinístico—, prioridad alta,
       `dueAt` en el horario de la cita; corre en contexto de sistema cubriendo
       todas las clínicas con el `tenantId` de cada cita.)
@@ -2055,8 +2054,8 @@ Meta, no un canal gratuito.
       aprobación del número en Meta y el token real son proceso administrativo
       fuera del código; el adaptador queda verificado y dormido.)
 - (`./mvnw.cmd clean verify`: 294/294 pruebas sin fallos. Nota de
-      implementación: el despacho por canal exige stubear `channel()` en los
-      mocks del sender —un mock sin stub devuelve null y no casa ningún canal.)
+  implementación: el despacho por canal exige stubear `channel()` en los
+  mocks del sender —un mock sin stub devuelve null y no casa ningún canal.)
 
 ---
 
@@ -2117,16 +2116,16 @@ Empezar por la regla más simple de validar con datos ya existentes:
 
 **Tareas:**
 
-- [ ] Entidad `Opportunity`: tipo, referencia polimórfica, valor
+- [x] Entidad `Opportunity`: tipo, referencia polimórfica, valor
       estimado, prioridad, estado.
-- [ ] Job programado que detecta `TreatmentPlan` en estado
+- [x] Job programado que detecta `TreatmentPlan` en estado
       `presentado`/`en_decision` sin contacto reciente y genera una
       `Opportunity` de tipo `tratamiento_sin_seguimiento`.
 
 **Criterios de aceptación:**
 
-- [ ] Existe al menos una regla completa funcionando de punta a punta.
-- [ ] Correr el job dos veces seguidas no duplica la misma oportunidad
+- [x] Existe al menos una regla completa funcionando de punta a punta.
+- [x] Correr el job dos veces seguidas no duplica la misma oportunidad
       ya abierta para el mismo tratamiento.
 
 ---
