@@ -2023,18 +2023,40 @@ Meta, no un canal gratuito.
 
 **Tareas:**
 
-- [ ] Adaptador `NotificationSender` para WhatsApp Business API.
-- [ ] Timeout corto + fallback (si WhatsApp falla, no bloquear el flujo
+- [x] Adaptador `NotificationSender` para WhatsApp Business API.
+      (`WhatsappNotificationSender` con `RestClient` y timeouts de 5s contra
+      Cloud API, activo con `odentix.notifications.whatsapp.enabled=true`;
+      `phoneNumberId` y token solo por variables de entorno sin defaults —
+      sin ellos reporta mala configuración en vez de inventar credenciales.
+      `NotificationService` ahora despacha por canal sobre `List<NotificationSender>`.)
+- [x] Timeout corto + fallback (si WhatsApp falla, no bloquear el flujo
       que lo originó — mismo principio de resiliencia que se aplicará
       a la IA en la Fase 10).
-- [ ] Registro de conversaciones en `Notification`.
+      (El "fallback" es `fallida` registrada sin propagar —garantía del
+      servicio—; no hay respaldo automático a otro canal porque no existe
+      adaptador SMS.)
+- [x] Registro de conversaciones en `Notification`.
+      (`sendAppointmentWhatsAppConfirmation` con el teléfono del paciente;
+      sin teléfono → `fallida` auditable.)
 
 **Criterios de aceptación:**
 
-- [ ] Se puede enviar y registrar un mensaje de confirmación por
+- [x] Se puede enviar y registrar un mensaje de confirmación por
       WhatsApp.
-- [ ] Simular una caída del proveedor de WhatsApp no bloquea el flujo
+      (Verificado con `WhatsappSenderIntegrationTest` 4/4 —formato Cloud API,
+      rechazo HTTP, inalcanzable, sin configuración, todo contra servidor falso
+      local sin red real— y `WhatsappNotificationServiceIntegrationTest` 2/2
+      —`enviada` con adaptador habilitado vía `@DynamicPropertySource`,
+      `fallida` sin teléfono.)
+- [x] Simular una caída del proveedor de WhatsApp no bloquea el flujo
       de negocio que disparó la notificación (test explícito de esto).
+      (Cubierto por el principio nunca-lanza verificado en FASE8-03/04 y el
+      caso de proveedor inalcanzable del adaptador. Límite explícito: la
+      aprobación del número en Meta y el token real son proceso administrativo
+      fuera del código; el adaptador queda verificado y dormido.)
+- (`./mvnw.cmd clean verify`: 294/294 pruebas sin fallos. Nota de
+      implementación: el despacho por canal exige stubear `channel()` en los
+      mocks del sender —un mock sin stub devuelve null y no casa ningún canal.)
 
 ---
 

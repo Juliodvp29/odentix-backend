@@ -2,6 +2,7 @@ package com.julio.odentix.odentix_backend.appointment;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -20,6 +21,7 @@ import com.julio.odentix.odentix_backend.auth.entity.UserRole;
 import com.julio.odentix.odentix_backend.auth.service.JwtService;
 import com.julio.odentix.odentix_backend.auth.service.UserService;
 import com.julio.odentix.odentix_backend.notification.entity.Notification;
+import com.julio.odentix.odentix_backend.notification.entity.NotificationChannel;
 import com.julio.odentix.odentix_backend.notification.entity.NotificationStatus;
 import com.julio.odentix.odentix_backend.notification.repository.NotificationRepository;
 import com.julio.odentix.odentix_backend.notification.sender.NotificationException;
@@ -84,7 +86,9 @@ class AppointmentNotificationResilienceIntegrationTest extends AbstractIntegrati
 
   @BeforeEach
   void setUp() {
-    // Proveedor caído para toda la clase.
+    // Proveedor caído para toda la clase. El channel() también se stubéa:
+    // el servicio despacha por canal y un mock sin stub devuelve null.
+    doReturn(NotificationChannel.email).when(notificationSender).channel();
     doThrow(new NotificationException("Proveedor simulado caído."))
         .when(notificationSender).send(anyString(), anyString(), anyString());
 

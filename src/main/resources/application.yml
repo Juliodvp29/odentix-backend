@@ -96,6 +96,15 @@ odentix:
       # y los flujos usan el adaptador de registro en log.
       enabled: ${NOTIFICATIONS_EMAIL_ENABLED:false}
       from: ${NOTIFICATIONS_EMAIL_FROM:}
+    whatsapp:
+      # Adaptador WhatsApp Cloud API (WhatsappNotificationSender, FASE8-05).
+      # Apagado por defecto: requiere número aprobado por Meta + token real,
+      # proceso administrativo fuera del código. Sin configurar, los intentos
+      # por este canal quedan como fallida auditable, nunca bloquean nada.
+      enabled: ${NOTIFICATIONS_WHATSAPP_ENABLED:false}
+      api-base-url: ${WHATSAPP_API_BASE_URL:https://graph.facebook.com/v21.0}
+      phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
+      token: ${WHATSAPP_TOKEN:}
 
 
 

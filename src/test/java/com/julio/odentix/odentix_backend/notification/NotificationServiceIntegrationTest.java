@@ -155,7 +155,7 @@ class NotificationServiceIntegrationTest extends AbstractIntegrationTest {
       }
     };
     NotificationService servicioSinProveedor =
-        new NotificationService(roto, notificationRepository, appointmentRepository);
+        new NotificationService(java.util.List.of(roto), notificationRepository, appointmentRepository);
 
     TenantContext.setTenantId(tenantA.getId());
     Notification intento;
