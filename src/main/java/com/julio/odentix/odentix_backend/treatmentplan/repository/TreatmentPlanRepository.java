@@ -2,6 +2,8 @@ package com.julio.odentix.odentix_backend.treatmentplan.repository;
 
 import com.julio.odentix.odentix_backend.treatmentplan.entity.TreatmentPlan;
 import com.julio.odentix.odentix_backend.treatmentplan.entity.TreatmentPlanStatus;
+import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -54,4 +56,31 @@ public interface TreatmentPlanRepository extends JpaRepository<TreatmentPlan, UU
       WHERE tp.id = :id AND tp.tenantId = :tenantId
   """)
   Optional<TreatmentPlan> findWithItemsByIdAndTenantId(@Param("id") UUID id, @Param("tenantId") UUID tenantId);
+
+  /**
+   * Encuentra planes de tratamiento candidatos a la regla "tratamiento sin seguimiento"
+   * (FASE9-01, insumo del motor de oportunidades).
+   *
+   * <p>Candidatos: planes en los estados indicados (típicamente {@code presentado} y
+   * {@code en_decision}) cuya última interacción conocida sea anterior al {@code cutoff}.
+   * La "última interacción" se resuelve con {@code COALESCE}: {@code lastContactAt} si
+   * existe, luego {@code presentedAt}, luego {@code createdAt}.
+   *
+   * <p>Esta query se ejecuta desde un job de sistema (sin request HTTP → {@code ROOT_TENANT_ID}
+   * sin filtro de tenant) para cubrir todas las clínicas en una sola corrida, igual que
+   * {@code UnconfirmedAppointmentJob} de FASE8-02 y {@code OverdueInstallmentsJob} de FASE6-03.
+   * Cada oportunidad generada hereda el {@code tenantId} del plan, manteniendo el aislamiento.
+   *
+   * @param statuses estados elegibles (ej. {@code presentado}, {@code en_decision}).
+   * @param cutoff   fecha de corte: planes sin contacto posterior a esta fecha son candidatos.
+   * @return lista de planes candidatos.
+   */
+  @Query("""
+      SELECT tp FROM TreatmentPlan tp
+      WHERE tp.status IN :statuses
+        AND COALESCE(tp.lastContactAt, tp.presentedAt, tp.createdAt) < :cutoff
+  """)
+  List<TreatmentPlan> findFollowupCandidates(
+      @Param("statuses") Collection<TreatmentPlanStatus> statuses,
+      @Param("cutoff") Instant cutoff);
 }
