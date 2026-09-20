@@ -13,8 +13,9 @@ import org.springframework.stereotype.Repository;
 public interface InvoiceItemRepository extends JpaRepository<InvoiceItem, UUID> {
 
   /**
-   * Ítems de una factura dentro del tenant activo (doble filtro de tenant,
-   * regla §5.2 de AGENTS.md).
+   * Ítems de una factura dentro del tenant activo (doble filtro por tenant).
    */
   List<InvoiceItem> findAllByTenantIdAndInvoiceId(UUID tenantId, UUID invoiceId);
 }
+
+

@@ -39,7 +39,7 @@ import org.springframework.dao.DataIntegrityViolationException;
  *       el trigger de BD (ambas capas presentes, defensa en profundidad).</li>
  *   <li>Aislamiento cross-tenant: un usuario del tenant B no puede ver el
  *       especialista ni la liquidación del tenant A, incluso conociendo su UUID
- *       (regla §5 de AGENTS.md). La respuesta es vacía (404 a nivel HTTP), no 403.</li>
+ *       (regla de aislamiento multi-tenant del proyecto). La respuesta es vacía (404 a nivel HTTP), no 403.</li>
  * </ul>
  */
 class SpecialistRepositoryIntegrationTest extends AbstractIntegrationTest {
@@ -266,7 +266,7 @@ class SpecialistRepositoryIntegrationTest extends AbstractIntegrationTest {
   }
 
   // ---------------------------------------------------------------------------
-  // Test de aislamiento cross-tenant (regla §5 de AGENTS.md — obligatorio)
+  // Test de aislamiento cross-tenant (regla de aislamiento multi-tenant del proyecto — obligatorio)
   // ---------------------------------------------------------------------------
 
   @Test
@@ -298,3 +298,4 @@ class SpecialistRepositoryIntegrationTest extends AbstractIntegrationTest {
     }
   }
 }
+

@@ -15,7 +15,7 @@ import java.util.UUID;
  * <p>El binario se almacena en el servicio compatible con S3 referenciado por {@code storageKey}.
  * Esta entidad guarda metadatos, autor y auditoría dentro de PostgreSQL.
  *
- * <p>Convención: Sin Lombok (regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Entity
 @Table(name = "patient_files")
@@ -108,3 +108,4 @@ public class PatientFile extends TenantAwareEntity {
     this.uploadedBy = uploadedBy;
   }
 }
+

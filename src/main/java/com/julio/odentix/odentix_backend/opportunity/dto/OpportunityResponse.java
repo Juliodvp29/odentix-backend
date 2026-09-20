@@ -12,7 +12,7 @@ import java.util.UUID;
 /**
  * DTO de lectura para una oportunidad de negocio (FASE9-01).
  *
- * <p>Desacopla la API REST de la entidad interna. Sin Lombok (§9 AGENTS.md).
+ * <p>Desacopla la API REST de la entidad interna. Sin Lombok.
  */
 public class OpportunityResponse {
 
@@ -129,3 +129,4 @@ public class OpportunityResponse {
     this.actions = actions != null ? actions : new ArrayList<>();
   }
 }
+

@@ -24,9 +24,10 @@ import org.springframework.stereotype.Service;
  * <p>Ventana fija de 60 segundos por (endpoint + IP), igual que el login.
  * In-memory con {@link ConcurrentHashMap}: válido para el monolito single-instance
  * en Render; si algún día se escala a varias réplicas habría que externalizar el
- * contador (p. ej. Redis) — ver AGENTS.md §10: no introducir infra antes de tiempo.
+ * contador (p. ej. Redis) — no introducir infraestructura antes de que la escala
+ * la justifique.
  *
- * <p>Convención: Sin Lombok (regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Service
 public class PublicEndpointRateLimitService {
@@ -129,3 +130,4 @@ public class PublicEndpointRateLimitService {
     }
   }
 }
+

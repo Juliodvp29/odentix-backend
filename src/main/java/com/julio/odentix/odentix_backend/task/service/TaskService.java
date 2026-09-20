@@ -23,7 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
  * duplicar la validación del responsable.
  *
  * <p>El tenant siempre sale del {@code TenantContext}: una tarea de otro
- * tenant resulta invisible (404), conforme a la regla §5 de AGENTS.md.
+ * tenant resulta invisible (404), conforme a la regla de aislamiento multi-tenant del proyecto.
  */
 @Service
 public class TaskService {
@@ -171,3 +171,4 @@ public class TaskService {
     return response;
   }
 }
+

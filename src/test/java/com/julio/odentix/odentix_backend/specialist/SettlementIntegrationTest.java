@@ -53,7 +53,7 @@ import org.springframework.test.web.servlet.MvcResult;
  *       y sin tratamiento).</li>
  *   <li>Un mismo periodo solo se liquida una vez (409 en el segundo intento).</li>
  *   <li>Aislamiento cross-tenant: liquidar un especialista de otro tenant → 404
- *       (regla §5 de AGENTS.md).</li>
+ *       (regla de aislamiento multi-tenant del proyecto).</li>
  *   <li>Autorización por rol: solo PROPIETARIO liquida (recepción → 403).</li>
  * </ul>
  */
@@ -308,3 +308,4 @@ class SettlementIntegrationTest extends AbstractIntegrationTest {
         .andExpect(status().isUnauthorized());
   }
 }
+

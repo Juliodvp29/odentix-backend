@@ -27,7 +27,7 @@ import org.hibernate.dialect.type.PostgreSQLEnumJdbcType;
  * se añadirá la relación JPA correspondiente (mismo precedente que
  * {@code ClinicalRecord.professionalId} en FASE2-05).
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Entity
 @Table(name = "odontogram_entries")
@@ -144,7 +144,7 @@ public class OdontogramEntry extends TenantAwareEntity {
 
   @Override
   public String toString() {
-    // Sin condición ni notas en logs (datos clínicos del tenant, regla §5.5 de AGENTS.md).
+    // Sin condición ni notas en logs (datos clínicos del tenant).
     return "OdontogramEntry{"
         + "id=" + getId()
         + ", patientId=" + (patient != null ? patient.getId() : "null")
@@ -153,3 +153,4 @@ public class OdontogramEntry extends TenantAwareEntity {
         + '}';
   }
 }
+

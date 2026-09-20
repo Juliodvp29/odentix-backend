@@ -17,7 +17,7 @@ import org.springframework.stereotype.Repository;
  *
  * <p>El filtro automático @TenantId (heredado de TenantAwareEntity, FASE1-09)
  * ya aísla por tenant, pero cada método filtra además por {@code tenantId}
- * explícito: defensa en profundidad (regla §5.2 de AGENTS.md). Nunca agregar
+ * explícito: defensa en profundidad (filtro explícito por tenant). Nunca agregar
  * aquí una query JPQL/nativa sin filtrar por {@code tenant_id}.
  */
 @Repository
@@ -65,4 +65,5 @@ public interface PatientRepository extends JpaRepository<Patient, UUID> {
       """)
   List<Patient> findInactiveSince(@Param("cutoff") Instant cutoff);
 }
+
 

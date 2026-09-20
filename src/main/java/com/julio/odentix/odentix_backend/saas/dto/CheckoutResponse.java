@@ -7,7 +7,7 @@ import java.util.UUID;
 
 /**
  * Respuesta del checkout: URL de pago de Bold y suscripción (FASE11-04).
- * Sin Lombok (§9 AGENTS.md).
+ * Sin Lombok.
  */
 public class CheckoutResponse {
 
@@ -69,3 +69,4 @@ public class CheckoutResponse {
     this.status = status;
   }
 }
+

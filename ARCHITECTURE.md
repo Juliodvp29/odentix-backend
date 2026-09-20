@@ -1,233 +1,234 @@
-# Arquitectura técnica — odentix-backend
+# Technical architecture — odentix-backend
 
-> Documento vivo de arquitectura y decisiones del backend SaaS para clínicas
-> odontológicas (multi-tenant: cada clínica es un `tenant`).
-> **Estado:** documenta Fase 0 a Fase 11 y Fase 12 en curso. Al cerrar cada fase este archivo debe
-> actualizarse (regla en `AGENTS.md` §11: sin esa actualización la fase no se
-> considera cerrada).
+> Living architecture and decision document for the backend SaaS for dental
+> clinics (multi-tenant: each clinic is a `tenant`).
+> **Status:** documents Phase 0 through Phase 11 and Phase 12 in progress. When closing each phase this file must
+> be updated (rule in `AGENTS.md` §11: without that update the phase is not
+> considered closed).
 >
-> Fuentes normativas: `docs/documentacion_sistema_gestion_odontologica_v1.1.md`
-> (producto), `docs/roadmap_backend_fases.md` (tickets y DoD),
-> `docs/schema.sql` (referencia de esquema). Todo lo aquí afirmado sale del
-> código y las migraciones reales, no de los documentos de diseño.
+> Normative sources: `docs/documentacion_sistema_gestion_odontologica_v1.1.md`
+> (product), `docs/roadmap_backend_fases.md` (tickets and DoD),
+> `docs/schema.sql` (schema reference). Everything stated here comes from the
+> real code and migrations, not from design documents.
 
 ---
 
-## 1. Visión general
+## 1. Overview
 
-Monolito modular en Java: un solo desplegable, organizado por módulo de
-negocio (no por capa técnica). No hay microservicios, colas ni Kubernetes por
-decisión explícita: no se introduce infraestructura antes de que la escala la
-justifique. El frontend Angular es un proyecto separado; no hay contrato de
-API congelado todavía.
+Modular monolith in Java: a single deployable, organized by business
+module (not by technical layer). No microservices, queues, or Kubernetes by
+explicit decision: no infrastructure is introduced before scale
+justifies it. The Angular frontend is a separate project; there is no frozen
+API contract yet.
 
 ### Stack
 
-| Pieza | Versión / decisión |
+| Piece | Version / decision |
 |---|---|
-| Java | 25 (LTS; nunca versiones no-LTS) |
-| Spring Boot | 4.1.1 (ver §2: paquetes de autoconfiguración reorganizados) |
-| Build | Maven (wrapper `./mvnw` incluido) |
-| Base de datos | PostgreSQL 16+ (nunca H2 ni embebidas, ni en tests) |
-| Migraciones | Flyway, `ddl-auto` siempre en `validate` |
-| Auth | Spring Security + JWT propio (JJWT 0.12.6, HMAC-SHA256) |
-| Tests integración | Testcontainers 2.x sobre `postgres:16` |
-| Despliegue | Docker multi-stage + Render; CI en GitHub Actions |
+| Java | 25 (LTS; never non-LTS versions) |
+| Spring Boot | 4.1.1 (see §2: reorganized autoconfiguration packages) |
+| Build | Maven (wrapper `./mvnw` included) |
+| Database | PostgreSQL 16+ (never H2 nor embedded, not even in tests) |
+| Migrations | Flyway, `ddl-auto` always `validate` |
+| Auth | Spring Security + own JWT (JJWT 0.12.6, HMAC-SHA256) |
+| Integration tests | Testcontainers 2.x on `postgres:16` |
+| Deployment | Multi-stage Docker + Render; CI on GitHub Actions |
 
-### Convenciones globales
+### Global conventions
 
-- Sin Lombok: getters/setters/constructores explícitos (decisión de FASE0-01
-  mientras se aprende el framework; revisar `pom.xml` antes de asumirlo).
-- Código y comentarios en español, consistente con el archivo que se edita.
-- `snake_case` en BD, tablas en plural, UUID como PK (`gen_random_uuid()`),
-  `TIMESTAMPTZ` (nunca `TIMESTAMP`), montos `NUMERIC(12,2)` con sufijo `_cop`,
-  `updated_at` gestionado por el trigger `set_updated_at()` (nunca desde Java).
+- No Lombok: explicit getters/setters/constructors (FASE0-01 decision
+  while learning the framework; check `pom.xml` before assuming otherwise).
+- Code and comments in Spanish, consistent with the file being edited.
+- `snake_case` in DB, plural tables, UUID as PK (`gen_random_uuid()`),
+  `TIMESTAMPTZ` (never `TIMESTAMP`), amounts `NUMERIC(12,2)` with `_cop` suffix,
+  `updated_at` managed by the `set_updated_at()` trigger (never from Java).
 
 ---
 
-## 2. Nota sobre Spring Boot 4.1.1
+## 2. Note on Spring Boot 4.1.1
 
-En esta versión los paquetes de autoconfiguración se reorganizaron respecto a
-3.x, y casi todo tutorial/Stack Overflow usa los paquetes viejos. **Antes de
-escribir cualquier import de autoconfiguración, verificar el paquete real**
-(paquetes ya confirmados en este proyecto):
+In this version the autoconfiguration packages were reorganized compared to
+3.x, and almost every tutorial/Stack Overflow answer uses the old packages.
+**Before writing any autoconfiguration import, verify the real package**
+(packages already confirmed in this project):
 
 - `org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration`
 - `org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration`
 - `org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration`
 
-Lo mismo aplica a dependencias vecinas: Testcontainers 2.x renombró sus
-artefactos con prefijo (`testcontainers-postgresql`,
-`testcontainers-junit-jupiter`; los paquetes Java `org.testcontainers.*` no
-cambiaron). La versión del BOM la fija el parent (`testcontainers.version`).
+The same applies to neighboring dependencies: Testcontainers 2.x renamed its
+artifacts with a prefix (`testcontainers-postgresql`,
+`testcontainers-junit-jupiter`; the Java packages `org.testcontainers.*` did
+not change). The BOM version is pinned by the parent (`testcontainers.version`).
 
 ---
 
-## 3. Estructura de paquetes
+## 3. Package structure
 
-Decisión FASE0-03: organización **por módulo de negocio** (familiar para quien
-viene de Angular modular), cada uno con sus subcapas internas.
+FASE0-03 decision: organization **by business module** (familiar to anyone
+coming from modular Angular), each with its internal sub-layers.
 
 ```
 com.julio.odentix.odentix_backend/
-├── shared/      # transversal: entity/, context/, excepciones comunes
-│   ├── entity/  # TenantAwareEntity (base de todo lo de negocio)
+├── shared/      # cross-cutting: entity/, context/, common exceptions
+│   ├── entity/  # TenantAwareEntity (base of everything business-related)
 │   └── context/ # TenantContext, TenantIdentifierResolver
-├── tenant/      # clínica cliente (raíz del multi-tenancy)
-├── auth/        # User, UserRole, login JWT, filtro, UserService
+├── tenant/      # client clinic (root of multi-tenancy)
+├── auth/        # User, UserRole, JWT login, filter, UserService
 ├── audit/       # AuditLog, AuditAction, AuditService (append-only)
-├── patient/     # Fase 2
-├── appointment/ # Fase 3
-├── treatmentplan/ # Fase 4
-├── billing/     # Fase 4
-├── crm/         # Fase 5
-└── inventory/   # Fase 7
+├── patient/     # Phase 2
+├── appointment/ # Phase 3
+├── treatmentplan/ # Phase 4
+├── billing/     # Phase 4
+├── crm/         # Phase 5
+└── inventory/   # Phase 7
 ```
 
-Reglas:
+Rules:
 
-1. Cada módulo tiene sus subcapas (`controller`, `service`, `repository`,
-   `entity`, `dto`) **dentro** de su paquete. No hay paquetes top-level por
-   capa. Módulo nuevo = mismo patrón, sin pedir permiso.
-2. `shared` es lo único importable desde cualquier módulo. Entre módulos de
-   negocio las dependencias apuntan hacia `tenant`/`patient`, nunca al revés
-   sin justificarlo.
-3. Cambiar este patrón requiere discusión explícita.
+1. Each module has its sub-layers (`controller`, `service`, `repository`,
+   `entity`, `dto`) **inside** its package. There are no top-level packages
+   by layer. New module = same pattern, no permission needed.
+2. `shared` is the only thing importable from any module. Dependencies between
+   business modules point toward `tenant`/`patient`, never the other way
+   without justification.
+3. Changing this pattern requires explicit discussion.
 
 ---
 
-## 4. Configuración por entorno
+## 4. Per-environment configuration
 
-Perfiles `dev` / `test` / `prod` (`application.yml` base + uno por perfil).
-Secretos solo por variables de entorno con sintaxis `${VAR:default}`; en el
-repo solo hay defaults locales sin valor productivo.
+`dev` / `test` / `prod` profiles (base `application.yml` + one per profile).
+Secrets only via environment variables with `${VAR:default}` syntax; the
+repo only holds local defaults with no production value.
 
-| Variable | Default local (dev/test) | Prod |
+| Variable | Local default (dev/test) | Prod |
 |---|---|---|
-| `DB_URL` | `jdbc:postgresql://localhost:5434/odentix` | sin default (obligatoria) |
-| `DB_USERNAME` / `DB_PASSWORD` | `odentix` / `odentix` | sin default (obligatorias) |
-| `PORT` | `8081` fijo en local | `${PORT:8080}` (Render inyecta `$PORT`) |
-| `JWT_SECRET` | clave de desarrollo en `application.yml` | **obligatoria**: `JWT_SECRET` real (≥32 caracteres) |
-| `JWT_EXPIRATION_MINUTES` | `15` (15 min) | `15` recomendado; ajustable |
-| `JWT_REFRESH_TOKEN_EXPIRATION_DAYS` | `7` (7 días) | `7` recomendado; ajustable |
+| `DB_URL` | `jdbc:postgresql://localhost:5434/odentix` | no default (mandatory) |
+| `DB_USERNAME` / `DB_PASSWORD` | `odentix` / `odentix` | no default (mandatory) |
+| `PORT` | `8081` fixed locally | `${PORT:8080}` (Render injects `$PORT`) |
+| `JWT_SECRET` | development key in `application.yml` | **mandatory**: real `JWT_SECRET` (≥32 characters) |
+| `JWT_EXPIRATION_MINUTES` | `15` (15 min) | `15` recommended; adjustable |
+| `JWT_REFRESH_TOKEN_EXPIRATION_DAYS` | `7` (7 days) | `7` recommended; adjustable |
 
-Particularidades de la máquina de desarrollo (no generalizar):
+Dev-machine particularities (do not generalize):
 
-- App en `8081` porque el `8080` lo ocupa `AgentService.exe`.
-- Postgres de Docker en `5434` porque los puertos `5432` y `5433` (IPv4) los
-  ocupan servicios nativos `postgresql-x64-17/18`.
+- App on `8081` because `8080` is taken by `AgentService.exe`.
+- Docker Postgres on `5434` because ports `5432` and `5433` (IPv4) are taken
+  by native `postgresql-x64-17/18` services.
 
-Comandos:
+Commands:
 
 ```bash
-docker compose up -d                                   # Postgres local
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev  # app en :8081
-./mvnw test                                            # integración (Testcontainers)
-./mvnw clean verify                                    # lo que corre el CI
+docker compose up -d                                   # local Postgres
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev  # app on :8081
+./mvnw test                                            # integration (Testcontainers)
+./mvnw clean verify                                    # what CI runs
 ```
 
-> Tras borrar o renombrar recursos (`application.properties` → YAML, etc.),
-> correr con `clean`: los builds incrementales no eliminan salidas obsoletas
-> de `target/` y un archivo viejo puede seguir activo en el classpath.
+> After deleting or renaming resources (`application.properties` → YAML, etc.),
+> run with `clean`: incremental builds don't remove stale outputs from
+> `target/` and an old file may stay active on the classpath.
 
 ---
 
-## 5. Base de datos y migraciones
+## 5. Database and migrations
 
-- `ddl-auto: validate` en todos los perfiles, sin excepción.
-- Todo cambio de esquema va en una migración Flyway nueva (`V{n}__...sql`);
-  nunca se edita una aplicada ni se toca `schema.sql` esperando que aplique solo.
-- Antes de crear una tabla, revisar su referencia en `docs/schema.sql`.
+- `ddl-auto: validate` in every profile, no exceptions.
+- Every schema change goes in a new Flyway migration (`V{n}__...sql`);
+  an applied migration is never edited, nor is `schema.sql` touched expecting
+  it to apply on its own.
+- Before creating a table, check its reference in `docs/schema.sql`.
 
-| Migración | Contenido |
+| Migration | Contents |
 |---|---|
-| `V1__init` | Función `set_updated_at()` + tabla temporal `migration_probe` (verificar el mecanismo; se elimina en Fase 1) |
-| `V2__create_tenants` | Extensiones `pgcrypto`/`citext`, función `current_tenant_id()`, tipo `tenant_status`, tabla `tenants`, índice, trigger `updated_at`, RLS (`tenant_self_isolation`) |
-| `V3__create_users` | Tipo `user_role`, tabla `users` (email `CITEXT`, unique `(tenant_id, email)`), índice `(tenant_id, role)`, trigger, RLS |
-| `V4__create_audit_log` | Tipo `audit_action`, tabla `audit_log`, índices, trigger, RLS (ver §8 por 2 desviaciones documentadas) |
-| `V5__create_patients` | Extensión `pg_trgm`, función `immutable_unaccent()`, tabla `patients`, índice trgm para búsqueda insensible, trigger, RLS |
-| `V6__create_clinical_records` | Tabla `clinical_records` con FK `patient_id`, `recorded_by_id`, trigger, RLS |
-| `V7__create_odontogram_entries` | Tipo `odontogram_entry_type`, tabla `odontogram_entries`, restricción `CHECK` notación FDI, trigger, RLS |
-| `V8__create_patient_files` | Tipo `storage_provider`, tabla `patient_files` (metadatos S3), trigger, RLS |
-| `V9__test_patient_file_data` | Migración de test (solo se aplica en perfil `test` mediante `V999`) |
-| `V10__create_refresh_tokens` | Tabla `refresh_tokens` (hash SHA-256 del token, `expires_at`, `revoked`, `revoked_at`, FK `tenant_id`/`user_id`), índices, trigger, RLS (permite `current_tenant_id() IS NULL` porque el refresh se hace antes de que exista `TenantContext`) |
+| `V1__init` | `set_updated_at()` function + temporary `migration_probe` table (verify the mechanism; removed in Phase 1) |
+| `V2__create_tenants` | `pgcrypto`/`citext` extensions, `current_tenant_id()` function, `tenant_status` type, `tenants` table, index, `updated_at` trigger, RLS (`tenant_self_isolation`) |
+| `V3__create_users` | `user_role` type, `users` table (`CITEXT` email, unique `(tenant_id, email)`), `(tenant_id, role)` index, trigger, RLS |
+| `V4__create_audit_log` | `audit_action` type, `audit_log` table, indexes, trigger, RLS (see §8 for 2 documented deviations) |
+| `V5__create_patients` | `pg_trgm` extension, `immutable_unaccent()` function, `patients` table, trgm index for insensitive search, trigger, RLS |
+| `V6__create_clinical_records` | `clinical_records` table with `patient_id`, `recorded_by_id` FKs, trigger, RLS |
+| `V7__create_odontogram_entries` | `odontogram_entry_type` type, `odontogram_entries` table, FDI-notation `CHECK` constraint, trigger, RLS |
+| `V8__create_patient_files` | `storage_provider` type, `patient_files` table (S3 metadata), trigger, RLS |
+| `V9__test_patient_file_data` | Test migration (only applied in the `test` profile via `V999`) |
+| `V10__create_refresh_tokens` | `refresh_tokens` table (SHA-256 hash of the token, `expires_at`, `revoked`, `revoked_at`, `tenant_id`/`user_id` FKs), indexes, trigger, RLS (allows `current_tenant_id() IS NULL` because refresh happens before `TenantContext` exists) |
 
-Patrón RLS en cada tabla de negocio (defensa en profundidad, §6):
+RLS pattern on every business table (defense in depth, §6):
 
 ```sql
-ALTER TABLE <tabla> ENABLE ROW LEVEL SECURITY;
-CREATE POLICY tenant_isolation ON <tabla>
+ALTER TABLE <table> ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON <table>
   USING (tenant_id = current_tenant_id() OR current_tenant_id() IS NULL)
   WITH CHECK (tenant_id = current_tenant_id() OR current_tenant_id() IS NULL);
 ```
 
-El rol de BD de producción no debe tener `BYPASSRLS`. Nunca se desactiva RLS
-ni el filtro de tenant "para probar más rápido": si algo es difícil de probar
-con aislamiento, el problema es del test.
+The production DB role must not have `BYPASSRLS`. RLS and the tenant
+filter are never disabled "to test faster": if something is hard to test
+with isolation, the problem is in the test.
 
 ---
 
 ## 6. Multi-tenancy
 
-El peor bug posible es filtrar datos entre clínicas. Tres capas
-independientes, ninguna sustituye a otra:
+The worst possible bug is leaking data across clinics. Three independent
+layers, none replacing another:
 
-1. **Filtro automático de aplicación (FASE1-09).** `TenantAwareEntity`
-   (`shared/entity`) aporta `id` UUID, `tenant_id` (`@TenantId` de Hibernate,
-   no-nulo e inmutable), `createdAt/updatedAt`. Hibernate filtra y asigna el
-   tenant automáticamente en queries y en `findById`, resolviéndolo vía
+1. **Automatic application filter (FASE1-09).** `TenantAwareEntity`
+   (`shared/entity`) provides UUID `id`, `tenant_id` (Hibernate `@TenantId`,
+   non-null and immutable), `createdAt/updatedAt`. Hibernate filters and assigns
+   the tenant automatically in queries and in `findById`, resolving it via
    `TenantIdentifierResolver` → `TenantContext`.
-2. **Convención en repositorios (defensa en profundidad).** Cada query
-   filtra por tenant aunque exista el filtro automático
-   (`findByTenantId...`, nunca JPQL/nativa sin `tenant_id`).
-3. **RLS en PostgreSQL** (patrón §5).
+2. **Repository convention (defense in depth).** Every query filters
+   by tenant even though the automatic filter exists
+   (`findByTenantId...`, never JPQL/native without `tenant_id`).
+3. **RLS in PostgreSQL** (§5 pattern).
 
 ### `TenantContext` (FASE1-08)
 
-`ThreadLocal<UUID>` estático (`setTenantId` / `getTenantId` /
-`getRequiredTenantId` / `clear`). Lo puebla el filtro JWT al inicio de cada
-request y lo limpia en `finally` (hilos de Tomcat se reutilizan; sin limpieza
-habría fuga entre requests). Sin tenant (arranque, tareas de sistema),
-`TenantIdentifierResolver` usa el sentinel nil-UUID como sesión raíz.
+Static `ThreadLocal<UUID>` (`setTenantId` / `getTenantId` /
+`getRequiredTenantId` / `clear`). Populated by the JWT filter at the start of
+each request and cleaned in `finally` (Tomcat threads are reused; without
+cleanup there would be leakage across requests). Without a tenant (startup,
+system tasks), `TenantIdentifierResolver` uses the nil-UUID as root session.
 
-### Convención `tenant_id` (FASE1-04)
+### `tenant_id` convention (FASE1-04)
 
-Toda entidad de negocio nueva hereda `TenantAwareEntity` desde su primera
-migración. Checklist por tabla: columna `tenant_id UUID NOT NULL REFERENCES
-tenants(id)` + índice + RLS + entidad heredada (+ asociación a `Tenant` con
-`insertable/updatable = false` si necesita navegar) + repo filtrado + **test
-cross-tenant obligatorio** (datos en A, actuar como B, verificar invisibilidad;
-`404` antes que `403` para ni confirmar existencia).
+Every new business entity inherits `TenantAwareEntity` from its first
+migration. Per-table checklist: `tenant_id UUID NOT NULL REFERENCES
+tenants(id)` column + index + RLS + inheriting entity (+ association to `Tenant`
+with `insertable/updatable = false` if it needs to navigate) + filtered repo +
+**mandatory cross-tenant test** (data in A, act as B, verify invisibility;
+`404` before `403` to not even confirm existence).
 
-Excepciones intencionales: `tenants` (es la raíz), `users` (tenant vía
-asociación desde FASE1-02) y catálogos globales (`plans`, `plan_features`,
-`plan_limits` en Fase 11).
+Intentional exceptions: `tenants` (it is the root), `users` (tenant via
+association since FASE1-02) and global catalogs (`plans`, `plan_features`,
+`plan_limits` in Phase 11).
 
 ---
 
-## 7. Autenticación y autorización (Fase 1 + mejoras previas a Fase 3)
+## 7. Authentication and authorization (Phase 1 + pre-Phase 3 improvements)
 
-### Modelo
+### Model
 
 - `Tenant`: id, `name`, `tax_id` (NIT), `status` (`trial`/`active`/`suspended`/
   `cancelled`), `timezone` (`America/Bogota`).
-- `User`: pertenece a un único `Tenant` (`@ManyToOne` obligatorio), `email`
-  (`CITEXT`, único **por tenant**, no global), `password_hash` (BCrypt, nunca
-  texto plano), `fullName`, `role`, `is_active`, `lastLoginAt`.
-- `UserRole` (enum en minúsculas, espejo del tipo PG `user_role`):
+- `User`: belongs to a single `Tenant` (mandatory `@ManyToOne`), `email`
+  (`CITEXT`, unique **per tenant**, not global), `password_hash` (BCrypt, never
+  plain text), `fullName`, `role`, `is_active`, `lastLoginAt`.
+- `UserRole` (lowercase enum, mirror of the PG `user_role` type):
   `propietario`, `odontologo`, `recepcion`, `auxiliar`,
-  `especialista_externo`. Un rol por usuario en esta fase.
-- `UserService.createUser(...)` (interno, sin registro público): valida datos,
-  exige tenant existente, rechaza email duplicado por tenant, hashea con
-  `BCryptPasswordEncoder` y guarda activo.
-- `RefreshToken` (V10): entidad de sesión persistida. Almacena `token_hash`
-  (SHA-256 del token en texto plano, nunca el token crudo), `expires_at`,
-  `revoked`, `revoked_at`, FK a `tenant_id` y `user_id`. No extiende
-  `TenantAwareEntity` (al igual que `User`): las operaciones de refresh se
-  producen antes de que exista `TenantContext`. Su RLS permite
-  `current_tenant_id() IS NULL` por la misma razón.
+  `especialista_externo`. One role per user in this phase.
+- `UserService.createUser(...)` (internal, no public registration): validates
+  data, requires an existing tenant, rejects duplicate email per tenant, hashes
+  with `BCryptPasswordEncoder` and saves as active.
+- `RefreshToken` (V10): persisted session entity. Stores `token_hash`
+  (SHA-256 of the plain-text token, never the raw token), `expires_at`,
+  `revoked`, `revoked_at`, FKs to `tenant_id` and `user_id`. Does not extend
+  `TenantAwareEntity` (like `User`): refresh operations happen
+  before `TenantContext` exists. Its RLS allows
+  `current_tenant_id() IS NULL` for the same reason.
 
-### Login — `POST /api/v1/auth/login` (público)
+### Login — `POST /api/v1/auth/login` (public)
 
 ```bash
 curl -X POST http://localhost:8081/api/v1/auth/login \
@@ -235,441 +236,445 @@ curl -X POST http://localhost:8081/api/v1/auth/login \
   -d '{"email":"admin@clinica.com","password":"Secreta123"}'
 # 200 → {"accessToken":"...","refreshToken":"...","tokenType":"Bearer","expiresInSeconds":900,
 #        "user":{"email":"...","role":"propietario","tenantId":"..."}}
-# Credenciales inválidas → 401 {"error":"Credenciales inválidas"} (genérico a
-# propósito: no distingue usuario inexistente de clave errónea, anti-enumeración)
+# Invalid credentials → 401 {"error":"Credenciales inválidas"} (deliberately generic:
+# it doesn't distinguish unknown user from wrong password, anti-enumeration)
 ```
 
-`tenantId` opcional en el request: solo se usa para desambiguar si el mismo
-email existiera en varias clínicas. Usuario inactivo → 401 genérico.
+Optional `tenantId` in the request: only used to disambiguate if the same
+email existed in several clinics. Inactive user → generic 401.
 
-**Protección contra fuerza bruta y DoS (Rate Limiting en memoria):**
-- **Rate limiting por IP:** Máximo 10 peticiones/minuto por IP hacia `/api/v1/auth/login` (configurable vía `LOGIN_RATE_LIMIT_IP_MAX`). Soporta proxies (`X-Forwarded-For` o `getRemoteAddr`). Al excederlo → `429 Too Many Requests` con cabecera `Retry-After: <segundos>` antes de ejecutar BCrypt ni consultar la base de datos.
-- **Bloqueo temporal por cuenta/email:** Máximo 5 intentos fallidos consecutivos en una ventana de 15 minutos (configurable vía `LOGIN_RATE_LIMIT_EMAIL_MAX_ATTEMPTS`). Al 5to fallo, la cuenta queda bloqueada por 15 minutos (`LOGIN_RATE_LIMIT_LOCKOUT_MINUTES`). Intentos posteriores durante el bloqueo reciben `429 Too Many Requests` con cabecera `Retry-After` sin gastar CPU en BCrypt. Un login exitoso resetea el contador de fallos.
-- `LoginRateLimitService` limpia automáticamente entradas vencidas cada 5 minutos (`@Scheduled`).
+**Brute-force and DoS protection (in-memory rate limiting):**
+- **Per-IP rate limiting:** max 10 requests/minute per IP to `/api/v1/auth/login` (configurable via `LOGIN_RATE_LIMIT_IP_MAX`). Supports proxies (`X-Forwarded-For` or `getRemoteAddr`). When exceeded → `429 Too Many Requests` with `Retry-After: <seconds>` header before running BCrypt or querying the database.
+- **Temporary per-account/email lockout:** max 5 consecutive failed attempts in a 15-minute window (configurable via `LOGIN_RATE_LIMIT_EMAIL_MAX_ATTEMPTS`). On the 5th failure, the account is locked for 15 minutes (`LOGIN_RATE_LIMIT_LOCKOUT_MINUTES`). Attempts during the lockout get `429 Too Many Requests` with a `Retry-After` header without spending CPU on BCrypt. A successful login resets the failure counter.
+- `LoginRateLimitService` automatically cleans expired entries every 5 minutes (`@Scheduled`).
 
-### Renovación de sesión — `POST /api/v1/auth/refresh` (público)
+### Session renewal — `POST /api/v1/auth/refresh` (public)
 
-Rota el refresh token de forma atómica: invalida el token anterior y emite
-un nuevo par (access token + refresh token). Detección de reúso: si se
-intenta renovar con un token ya revocado → 401. Token expirado → 401.
-Usuario inactivo al momento del refresh → 401.
+Atomically rotates the refresh token: invalidates the previous token and issues
+a new pair (access token + refresh token). Reuse detection: renewing
+with an already-revoked token → 401. Expired token → 401.
+User inactive at refresh time → 401.
 
 ```bash
 curl -X POST http://localhost:8081/api/v1/auth/refresh \
   -H 'Content-Type: application/json' \
-  -d '{"refreshToken":"<token-de-7-dias>"}'
+  -d '{"refreshToken":"<7-day-token>"}'
 # 200 → {"accessToken":"...","refreshToken":"...","tokenType":"Bearer","expiresInSeconds":900}
-# Token revocado/expirado/inválido → 401 {"error":"Refresh token revocado|expirado|inválido"}
+# Revoked/expired/invalid token → 401 {"error":"Refresh token revocado|expirado|inválido"}
 ```
 
-### Cierre de sesión — `POST /api/v1/auth/logout` (público)
+### Logout — `POST /api/v1/auth/logout` (public)
 
-Revoca el refresh token. El access token (15 min) sigue siendo válido hasta
-su expiración natural, pero sin refresh token la sesión no se puede renovar.
+Revokes the refresh token. The access token (15 min) stays valid until
+its natural expiration, but without a refresh token the session cannot be renewed.
 
 ```bash
 curl -X POST http://localhost:8081/api/v1/auth/logout \
   -H 'Content-Type: application/json' \
-  -d '{"refreshToken":"<token-a-revocar>"}'
+  -d '{"refreshToken":"<token-to-revoke>"}'
 # 204 No Content
 ```
 
 ### JWT
 
-- HMAC-SHA256 (`JwtService`, JJWT), **access token 15 min** (configurable
-  con `JWT_EXPIRATION_MINUTES`; default en dev/test `15`).
-- **Refresh token 7 días** (configurable con `JWT_REFRESH_TOKEN_EXPIRATION_DAYS`).
-  Solo el hash SHA-256 se almacena en BD; el token en texto plano vive
-  exclusivamente en el cliente y en tránsito HTTPS.
-- Claims del JWT: `sub` = user_id, `tenant_id`, `email`, `role`.
-- `JwtAuthenticationFilter` (`OncePerRequestFilter`): valida firma y vigencia
-  del JWT distinguiendo tokens válidos, expirados e inválidos/manipulados vía
-  `JwtValidationResult`. Luego **verifica en tiempo real** en BD que el usuario exista en
-  su tenant y esté activo (`user.isActive()`). Si no → `SecurityContextHolder`
-  limpio → 401 instantáneo aunque el JWT sea válido. El rol se sincroniza desde
-  BD en cada request (no desde el claim del token), por lo que un cambio de rol
-  tiene efecto inmediato sin necesidad de revocar el JWT.
-- **Distinción granular de errores en `JwtAuthenticationEntryPoint` (RFC 6750):**
-  Para facilitar la UX del frontend al refrescar sesión automáticamente, las peticiones
-  no autenticadas reciben la cabecera estándar `WWW-Authenticate` y un payload JSON
-  con código de error específico sin romper compatibilidad (`error: "No autorizado"`):
-  - `token_expired`: HTTP 401, `code: "token_expired"`, cabecera `WWW-Authenticate: Bearer error="invalid_token", error_description="The access token expired"`. Indica al cliente que debe invocar `POST /api/v1/auth/refresh`.
-  - `token_invalid`: HTTP 401, `code: "token_invalid"`, cabecera `WWW-Authenticate: Bearer error="invalid_token", error_description="The access token is invalid or tampered"`. Indica token manipulado o corrupto (fuerza cierre de sesión).
-  - `user_inactive`: HTTP 401, `code: "user_inactive"`, cabecera `WWW-Authenticate: Bearer error="invalid_token", error_description="User is inactive or not found"`.
-  - `token_missing`: HTTP 401, `code: "token_missing"`, cabecera `WWW-Authenticate: Bearer error="unauthorized"`.
+- HMAC-SHA256 (`JwtService`, JJWT), **15-min access token** (configurable
+  with `JWT_EXPIRATION_MINUTES`; default in dev/test `15`).
+- **7-day refresh token** (configurable with `JWT_REFRESH_TOKEN_EXPIRATION_DAYS`).
+  Only the SHA-256 hash is stored in DB; the plain-text token lives
+  exclusively on the client and in HTTPS transit.
+- JWT claims: `sub` = user_id, `tenant_id`, `email`, `role`.
+- `JwtAuthenticationFilter` (`OncePerRequestFilter`): validates signature and
+  validity of the JWT, distinguishing valid, expired, and invalid/tampered
+  tokens via `JwtValidationResult`. Then it **verifies in real time** in DB
+  that the user exists in its tenant and is active (`user.isActive()`). If
+  not → clean `SecurityContextHolder` → instant 401 even with a valid JWT.
+  The role is synced from DB on every request (not from the token claim), so a
+  role change takes effect immediately without revoking the JWT.
+- **Granular error distinction in `JwtAuthenticationEntryPoint` (RFC 6750):**
+  To help frontend UX auto-refresh sessions, unauthenticated requests
+  receive the standard `WWW-Authenticate` header and a JSON payload
+  with a specific error code without breaking compatibility (`error: "No autorizado"`):
+  - `token_expired`: HTTP 401, `code: "token_expired"`, header `WWW-Authenticate: Bearer error="invalid_token", error_description="The access token expired"`. Tells the client to call `POST /api/v1/auth/refresh`.
+  - `token_invalid`: HTTP 401, `code: "token_invalid"`, header `WWW-Authenticate: Bearer error="invalid_token", error_description="The access token is invalid or tampered"`. Indicates a manipulated or corrupt token (forces logout).
+  - `user_inactive`: HTTP 401, `code: "user_inactive"`, header `WWW-Authenticate: Bearer error="invalid_token", error_description="User is inactive or not found"`.
+  - `token_missing`: HTTP 401, `code: "token_missing"`, header `WWW-Authenticate: Bearer error="unauthorized"`.
 
-### Reglas de acceso (`SecurityConfig`, stateless, sin sesiones, CSRF off en API)
+### Access rules (`SecurityConfig`, stateless, no sessions, CSRF off in API)
 
-- Públicas: `/actuator/health`, `/actuator/info`, `/api/v1/auth/login`,
+- Public: `/actuator/health`, `/actuator/info`, `/api/v1/auth/login`,
   `/api/v1/auth/refresh`, `/api/v1/auth/logout`.
-- Todo lo demás exige autenticación; `@EnableMethodSecurity` permite
-  `@PreAuthorize("hasRole('PROPIETARIO')")` (rol en mayúsculas = enum en
-  mayúsculas; `UserRole` en minúsculas se mapea con `toUpperCase()`).
-- Errores probados: sin token → 401 `{"error":"No autorizado"}`; rol
-  insuficiente → 403 `{"error":"Acceso denegado","message":"..."}`.
-- Usuario desactivado en BD → 401 inmediato incluso con JWT válido.
+- Everything else requires authentication; `@EnableMethodSecurity` allows
+  `@PreAuthorize("hasRole('PROPIETARIO')")` (uppercase role = uppercase enum;
+  lowercase `UserRole` is mapped with `toUpperCase()`).
+- Tested errors: no token → 401 `{"error":"No autorizado"}`; insufficient
+  role → 403 `{"error":"Acceso denegado","message":"..."}`.
+- User deactivated in DB → instant 401 even with a valid JWT.
 
-### `GET /api/v1/me` (protegida)
+### `GET /api/v1/me` (protected)
 
-Devuelve el perfil del usuario del token (`@AuthenticationPrincipal`):
-sin token → 401; token válido → 200 con sus datos; usuario desactivado → 401.
+Returns the token user's profile (`@AuthenticationPrincipal`):
+no token → 401; valid token → 200 with its data; deactivated user → 401.
 
 ---
 
-## 8. Auditoría
+## 8. Auditing
 
-Tabla `audit_log` (append-only: se escribe y se lee filtrada por tenant;
-nunca update/delete): `tenant_id` (FK `CASCADE`), `user_id` (FK `SET NULL`,
-anulable), `action` (`audit_action`), `entity_name`, `entity_id` (anulable),
-`detail` JSONB (anulable), timestamps. Índices `(tenant_id, created_at)` y
-`(tenant_id, entity_name, entity_id)` + RLS.
+`audit_log` table (append-only: written and read filtered by tenant;
+never update/delete): `tenant_id` (`CASCADE` FK), `user_id` (`SET NULL` FK,
+nullable), `action` (`audit_action`), `entity_name`, `entity_id` (nullable),
+`detail` JSONB (nullable), timestamps. `(tenant_id, created_at)` and
+`(tenant_id, entity_name, entity_id)` indexes + RLS.
 
-Desviaciones de `schema.sql` (documentadas en `V4`): PK UUID en vez de
-`BIGSERIAL` (para heredar `TenantAwareEntity` y su filtro automático) y
-columna `updated_at` (la exige el mapeo base; nunca se actualiza por API; el
-`toString` omite `detail` por si trae datos sensibles).
+Deviations from `schema.sql` (documented in `V4`): UUID PK instead of
+`BIGSERIAL` (to inherit `TenantAwareEntity` and its automatic filter) and
+`updated_at` column (required by the base mapping; never updated via API; the
+`toString` omits `detail` in case it carries sensitive data).
 
 `AuditService.log(tenantId, userId, action, entityName, entityId, detail)`
-(`Map<String,Object>` → JSONB): valida obligatorios, corre en
-`REQUIRES_NEW` para que el rollback del flujo que audita (ej. login fallido)
-no borre la entrada.
+(`Map<String,Object>` → JSONB): validates required fields, runs in
+`REQUIRES_NEW` so the audited flow's rollback (e.g. failed login)
+doesn't erase the entry.
 
-Auditoría de login (FASE1-14): `login_success` (con usuario) y `login_failed`
-cuando el tenant es atribuible (usuario encontrado, o `tenantId` del request
-aunque el email no exista → `userId` null). Decisión: **sin tenant atribuible
-no se registra nada** (inventarlo violaría el aislamiento; `tenant_id` es NOT
-NULL). Detalle solo con el email: nunca contraseñas.
+Login auditing (FASE1-14): `login_success` (with user) and `login_failed`
+when the tenant is attributable (user found, or request `tenantId`
+even if the email doesn't exist → null `userId`). Decision: **with no
+attributable tenant nothing is logged** (inventing one would violate isolation;
+`tenant_id` is NOT NULL). Detail with email only: never passwords.
 
 ---
 
 ## 9. Testing
 
-- Integración contra PostgreSQL real vía `AbstractIntegrationTest`
-  (`@SpringBootTest` + `@Testcontainers`, contenedor `postgres:16` estático
-  compartido, `@DynamicPropertySource`). Nunca H2 ni mocks de BD.
-- Web con MockMvc (`@AutoConfigureMockMvc`); controladores solo-de-test viven
-  en `src/test` (no se despliegan).
-- Exigido por endpoint/repositorio de negocio: caso normal + **cross-tenant**
-  + autorización por rol si aplica. DoD = prueba automatizada, no "probado a
-  mano".
-- Lección registrada: la BD de Testcontainers se comparte entre métodos, así
-  que los datos de prueba que deban ser únicos (emails para login) se generan
-  únicos por método; si no, el resultado depende del orden de ejecución.
+- Integration against a real PostgreSQL via `AbstractIntegrationTest`
+  (`@SpringBootTest` + `@Testcontainers`, shared static `postgres:16`
+  container, `@DynamicPropertySource`). Never H2 nor DB mocks.
+- Web with MockMvc (`@AutoConfigureMockMvc`); test-only controllers live
+  in `src/test` (never deployed).
+- Required per business endpoint/repository: normal case + **cross-tenant**
+  + role authorization if applicable. DoD = automated test, not "tested by
+  hand".
+- Recorded lesson: the Testcontainers DB is shared across methods, so
+  test data that must be unique (login emails) is generated unique per
+  method; otherwise the result depends on execution order.
 
 ---
 
-## 10. Observabilidad y despliegue
+## 10. Observability and deployment
 
-- Actuator: `health` e `info` expuestos (health con `show-details: never`).
-- `Dockerfile` multi-stage (`maven:3.9-eclipse-temurin-25` → running
-  `eclipse-temurin:25-jre`; tags verificados, no asumidos) + `.dockerignore`;
-  perfil `prod` por defecto vía `SPRING_PROFILES_ACTIVE`, puerto `$PORT`.
-- Producción en Render (app + Postgres 16 administrado); CI en GitHub Actions
-  (`clean verify` en push/PR a `dev` y `main`; Testcontainers levanta su BD).
+- Actuator: `health` and `info` exposed (health with `show-details: never`).
+- Multi-stage `Dockerfile` (`maven:3.9-eclipse-temurin-25` → running
+  `eclipse-temurin:25-jre`; tags verified, not assumed) + `.dockerignore`;
+  `prod` profile by default via `SPRING_PROFILES_ACTIVE`, `$PORT` port.
+- Production on Render (app + managed Postgres 16); CI on GitHub Actions
+  (`clean verify` on push/PR to `dev` and `main`; Testcontainers spins up its DB).
 
 ---
 
-## 11. Registro de decisiones y desviaciones
+## 11. Decision and deviation log
 
-| # | Decisión / desviación | Por qué |
+| # | Decision / deviation | Why |
 |---|---|---|
-| FASE0-01 | Sin Lombok, código explícito | Aprender el framework sin magia oculta |
-| FASE0-03 | Paquetes por módulo de negocio | Familiar (Angular modular); cada módulo con sus subcapas |
-| FASE0-05 | `ddl-auto: validate` siempre | El esquema solo cambia vía Flyway versionado |
-| FASE0-06 | Testcontainers 2.x: artefactos `testcontainers-*` | El BOM 2.x los renombró (verificado en el POM local, no asumido) |
-| FASE0 | `clean` tras borrar/renombrar recursos | `target/` conserva archivos obsoletos que siguen activos en el classpath |
-| FASE0 | PG Docker en `5434` | Nativos `postgresql-x64-17/18` ocupan 5432 y 5433-IPv4 en dev |
-| FASE1-04 | `TenantAwareEntity` + `@TenantId` | El olvido del filtro se vuelve error de diseño, no de memoria |
-| FASE1-05 | Test de integración en vez de unitario | AGENTS.md §7 manda: solo la BD real prueba que el hash se guarda |
-| FASE1-13 | `audit_log` con PK UUID + `updated_at` | Heredar el filtro automático pesa más que calcar `schema.sql` |
-| FASE1-13 | `AuditService.log` en `REQUIRES_NEW` | Sin esto, el rollback del login fallido borraría su auditoría |
-| FASE1-14 | Fallos sin tenant no se auditan | Inventar tenant viola aislamiento; `tenant_id` es NOT NULL |
-| FASE2-02 | Baja lógica con `is_active` en `Patient` | Preservar historial clínico sin borrado físico destructivo |
-| FASE2-03 | Búsqueda insensible a tildes/mayúsculas | Extensión `unaccent` y función indexable `immutable_unaccent` con trigramas |
-| FASE2-07 | Entradas de odontograma append-only | Cada entrada es un momento clínico; varias entradas coexisten en la misma pieza |
-| FASE2-09 | Compensación en subida de archivos S3 | Si el guardado en BD falla tras subir a S3, se elimina el objeto para evitar huérfanos |
-| FASE2-10 | URLs prefirmadas temporales con S3Presigner | Descarga directa desde storage/CDN sin saturar ancho de banda del backend (15 min) |
-| FASE3-01 | Recursos físicos y profesionales (`Professional`, `Room`) | Desacoplados del usuario de login; `Room` opcional en la cita |
-| FASE3-02 | Prevención de solapamiento vía constraint PostgreSQL `EXCLUDE USING gist` | Garantía a nivel de motor contra carreras concurrentes usando `tstzrange`; citas canceladas/no_show excluidas (`WHERE status NOT IN ('cancelada', 'no_show')`) |
-| FASE3-03 | Consulta de agenda con filtros opcionales de rango y profesional | Ordenamiento cronológico ascendente y aislamiento cross-tenant estricto |
-| FASE3-04 | Máquina de estados en servicio con transiciones explícitas | Validaciones en dominio (`programada` -> `confirmada` -> `atendida` / `no_show` / `cancelada`) con HTTP 400 descriptivo |
-| FASE3-05 | Agregación de valor de agenda (`summarizeValue`) | Excluye citas canceladas y no_show, coherente con el espacio liberado |
-| FASE3-06 | `WaitlistEntry` para demanda insatisfecha | Ventana de disponibilidad temporal (`desired_from`, `desired_to`) y procedimiento de interés |
-| FASE3-07 | Recuperación de espacio al cancelar cita | Sugerencia inmediata de candidatos compatibles en la respuesta de cancelación y vía endpoint dedicado, con orden FIFO y exclusión del paciente cancelador |
-| FASE4-01 | Planes de tratamiento e ítems (`TreatmentPlan`, `TreatmentPlanItem`) | Extienden `TenantAwareEntity`, trigger de consistencia de tenant `check_treatment_plan_tenant_consistency` (valida que paciente y profesional pertenezcan al mismo tenant), check de pieza dental FDI (11..48) y recálculo automático de `total_price_cop` |
-| FASE4-02 | Máquina de estados de planes (`TreatmentPlanService`) | Estados: `borrador` -> `presentado` -> `aceptado` / `rechazado` -> `en_ejecucion` -> `completado` / `cancelado`. Registro automático de `presented_at` y `last_contact_at` para seguimiento CRM/oportunidades |
-| FASE4-03 | Facturación y pagos simples (`Invoice`, `InvoiceItem`, `Payment`) | Relación `tenant_id` + `patient_id` obligatoria, relación opcional con `treatment_plan_id`. Secuencia y numeración correlativa atómica (`FAC-000001`) con `V16` y trigger `check_invoice_tenant_consistency` |
-| FASE4-04 | Transición de estado en factura y control de sobrepagos | Al registrar abonos (`POST /invoices/{id}/payments`), la factura transiciona automáticamente de `pendiente` -> `parcial` -> `pagada`. Sobrepagos rechazados con HTTP 400 (`IllegalArgumentException`) |
-| FASE4-05 | Checkpoint Plan Esencial validado vía E2E | Validación completa del flujo comercial y clínico vía MockMvc (`EssentialPlanFlowIntegrationTest`, 13 pasos) sin intervención directa en base de datos |
+| FASE0-01 | No Lombok, explicit code | Learn the framework without hidden magic |
+| FASE0-03 | Packages by business module | Familiar (modular Angular); each module with its sub-layers |
+| FASE0-05 | `ddl-auto: validate` always | Schema only changes via versioned Flyway |
+| FASE0-06 | Testcontainers 2.x: `testcontainers-*` artifacts | The 2.x BOM renamed them (verified in the local POM, not assumed) |
+| FASE0 | `clean` after deleting/renaming resources | `target/` keeps stale files that stay active on the classpath |
+| FASE0 | Docker PG on `5434` | Native `postgresql-x64-17/18` take 5432 and 5433-IPv4 in dev |
+| FASE1-04 | `TenantAwareEntity` + `@TenantId` | Forgetting the filter becomes a design error, not a memory one |
+| FASE1-05 | Integration test instead of unit test | AGENTS.md §7 mandates: only the real DB proves the hash is stored |
+| FASE1-13 | `audit_log` with UUID PK + `updated_at` | Inheriting the automatic filter outweighs copying `schema.sql` exactly |
+| FASE1-13 | `AuditService.log` in `REQUIRES_NEW` | Without it, the failed-login rollback would erase its audit entry |
+| FASE1-14 | Failures without tenant are not audited | Inventing a tenant violates isolation; `tenant_id` is NOT NULL |
+| FASE2-02 | Soft delete with `is_active` on `Patient` | Preserve clinical history without destructive physical deletion |
+| FASE2-03 | Search insensitive to accents/case | `unaccent` extension and indexable `immutable_unaccent` function with trigrams |
+| FASE2-07 | Append-only odontogram entries | Each entry is a clinical moment; several entries coexist on the same tooth |
+| FASE2-09 | Compensation on S3 file upload | If the DB save fails after uploading to S3, the object is deleted to avoid orphans |
+| FASE2-10 | Temporary presigned URLs with S3Presigner | Direct download from storage/CDN without saturating backend bandwidth (15 min) |
+| FASE3-01 | Physical resources and professionals (`Professional`, `Room`) | Decoupled from the login user; `Room` optional on the appointment |
+| FASE3-02 | Overlap prevention via PostgreSQL `EXCLUDE USING gist` constraint | Engine-level guarantee against concurrent races using `tstzrange`; cancelled/no_show appointments excluded (`WHERE status NOT IN ('cancelada', 'no_show')`) |
+| FASE3-03 | Agenda query with optional range and professional filters | Ascending chronological order and strict cross-tenant isolation |
+| FASE3-04 | Service-layer state machine with explicit transitions | Domain validations (`programada` -> `confirmada` -> `atendida` / `no_show` / `cancelada`) with descriptive HTTP 400 |
+| FASE3-05 | Agenda value aggregation (`summarizeValue`) | Excludes cancelled and no_show appointments, consistent with freed-up space |
+| FASE3-06 | `WaitlistEntry` for unsatisfied demand | Temporal availability window (`desired_from`, `desired_to`) and procedure of interest |
+| FASE3-07 | Slot recovery when cancelling an appointment | Immediate suggestion of compatible candidates in the cancellation response and via dedicated endpoint, FIFO order excluding the cancelling patient |
+| FASE4-01 | Treatment plans and items (`TreatmentPlan`, `TreatmentPlanItem`) | Extend `TenantAwareEntity`, tenant-consistency trigger `check_treatment_plan_tenant_consistency` (validates patient and professional belong to the same tenant), FDI tooth check (11..48) and automatic `total_price_cop` recalculation |
+| FASE4-02 | Plan state machine (`TreatmentPlanService`) | States: `borrador` -> `presentado` -> `aceptado` / `rechazado` -> `en_ejecucion` -> `completado` / `cancelado`. Automatic `presented_at` and `last_contact_at` timestamps for CRM/opportunity follow-up |
+| FASE4-03 | Simple billing and payments (`Invoice`, `InvoiceItem`, `Payment`) | Mandatory `tenant_id` + `patient_id` relation, optional `treatment_plan_id` relation. Atomic correlative invoice numbering (`FAC-000001`) with `V16` and `check_invoice_tenant_consistency` trigger |
+| FASE4-04 | Invoice state transition and overpayment control | When registering payments (`POST /invoices/{id}/payments`), the invoice automatically transitions `pendiente` -> `parcial` -> `pagada`. Overpayments rejected with HTTP 400 (`IllegalArgumentException`) |
+| FASE4-05 | Essential-plan checkpoint validated via E2E | Full 13-step business and clinical flow (`EssentialPlanFlowIntegrationTest`, 13 steps) via MockMvc without direct database manipulation + alignment with Essential-plan limits |
 
 ---
 
-## 12. Historial por fase
+## 12. Per-phase history
 
-### Fase 0 — Fundamentos (completada)
+### Phase 0 — Foundations (completed)
 
-Proyecto Spring Boot corriendo, perfiles `dev/test/prod` con secretos por
-entorno, estructura por módulos documentada, Postgres reproducible
-(`docker compose up -d`), Flyway desde V1 con `validate`, Testcontainers con
-clase base reutilizable, imagen Docker multi-stage verificada (`build` + `run`
-+ `/actuator/health`), despliegue manual en Render y CI que bloquea PRs en
-rojo. DoD: `GET /actuator/health` → `UP` en local, contenedor y nube.
+Spring Boot project running, `dev/test/prod` profiles with env-based secrets,
+documented module structure, reproducible Postgres
+(`docker compose up -d`), Flyway from V1 with `validate`, Testcontainers with
+reusable base class, verified multi-stage Docker image (`build` + `run`
++ `/actuator/health`), manual Render deploy and CI blocking red PRs. DoD:
+`GET /actuator/health` → `UP` locally, in container, and in the cloud.
 
-### Fase 1 — Identidad, autenticación y multi-tenancy (completada, FASE1-01–14)
+### Phase 1 — Identity, authentication, and multi-tenancy (completed, FASE1-01–14)
 
-`Tenant` + `User`/`UserRole` (email único por tenant) + `TenantAwareEntity` y
-filtro automático `@TenantId`/`TenantIdentifierResolver` + `TenantContext`
-por request + `UserService` con BCrypt + login JWT (`/api/v1/auth/login`,
-`/api/v1/me`) + autorización `@PreAuthorize` + auditoría `audit_log`.
-Checklist de salida verificado: FASE1-10 5/5 y FASE1-12 5/5 en `clean verify`
-(lo que corre el CI), base lista para Fase 2.
+`Tenant` + `User`/`UserRole` (per-tenant unique email) + `TenantAwareEntity` and
+automatic `@TenantId`/`TenantIdentifierResolver` filter + per-request
+`TenantContext` + BCrypt `UserService` + JWT login (`/api/v1/auth/login`,
+`/api/v1/me`) + `@PreAuthorize` authorization + `audit_log` auditing.
+Exit checklist verified: FASE1-10 5/5 and FASE1-12 5/5 in `clean verify`
+(what CI runs), base ready for Phase 2.
 
-### Mejoras de seguridad de sesión (pre-Fase 3)
+### Session security improvements (pre-Phase 3)
 
-Implementadas antes de iniciar Fase 3 (agenda y citas):
+Implemented before starting Phase 3 (agenda and appointments):
 
-- **Refresh tokens con rotación atómica** (`V10__create_refresh_tokens.sql`,
-  `RefreshToken`, `RefreshTokenService`): access token de 15 min + refresh
-  token de 7 días con hash SHA-256 en BD. `POST /api/v1/auth/refresh` rota
-  el token y emite nuevo par. `POST /api/v1/auth/logout` revoca el token.
-  Detección de reúso de tokens revocados → 401.
-- **Validación en tiempo real del usuario** (`JwtAuthenticationFilter`):
-  en cada request autenticado se consulta la BD para verificar `isActive()` y
-  el tenant. Desactivar un usuario tiene efecto inmediato sin esperar a que
-  expire el JWT. El rol también se lee de BD en cada request (sincronización
-  en tiempo real).
-- **Rate limiting y protección contra fuerza bruta en login (`LoginRateLimitService`):**
-  defensa en profundidad sin dependencias pesadas: (1) límite de 10 peticiones/minuto por IP a `/api/v1/auth/login` con HTTP 429 y `Retry-After`; (2) bloqueo temporal de 15 minutos al acumular 5 fallos consecutivos por email, rechazando solicitudes con HTTP 429 sin ejecutar el costoso cálculo de BCrypt; (3) reseteo de contador tras login exitoso; (4) limpieza periódica de registros vencidos cada 5 minutos.
-- **Pruebas en verde tras mejoras de auth:** `LoginRateLimitIntegrationTest` (4/4), `AuthRefreshIntegrationTest` (5/5) y `JwtSecurityIntegrationTest` (7/7).
+- **Atomic-rotation refresh tokens** (`V10__create_refresh_tokens.sql`,
+  `RefreshToken`, `RefreshTokenService`): 15-min access token + 7-day refresh
+  token with SHA-256 hash in DB. `POST /api/v1/auth/refresh` rotates
+  the token and issues a new pair. `POST /api/v1/auth/logout` revokes the token.
+  Revoked-token reuse detection → 401.
+- **Real-time user validation** (`JwtAuthenticationFilter`):
+  on every authenticated request the DB is queried to verify `isActive()` and
+  the tenant. Deactivating a user takes effect immediately without waiting for
+  the JWT to expire. The role is also read from DB on every request (real-time
+  sync).
+- **Login rate limiting and brute-force protection (`LoginRateLimitService`):**
+  defense in depth without heavy dependencies: (1) 10 requests/minute per IP
+  limit on `/api/v1/auth/login` with HTTP 429 and `Retry-After`; (2) 15-minute
+  temporary lockout after 5 consecutive failures per email, rejecting requests
+  with HTTP 429 without running the expensive BCrypt computation; (3) counter
+  reset after successful login; (4) periodic cleanup of expired records every
+  5 minutes.
+- **Green tests after auth improvements:** `LoginRateLimitIntegrationTest` (4/4), `AuthRefreshIntegrationTest` (5/5) and `JwtSecurityIntegrationTest` (7/7).
 
-### Fase 2 — Pacientes e historia clínica base (completada, FASE2-01–10)
+### Phase 2 — Patients and base clinical history (completed, FASE2-01–10)
 
-Módulo `patient`:
-- `Patient` (FASE2-01/02/03): CRUD, baja lógica con `is_active`, paginación y búsqueda insensible a acentos/mayúsculas con PostgreSQL `pg_trgm` y `immutable_unaccent()`.
-- Manejo de excepciones centralizado con `GlobalExceptionHandler` y `ApiErrorResponse`.
-- `ClinicalRecord` (FASE2-05/06): modelo de historia clínica y endpoints (`POST /{id}/clinical-records`, `GET /{id}/clinical-records`).
-- `OdontogramEntry` (FASE2-07/08): modelo de odontograma no destructivo, validación de notación FDI (11 a 48), 4 tipos de entrada y endpoints (`POST /{id}/odontogram`, `GET /{id}/odontogram` agrupado por pieza y tipo).
-- Almacenamiento S3 y archivos (FASE2-09/10): `PatientFile` con Flyway `V9`, cliente S3 SDK v2 (`software.amazon.awssdk:s3`), subida multipart `POST /{id}/files` con compensación automática de borrado en S3 si falla la base de datos, listado `GET /{id}/files` y generación de URLs prefirmadas temporales (15 min) `GET /{id}/files/{fileId}/download-url` con `S3Presigner`.
-- **Control de acceso por rol (`@PreAuthorize`) en `PatientController`:**
-  - Historia clínica (`POST /{id}/clinical-records`): restringida a personal facultativo (`PROPIETARIO`, `ODONTOLOGO`, `ESPECIALISTA_EXTERNO`).
-  - Historia clínica (`GET /{id}/clinical-records`): confidencial para personal asistencial (`PROPIETARIO`, `ODONTOLOGO`, `ESPECIALISTA_EXTERNO`, `AUXILIAR`). Recepción bloqueada con 403.
-  - Odontograma (`POST /{id}/odontogram`): reservado a `PROPIETARIO`, `ODONTOLOGO`, `ESPECIALISTA_EXTERNO`.
-  - Baja lógica (`DELETE /{id}`): acción destructiva reservada exclusivamente a `PROPIETARIO`.
-  - Gestión demográfica (`POST /patients`, `PATCH /patients/{id}`): `PROPIETARIO`, `RECEPCION`, `ODONTOLOGO`, `AUXILIAR`.
-  - 11 pruebas de autorización en `PatientRoleAuthorizationIntegrationTest` (11/11 en verde).
-- Total de pruebas del proyecto: **124/124 pruebas en verde** en `./mvnw.cmd clean verify`.
+`patient` module:
+- `Patient` (FASE2-01/02/03): CRUD, soft delete with `is_active`, pagination and accent/case-insensitive search with PostgreSQL `pg_trgm` and `immutable_unaccent()`.
+- Centralized exception handling with `GlobalExceptionHandler` and `ApiErrorResponse`.
+- `ClinicalRecord` (FASE2-05/06): clinical-history model and endpoints (`POST /{id}/clinical-records`, `GET /{id}/clinical-records`).
+- `OdontogramEntry` (FASE2-07/08): non-destructive odontogram model, FDI notation validation (11–48), 4 entry types and endpoints (`POST /{id}/odontogram`, `GET /{id}/odontogram` grouped by tooth and type).
+- S3 storage and files (FASE2-09/10): `PatientFile` with Flyway `V9`, S3 SDK v2 client (`software.amazon.awssdk:s3`), multipart upload `POST /{id}/files` with automatic S3-delete compensation if the database fails, listing `GET /{id}/files` and temporary presigned-URL generation (15 min) `GET /{id}/files/{fileId}/download-url` with `S3Presigner`.
+- **Role access control (`@PreAuthorize`) in `PatientController`:**
+  - Clinical history (`POST /{id}/clinical-records`): restricted to practitioners (`PROPIETARIO`, `ODONTOLOGO`, `ESPECIALISTA_EXTERNO`).
+  - Clinical history (`GET /{id}/clinical-records`): confidential for care staff (`PROPIETARIO`, `ODONTOLOGO`, `ESPECIALISTA_EXTERNO`, `AUXILIAR`). Reception blocked with 403.
+  - Odontogram (`POST /{id}/odontogram`): reserved to `PROPIETARIO`, `ODONTOLOGO`, `ESPECIALISTA_EXTERNO`.
+  - Soft delete (`DELETE /{id}`): destructive action reserved exclusively to `PROPIETARIO`.
+  - Demographic management (`POST /patients`, `PATCH /patients/{id}`): `PROPIETARIO`, `RECEPCION`, `ODONTOLOGO`, `AUXILIAR`.
+  - 11 authorization tests in `PatientRoleAuthorizationIntegrationTest` (11/11 green).
+- Total project tests: **124/124 green** in `./mvnw.cmd clean verify`.
 
-### Fase 3 — Agenda y citas (completada, FASE3-01–07)
+### Phase 3 — Agenda and appointments (completed, FASE3-01–07)
 
-Módulo `appointment`:
-- `Professional` y `Room` (FASE3-01): catálogo de recursos profesionales y consultorios/sillones por tenant con validación de existencia y estado activo. Migración Flyway `V11__create_professionals_and_rooms.sql`.
-- `Appointment` y prevención de solapamiento (FASE3-02): modelo de citas con migración `V12__create_appointments.sql`. Restricción `EXCLUDE USING gist` en PostgreSQL sobre `(tenant_id WITH =, professional_id WITH =, tstzrange(starts_at, ends_at) WITH &&)` para evitar doble-agendamiento físico a nivel de motor. Citas canceladas y no_show quedan excluidas del constraint (`WHERE status NOT IN ('cancelada', 'no_show')`), liberando el espacio automáticamente. Manejo de error en `GlobalExceptionHandler` traduciendo a HTTP 409 Conflict.
-- Endpoints de consulta de agenda (FASE3-03): `GET /api/v1/appointments` con filtros opcionales por rango (`from`, `to`) y por profesional (`professionalId`), ordenados por `starts_at ASC`. Aislamiento cross-tenant verificado.
-- Máquina de estados y transiciones válidas (FASE3-04): `PATCH /api/v1/appointments/{id}/status` soportando ciclo `programada` → `confirmada` → `atendida` / `no_show` / `cancelada`. Transiciones ilegales rechazadas con HTTP 400.
-- Valor económico de la cita (FASE3-05): campo `estimated_value_cop` y endpoint de agregación `GET /api/v1/appointments/summary-value` que suma y cuenta citas del rango excluyendo estados terminales liberados (`cancelada`, `no_show`).
-- Lista de espera (FASE3-06): modelo `WaitlistEntry` con migración `V13__create_waitlist_entries.sql` y endpoint `POST /api/v1/waitlist` para registrar demanda insatisfecha con ventana de disponibilidad y procedimiento deseado.
-- Recuperación de espacio al cancelar una cita (FASE3-07):
-  - Al transicionar una cita a `cancelada` vía `PATCH /api/v1/appointments/{id}/status`, el backend calcula automáticamente los candidatos compatibles de la lista de espera y los anexa en `AppointmentResponse.waitlistCandidates`.
-  - Endpoint dedicado de consulta: `GET /api/v1/appointments/{id}/waitlist-candidates`.
-  - Lógica de compatibilidad: mismo tenant, estado activo (`WaitlistStatus.activa`), procedimiento compatible (mismo `procedureId` o comodín `null`), ventana horaria solapada con el intervalo liberado, exclusión del paciente cancelador y orden FIFO por fecha de registro.
-  - Verificado con `SlotRecoveryIntegrationTest` (7/7 en verde).
-- Total de pruebas del proyecto: **170/170 pruebas en verde** en `./mvnw.cmd clean verify`.
+`appointment` module:
+- `Professional` and `Room` (FASE3-01): per-tenant professional-resources and office/chair catalog with existence and active-status validation. Flyway migration `V11__create_professionals_and_rooms.sql`.
+- `Appointment` and overlap prevention (FASE3-02): appointment model with `V12__create_appointments.sql` migration. PostgreSQL `EXCLUDE USING gist` constraint on `(tenant_id WITH =, professional_id WITH =, tstzrange(starts_at, ends_at) WITH &&)` to prevent physical double-booking at engine level. Cancelled and no_show appointments are excluded from the constraint (`WHERE status NOT IN ('cancelada', 'no_show')`), freeing the slot automatically. Error handling in `GlobalExceptionHandler` translating to HTTP 409 Conflict.
+- Agenda query endpoints (FASE3-03): `GET /api/v1/appointments` with optional range (`from`, `to`) and professional (`professionalId`) filters, ordered by `starts_at ASC`. Cross-tenant isolation verified.
+- State machine and valid transitions (FASE3-04): `PATCH /api/v1/appointments/{id}/status` supporting the `programada` → `confirmada` → `atendida` / `no_show` / `cancelada` cycle. Illegal transitions rejected with HTTP 400.
+- Appointment economic value (FASE3-05): `estimated_value_cop` field and `GET /api/v1/appointments/summary-value` aggregation endpoint summing and counting in-range appointments excluding freed terminal states (`cancelada`, `no_show`).
+- Waitlist (FASE3-06): `WaitlistEntry` model with `V13__create_waitlist_entries.sql` migration and `POST /api/v1/waitlist` endpoint to register unsatisfied demand with availability window and desired procedure.
+- Slot recovery on appointment cancellation (FASE3-07):
+  - When transitioning an appointment to `cancelada` via `PATCH /api/v1/appointments/{id}/status`, the backend automatically computes compatible waitlist candidates and appends them in `AppointmentResponse.waitlistCandidates`.
+  - Dedicated query endpoint: `GET /api/v1/appointments/{id}/waitlist-candidates`.
+  - Compatibility logic: same tenant, active status (`WaitlistStatus.activa`), compatible procedure (same `procedureId` or `null` wildcard), time window overlapping the freed slot, exclusion of the cancelling patient, and FIFO order by registration date.
+  - Verified with `SlotRecoveryIntegrationTest` (7/7 green).
+- Total project tests: **170/170 green** in `./mvnw.cmd clean verify`.
 
-### Fase 4 — Planes de tratamiento y facturación básica (completada, FASE4-01–05)
+### Phase 4 — Treatment plans and basic invoicing (completed, FASE4-01–05)
 
-Módulos `treatmentplan` y `billing`:
-- **Modelado de planes e ítems de tratamiento (FASE4-01):**
-  - Entidades `TreatmentPlan` y `TreatmentPlanItem` mapeadas con `TenantAwareEntity`.
-  - Migración Flyway `V14__create_treatment_plans.sql` con check FDI para piezas dentales (`tooth_number BETWEEN 11 AND 48`), trigger de aislamiento de tenant (`check_treatment_plan_tenant_consistency`) y recálculo automático de `total_price_cop`.
-  - `TreatmentPlanRepositoryIntegrationTest` (7/7 en verde).
-- **Endpoints y máquina de estados de planes (FASE4-02):**
-  - Endpoints REST bajo `/api/v1/treatment-plans` con `@Tag("Planes de Tratamiento")` y documentación Swagger/OpenAPI.
-  - Creación con ítems (`POST /api/v1/treatment-plans`), actualización de datos diagnósticos/profesional (`PUT /{id}`), consulta (`GET /{id}`) y listado paginado con filtros (`GET /api/v1/treatment-plans?patientId=...&status=...`).
-  - Gestión del ciclo de vida (`PATCH /{id}/status`): estados `borrador` -> `presentado` -> `aceptado` / `rechazado` -> `en_ejecucion` -> `completado` / `cancelado`. Registro automático de marcas temporales `presented_at` y `last_contact_at` para soporte del motor de oportunidades y CRM.
-  - `TreatmentPlanIntegrationTest` (10/10 en verde).
-- **Modelado de facturación y pagos (FASE4-03):**
-  - Entidades `Invoice`, `InvoiceItem` y `Payment` con migración Flyway `V15__create_invoices_and_payments.sql`.
-  - Trigger `check_invoice_tenant_consistency` garantizando que el paciente y el plan de tratamiento pertenezcan estrictamente al mismo tenant.
-  - Migración Flyway `V16__create_invoice_number_seq.sql` para generación atómica y correlativa del número de factura (`FAC-000001`) por tenant.
-  - `BillingModelIntegrationTest` (4/4 en verde).
-- **Endpoints de facturación y registro de pagos (FASE4-04):**
-  - Endpoints REST bajo `/api/v1/invoices` con `@Tag("Facturación")`.
-  - Creación de facturas manuales o a partir de un plan de tratamiento aprobado (`POST /api/v1/invoices`), consulta por id (`GET /{id}`) y listado por paciente/estado (`GET /api/v1/invoices`).
-  - Registro de cobros y pagos (`POST /api/v1/invoices/{id}/payments`) con soporte de medios de pago (`efectivo`, `tarjeta`, `transferencia`, `otro`).
-  - Transición automática reactiva de estado: `pendiente` -> `parcial` -> `pagada` cuando los abonos acumulados saldan el total de la factura.
-  - Control riguroso de sobrepagos: rechaza pagos que excedan el saldo pendiente con HTTP 400 (`IllegalArgumentException`).
-  - `InvoiceIntegrationTest` (9/9 en verde).
-- **Checkpoint del plan Esencial y Demo E2E (FASE4-05):**
-  - Flujo de negocio de 13 pasos cubierto de punta a punta en `EssentialPlanFlowIntegrationTest`: autenticación de Propietario y Recepcionista → alta de paciente → agendamiento de cita → consulta clínica → registro de hallazgo en odontograma → atención de cita → creación de presupuesto con descuentos → presentación y aceptación del plan → facturación → pagos parciales hasta liquidación completa → cierre de tratamiento.
-  - 100% ejecutado a través de la API REST sin manipulación directa de base de datos.
-  - Revisión y alineación con los límites del plan Esencial (`max_patients`, `max_users`, `max_sedes`).
-- Total de pruebas del proyecto: **201/201 pruebas en verde** en `./mvnw.cmd clean verify`.
+`treatmentplan` and `billing` modules:
+- **Treatment plan and item modeling (FASE4-01):**
+  - `TreatmentPlan` and `TreatmentPlanItem` entities mapped with `TenantAwareEntity`.
+  - Flyway migration `V14__create_treatment_plans.sql` with FDI check for teeth (`tooth_number BETWEEN 11 AND 48`), tenant-isolation trigger (`check_treatment_plan_tenant_consistency`) and automatic `total_price_cop` recalculation.
+  - `TreatmentPlanRepositoryIntegrationTest` (7/7 green).
+- **Plan endpoints and state machine (FASE4-02):**
+  - REST endpoints under `/api/v1/treatment-plans` with `@Tag("Planes de Tratamiento")` and Swagger/OpenAPI docs.
+  - Creation with items (`POST /api/v1/treatment-plans`), diagnostic/professional data update (`PUT /{id}`), fetch (`GET /{id}`) and paginated listing with filters (`GET /api/v1/treatment-plans?patientId=...&status=...`).
+  - Lifecycle management (`PATCH /{id}/status`): states `borrador` -> `presentado` -> `aceptado` / `rechazado` -> `en_ejecucion` -> `completado` / `cancelado`. Automatic `presented_at` and `last_contact_at` timestamps supporting the opportunity engine and CRM.
+  - `TreatmentPlanIntegrationTest` (10/10 green).
+- **Invoicing and payment modeling (FASE4-03):**
+  - `Invoice`, `InvoiceItem` and `Payment` entities with Flyway migration `V15__create_invoices_and_payments.sql`.
+  - `check_invoice_tenant_consistency` trigger guaranteeing patient and treatment plan strictly belong to the same tenant.
+  - Flyway migration `V16__create_invoice_number_seq.sql` for atomic correlative invoice numbering (`FAC-000001`) per tenant.
+  - `BillingModelIntegrationTest` (4/4 green).
+- **Invoicing endpoints and payment registration (FASE4-04):**
+  - REST endpoints under `/api/v1/invoices` with `@Tag("Facturación")`.
+  - Manual invoice creation or from an approved treatment plan (`POST /api/v1/invoices`), fetch by id (`GET /{id}`) and listing by patient/status (`GET /api/v1/invoices`).
+  - Charge and payment registration (`POST /api/v1/invoices/{id}/payments`) with payment-method support (`efectivo`, `tarjeta`, `transferencia`, `otro`).
+  - Automatic reactive state transition: `pendiente` -> `parcial` -> `pagada` when accumulated payments settle the invoice total.
+  - Strict overpayment control: rejects payments exceeding the outstanding balance with HTTP 400 (`IllegalArgumentException`).
+  - `InvoiceIntegrationTest` (9/9 green).
+- **Essential-plan checkpoint and E2E demo (FASE4-05):**
+  - 13-step business flow covered end to end in `EssentialPlanFlowIntegrationTest`: Owner and Receptionist authentication → patient intake → appointment booking → clinical consult → odontogram finding → appointment completion → discounted quote creation → plan presentation and acceptance → invoicing → partial payments to full settlement → treatment closure.
+  - 100% executed through the REST API with no direct database manipulation.
+  - Review and alignment with Essential-plan limits (`max_patients`, `max_users`, `max_sedes`).
+- Total project tests: **201/201 green** in `./mvnw.cmd clean verify`.
 
-### Fase 5 — CRM de leads (completada, FASE5-01–04)
+### Phase 5 — Lead CRM (completed, FASE5-01–04)
 
-Módulo `crm`:
-- **Modelado de `Lead` y su pipeline comercial (FASE5-01):**
-  - Entidad `Lead`: contacto comercial con nombre, teléfono, email (`citext`), canal de marketing (`source`), campaña publicitaria (`campaign`), procedimiento de interés (`procedure_of_interest`), valor estimado (`estimated_value_cop`), asignación de responsable (`assigned_to`) y paciente convertido (`converted_patient_id`).
-  - Pipeline de 9 etapas modelado con enum PostgreSQL nativo `lead_status`: `nuevo`, `contactado`, `calificado`, `cita_propuesta`, `cita_agendada`, `cita_asistida`, `tratamiento_propuesto`, `tratamiento_aceptado`, `perdido`.
-  - Entidad `LeadActivity`: historial cronológico de interacciones de contacto (`llamada`, `whatsapp`, `email`, `nota`) con usuario autor y notas explicativas.
-  - Migración Flyway `V17__create_leads.sql` con Row Level Security activado (`tenant_isolation`), trigger de consistencia multi-tenant (`check_lead_tenant_consistency` y `check_lead_activity_tenant_consistency`) e índice analítico parcial `idx_leads_unresponded` (`WHERE status = 'nuevo'`) para alimentar el motor de oportunidades (Fase 9).
-  - `LeadRepositoryIntegrationTest` (5/5 en verde).
-- **Endpoints CRUD y cambio de estado de leads (FASE5-02):**
-  - Endpoints REST bajo `/api/v1/leads` con documentación OpenAPI (`@Tag("CRM Leads")`).
-  - Creación manual (`POST /api/v1/leads`), consulta por id (`GET /{id}`) y listado paginado con filtros dinámicos (`GET /api/v1/leads?status=...&assignedToId=...&source=...`) mediante Spring Data JPA `Specification<Lead>`.
-  - Transición flexible del pipeline comercial (`PATCH /{id}/status`): a diferencia de citas y tratamientos clínicos, el embudo de ventas permite libremente avances y retrocesos conforme al comportamiento real del prospecto, registrando automáticamente actividades de tipo `nota` cuando se suministra justificación.
-  - Registro de actividades (`POST /{id}/activities`) con actualización reactiva del timestamp `last_contact_at` en el lead ante interacciones directas, y consulta del historial cronológico descendente (`GET /{id}/activities`).
-- **Conversión de lead a paciente/cita (FASE5-03):**
-  - Endpoint de conversión: `POST /api/v1/leads/{id}/convert`.
-  - Transforma un prospecto en paciente activo (`Patient`) de la clínica con inferencia inteligente de nombres (`fullName` desglosado automáticamente en `firstName` y `lastName` si no se especifican en el body) y herencia de datos de contacto.
-  - Programación opcional de primera cita médica (`Appointment`) en la misma transacción atómica bajo `@Transactional`. Si se incluye cita, el estado del prospecto avanza automáticamente a `cita_agendada`; sin cita avanza a `calificado`.
-  - Idempotencia razonable: si el lead ya cuenta con `converted_patient_id`, llamadas posteriores retornan el paciente existente con `alreadyConverted = true` (HTTP 200 OK) sin duplicar filas en la tabla `patients`.
-  - Registro automático de actividad de trazabilidad enlazando al colaborador y a la cita agendada.
-- **Métricas de conversión y velocidad de atención (FASE5-04):**
-  - Servicio analítico `LeadMetricsService` desacoplado del flujo operativo (SRP).
-  - `GET /api/v1/leads/metrics/conversion`: calcula el volumen total de prospectos, convertidos a pacientes y porcentaje de conversión global, desglosado por canal (`bySource`) y por campaña (`byCampaign`) para un rango opcional de fechas (`from`, `to`).
-  - `GET /api/v1/leads/metrics/response-time`: mide la velocidad de atención desde la creación del prospecto hasta su primera interacción (`MIN(la.created_at)`), reportando leads atendidos, sin respuesta, tasa de atención y promedios en minutos y horas.
-  - Verificado con `LeadIntegrationTest` (19/19 en verde) y `OpenApiDocsIntegrationTest` (1/1 en verde).
-- Total de pruebas del proyecto: **225/225 pruebas en verde** en `./mvnw.cmd clean verify`.
+`crm` module:
+- **`Lead` modeling and its sales pipeline (FASE5-01):**
+  - `Lead` entity: commercial contact with name, phone, email (`citext`), marketing channel (`source`), ad campaign (`campaign`), procedure of interest (`procedure_of_interest`), estimated value (`estimated_value_cop`), owner assignment (`assigned_to`) and converted patient (`converted_patient_id`).
+  - 9-stage pipeline modeled with native PostgreSQL `lead_status` enum: `nuevo`, `contactado`, `calificado`, `cita_propuesta`, `cita_agendada`, `cita_asistida`, `tratamiento_propuesto`, `tratamiento_aceptado`, `perdido`.
+  - `LeadActivity` entity: chronological history of contact interactions (`llamada`, `whatsapp`, `email`, `nota`) with author user and explanatory notes.
+  - Flyway migration `V17__create_leads.sql` with Row Level Security enabled (`tenant_isolation`), multi-tenant consistency triggers (`check_lead_tenant_consistency` and `check_lead_activity_tenant_consistency`) and partial analytic index `idx_leads_unresponded` (`WHERE status = 'nuevo'`) feeding the opportunity engine (Phase 9).
+  - `LeadRepositoryIntegrationTest` (5/5 green).
+- **Lead CRUD and status-change endpoints (FASE5-02):**
+  - REST endpoints under `/api/v1/leads` with OpenAPI docs (`@Tag("CRM Leads")`).
+  - Manual creation (`POST /api/v1/leads`), fetch by id (`GET /{id}`) and paginated listing with dynamic filters (`GET /api/v1/leads?status=...&assignedToId=...&source=...`) via Spring Data JPA `Specification<Lead>`.
+  - Flexible sales-pipeline transition (`PATCH /{id}/status`): unlike clinical appointments and treatments, the sales funnel freely allows forward and backward moves following real prospect behavior, automatically logging `nota`-type activities when justification is supplied.
+  - Activity logging (`POST /{id}/activities`) with reactive `last_contact_at` timestamp update on the lead for direct interactions, and descending chronological history query (`GET /{id}/activities`).
+- **Lead-to-patient/appointment conversion (FASE5-03):**
+  - Conversion endpoint: `POST /api/v1/leads/{id}/convert`.
+  - Turns a prospect into an active clinic `Patient` with smart name inference (`fullName` automatically split into `firstName` and `lastName` if not specified in the body) and contact-data inheritance.
+  - Optional first medical appointment (`Appointment`) scheduling in the same atomic transaction under `@Transactional`. With an appointment, the prospect status automatically advances to `cita_agendada`; without one it advances to `calificado`.
+  - Reasonable idempotency: if the lead already has a `converted_patient_id`, later calls return the existing patient with `alreadyConverted = true` (HTTP 200 OK) without duplicating `patients` rows.
+  - Automatic traceability activity logging linking the collaborator and the scheduled appointment.
+- **Conversion and response-speed metrics (FASE5-04):**
+  - `LeadMetricsService` analytic service decoupled from the operational flow (SRP).
+  - `GET /api/v1/leads/metrics/conversion`: computes total prospect volume, patient-converted count, and global conversion rate, broken down by channel (`bySource`) and campaign (`byCampaign`) for an optional date range (`from`, `to`).
+  - `GET /api/v1/leads/metrics/response-time`: measures response speed from prospect creation to first interaction (`MIN(la.created_at)`), reporting attended leads, unresponded leads, response rate, and minute/hour averages.
+  - Verified with `LeadIntegrationTest` (19/19 green) and `OpenApiDocsIntegrationTest` (1/1 green).
+- Total project tests: **225/225 green** in `./mvnw.cmd clean verify`.
 
-### Fase 6 — Cartera y pagos por etapas (completada, FASE6-01–04)
+### Phase 6 — Receivables and staged payments (completed, FASE6-01–04)
 
-Módulo `billing`/`cartera`:
-- **Modelado de `PaymentPlan` e `Installment` (FASE6-01):**
-  - Entidad `PaymentPlan` (extiende `TenantAwareEntity`, FK hacia `TreatmentPlan` como UUID plano para desacoplar el grafo JPA, monto total pactado en `NUMERIC(12,2)` y número de cuotas).
-  - Entidad `Installment` (cuotas individuales con `@ManyToOne` hacia `PaymentPlan`, número de cuota, monto en `NUMERIC(12,2)`, fecha de vencimiento `due_date`, estado `status` y marca temporal `paid_at`).
-  - Tipo enum nativo PostgreSQL `installment_status`: `pendiente`, `pagada`, `vencida` con `@JdbcType(PostgreSQLEnumJdbcType.class)`.
-  - Restricción de unicidad `uq_installments_plan_number UNIQUE (payment_plan_id, installment_number)` para evitar duplicados en un mismo plan.
-  - Migración Flyway `V18__create_payment_plans.sql`: crea tablas con Row Level Security activado y forzado (`tenant_isolation`), trigger `set_updated_at` y función PL/pgSQL `mark_overdue_installments()`.
-  - Verificado con `PaymentPlanRepositoryIntegrationTest` (5/5 en verde).
-- **Endpoints de planes de pago y registro de cuotas pagadas (FASE6-02):**
-  - `POST /api/v1/treatment-plans/{id}/payment-plan`: crea un plan en N cuotas mensuales con redondeo bancario estándar (`HALF_UP`) y absorción del residuo en la última cuota para cuadrar el monto pactado al centavo. Si el tratamiento ya tiene un plan activo, responde con HTTP 409 Conflict vía `ConflictException`.
-  - `POST /api/v1/installments/{id}/pay`: liquida una cuota, transicionando su estado a `pagada` y registrando `paid_at`. Genera automáticamente su `Invoice` saldada y su ítem de detalle correspondiente para mantener trazabilidad contable completa. Intentar pagar una cuota ya pagada devuelve HTTP 409 Conflict.
-  - Controladores `PaymentPlanController` e `InstallmentController` protegidos con `@PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")`.
-  - Verificado con `PaymentPlanIntegrationTest` (6/6 en verde) con pruebas de ciclo de vida y aislamiento cross-tenant 404.
-- **Job diario de cuotas vencidas (FASE6-03):**
-  - Servicio `OverdueInstallmentsJob` en `billing.service`.
-  - Método `execute()`: transaccional, ejecuta la función SQL nativa `mark_overdue_installments()`, actualiza a `vencida` las cuotas en estado `pendiente` con `due_date < CURRENT_DATE` y loguea las filas afectadas con SLF4J.
-  - Disparador `@Scheduled(cron = "${odentix.jobs.overdue-installments.cron:0 0 2 * * *}")` configurable vía `application.yml`.
-  - Ejecución en contexto de sistema (fuera de petición HTTP) operando sobre `ROOT_TENANT_ID` y RLS `current_tenant_id() IS NULL` para actualizar todas las clínicas de forma global y atómica.
-  - Verificado con `OverdueInstallmentsJobIntegrationTest` (4/4 en verde).
-- **Dashboard de cartera consolidado (FASE6-04):**
-  - Endpoint `GET /api/v1/portfolio/summary` en `PortfolioController`.
-  - Servicio `PortfolioService` y consulta agregada en `InstallmentRepository.getPortfolioSummary(tenantId)`.
-  - Calcula en tiempo real:
-    - Cartera total pactada (`totalAmountCop`).
-    - Cartera vencida (`overdueAmountCop`): cuotas con estado `vencida` o pendientes con fecha de vencimiento pasada previa a la ejecución del job.
-    - Cartera por vencer (`upcomingAmountCop`): cuotas pendientes con vencimiento futuro.
-    - Cartera al día / pagada (`paidAmountCop`): cuotas saldadas.
-    - Saldo total por cobrar (`outstandingAmountCop`): suma de vencidas + por vencer.
-    - Conteos de cuotas por categoría (`totalInstallmentsCount`, `overdueInstallmentsCount`, `upcomingInstallmentsCount`, `paidInstallmentsCount`).
-  - Si una clínica no tiene planes de pago, devuelve todos los montos en `0.00` y conteos en `0` (sin nulos).
-  - Verificado con `PortfolioIntegrationTest` (4/4 en verde).
-- **Documentación OpenAPI y regla §4 de AGENTS.md:**
-  - Todas las operaciones de cartera registradas y verificadas exhaustivamente en `OpenApiDocsIntegrationTest`:
+`billing`/`receivables` module:
+- **`PaymentPlan` and `Installment` modeling (FASE6-01):**
+  - `PaymentPlan` entity (extends `TenantAwareEntity`, FK to `TreatmentPlan` as plain UUID to decouple the JPA graph, total agreed amount in `NUMERIC(12,2)` and installment count).
+  - `Installment` entity (individual installments with `@ManyToOne` to `PaymentPlan`, installment number, amount in `NUMERIC(12,2)`, `due_date`, `status` and `paid_at` timestamp).
+  - Native PostgreSQL `installment_status` enum type: `pendiente`, `pagada`, `vencida` with `@JdbcType(PostgreSQLEnumJdbcType.class)`.
+  - `uq_installments_plan_number UNIQUE (payment_plan_id, installment_number)` uniqueness constraint to avoid duplicates within a plan.
+  - Flyway migration `V18__create_payment_plans.sql`: creates tables with Row Level Security enabled and forced (`tenant_isolation`), `set_updated_at` trigger and `mark_overdue_installments()` PL/pgSQL function.
+  - Verified with `PaymentPlanRepositoryIntegrationTest` (5/5 green).
+- **Payment-plan endpoints and paid-installment registration (FASE6-02):**
+  - `POST /api/v1/treatment-plans/{id}/payment-plan`: creates a plan in N monthly installments with standard banker's rounding (`HALF_UP`) and remainder absorption in the last installment to match the agreed amount to the cent. If the treatment already has an active plan, responds with HTTP 409 Conflict via `ConflictException`.
+  - `POST /api/v1/installments/{id}/pay`: settles an installment, transitioning its status to `pagada` and recording `paid_at`. Automatically generates its settled `Invoice` and corresponding line item to keep full accounting traceability. Paying an already-paid installment returns HTTP 409 Conflict.
+  - `PaymentPlanController` and `InstallmentController` protected with `@PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")`.
+  - Verified with `PaymentPlanIntegrationTest` (6/6 green) with lifecycle and 404 cross-tenant isolation tests.
+- **Daily overdue-installments job (FASE6-03):**
+  - `OverdueInstallmentsJob` service in `billing.service`.
+  - `execute()` method: transactional, runs the native SQL function `mark_overdue_installments()`, updates `pendiente` installments with `due_date < CURRENT_DATE` to `vencida`, and logs affected rows with SLF4J.
+  - `@Scheduled(cron = "${odentix.jobs.overdue-installments.cron:0 0 2 * * *}")` trigger configurable via `application.yml`.
+  - System-context execution (outside HTTP requests) operating on `ROOT_TENANT_ID` and `current_tenant_id() IS NULL` RLS to update all clinics globally and atomically.
+  - Verified with `OverdueInstallmentsJobIntegrationTest` (4/4 green).
+- **Consolidated receivables dashboard (FASE6-04):**
+  - `GET /api/v1/portfolio/summary` endpoint in `PortfolioController`.
+  - `PortfolioService` service and aggregate query in `InstallmentRepository.getPortfolioSummary(tenantId)`.
+  - Computes in real time:
+    - Total agreed receivables (`totalAmountCop`).
+    - Overdue receivables (`overdueAmountCop`): installments in `vencida` status or past-due pending ones before the job run.
+    - Upcoming receivables (`upcomingAmountCop`): pending installments with future due dates.
+    - Current / paid receivables (`paidAmountCop`): settled installments.
+    - Total outstanding balance (`outstandingAmountCop`): overdue + upcoming sum.
+    - Installment counts per category (`totalInstallmentsCount`, `overdueInstallmentsCount`, `upcomingInstallmentsCount`, `paidInstallmentsCount`).
+  - If a clinic has no payment plans, returns all amounts as `0.00` and counts as `0` (no nulls).
+  - Verified with `PortfolioIntegrationTest` (4/4 green).
+- **OpenAPI documentation and AGENTS.md §4 rule:**
+  - All receivables operations registered and exhaustively verified in `OpenApiDocsIntegrationTest`:
     - `POST /api/v1/treatment-plans/{id}/payment-plan`
     - `POST /api/v1/installments/{id}/pay`
     - `GET /api/v1/portfolio/summary`
-- Total de pruebas del proyecto: **244/244 pruebas en verde** en `./mvnw.cmd clean verify`.
+- Total project tests: **244/244 green** in `./mvnw.cmd clean verify`.
 
-### Fase 7 — Especialistas externos e inventario (completada, FASE7-01–04)
+### Phase 7 — External specialists and inventory (completed, FASE7-01–04)
 
-Módulos `specialist` e `inventory`:
-- **Modelado de `Specialist` y liquidaciones (FASE7-01):**
-  - Entidad `Specialist` (extiende `TenantAwareEntity`, 1—1 con `Professional` vía `professional_id UNIQUE`, `fee_percentage NUMERIC(5,2)` 0–100).
-  - Entidad `SpecialistSettlement` (periodo `DATE` con CHECK `period_end >= period_start`, montos `NUMERIC(12,2)`, estado `settlement_status`, `paid_at` nullable) + enum nativo `SettlementStatus` con `@JdbcType(PostgreSQLEnumJdbcType.class)`.
-  - Migración `V19__create_specialists.sql`: trigger `check_specialist_is_external` reutilizado tal cual de `schema.sql` + validación de aplicación en `@PrePersist/@PreUpdate` (defensa en profundidad), RLS `tenant_isolation` en ambas tablas.
-  - Verificado con `SpecialistRepositoryIntegrationTest` (7/7 en verde).
-- **Cálculo y endpoint de liquidaciones (FASE7-02):**
-  - `POST /api/v1/specialists/{id}/settlements` (`SettlementController`, solo `PROPIETARIO`, 201 + `Location`): producción bruta = `SUM(total_cop)` de facturas emitidas en el periodo vinculadas a tratamientos del profesional (excluye `anulada` y sin tratamiento) vía `InvoiceRepository.sumFacturadoPorProfesionalEnPeriodo` (JPQL con filtro explícito de tenant); honorarios = bruto × porcentaje / 100 (HALF_UP); límites del periodo en la zona horaria de la clínica; idempotencia por periodo (409).
-  - Verificado con `SettlementIntegrationTest` (7/7 en verde).
-- **Modelado de inventario (FASE7-03):**
-  - Entidades `InventoryItem` (nombre único por tenant, `quantity`, `min_threshold`) y `StockMovement` (`quantity_delta` ≠ 0, `reason`, `created_by` UUID simple).
-  - Migración `V20__create_inventory.sql`: índice parcial `idx_inventory_items_critical`, función + trigger `apply_stock_movement` reutilizados tal cual (el trigger es el único que mueve el stock; el CHECK revierte consumos en negativo), RLS en ambas. Desviación: `updated_at` en `stock_movements` (lo exige `TenantAwareEntity`).
-  - Verificado con `InventoryRepositoryIntegrationTest` (7/7 en verde).
-- **Endpoints de inventario y alertas (FASE7-04):**
-  - `InventoryController` (`/api/v1/inventory`, roles operativos amplios): CRUD de ítems (DELETE solo sin movimientos → 409), `POST /items/{id}/movements` (devuelve stock resultante; negativo → 409 "Stock insuficiente"; `delta = 0` → 400), `GET /critical` (vía `findCritical` con JPQL explícito, usa el índice parcial).
-  - Verificado con `InventoryIntegrationTest` (8/8 en verde).
-- **Documentación OpenAPI y regla §4 de AGENTS.md:**
-  - Los 8 endpoints nuevos registrados y verificados en `OpenApiDocsIntegrationTest`:
+`specialist` and `inventory` modules:
+- **`Specialist` and settlement modeling (FASE7-01):**
+  - `Specialist` entity (extends `TenantAwareEntity`, 1—1 with `Professional` via `professional_id UNIQUE`, `fee_percentage NUMERIC(5,2)` 0–100).
+  - `SpecialistSettlement` entity (`DATE` period with `period_end >= period_start` CHECK, `NUMERIC(12,2)` amounts, `settlement_status` status, nullable `paid_at`) + native `SettlementStatus` enum with `@JdbcType(PostgreSQLEnumJdbcType.class)`.
+  - `V19__create_specialists.sql` migration: `check_specialist_is_external` trigger reused as-is from `schema.sql` + application validation in `@PrePersist/@PreUpdate` (defense in depth), `tenant_isolation` RLS on both tables.
+  - Verified with `SpecialistRepositoryIntegrationTest` (7/7 green).
+- **Settlement calculation and endpoint (FASE7-02):**
+  - `POST /api/v1/specialists/{id}/settlements` (`SettlementController`, `PROPIETARIO` only, 201 + `Location`): gross production = `SUM(total_cop)` of invoices issued in the period linked to the professional's treatments (excludes `anulada` and treatment-less ones) via `InvoiceRepository.sumFacturadoPorProfesionalEnPeriodo` (JPQL with explicit tenant filter); fees = gross × percentage / 100 (HALF_UP); period bounds in the clinic's timezone; per-period idempotency (409).
+  - Verified with `SettlementIntegrationTest` (7/7 green).
+- **Inventory modeling (FASE7-03):**
+  - `InventoryItem` entities (per-tenant unique name, `quantity`, `min_threshold`) and `StockMovement` (`quantity_delta` ≠ 0, `reason`, plain-UUID `created_by`).
+  - `V20__create_inventory.sql` migration: partial `idx_inventory_items_critical` index, `apply_stock_movement` function + trigger reused as-is (the trigger is the only thing moving stock; the CHECK rolls back negative consumption), RLS on both. Deviation: `updated_at` on `stock_movements` (required by `TenantAwareEntity`).
+  - Verified with `InventoryRepositoryIntegrationTest` (7/7 green).
+- **Inventory endpoints and alerts (FASE7-04):**
+  - `InventoryController` (`/api/v1/inventory`, broad operational roles): item CRUD (DELETE only with no movements → 409), `POST /items/{id}/movements` (returns resulting stock; negative → 409 "Stock insuficiente"; `delta = 0` → 400), `GET /critical` (via `findCritical` with explicit JPQL, uses the partial index).
+  - Verified with `InventoryIntegrationTest` (8/8 green).
+- **OpenAPI documentation and AGENTS.md §4 rule:**
+  - The 8 new endpoints registered and verified in `OpenApiDocsIntegrationTest`:
     - `POST /api/v1/specialists/{id}/settlements`
     - `POST/GET /api/v1/inventory/items`, `GET /api/v1/inventory/critical`,
       `GET/PATCH/DELETE /api/v1/inventory/items/{id}`,
       `POST /api/v1/inventory/items/{id}/movements`
-- Total de pruebas del proyecto: **273/273 pruebas en verde** en `./mvnw.cmd clean verify`.
+- Total project tests: **273/273 green** in `./mvnw.cmd clean verify`.
 
-### Fase 8 — Automatizaciones, notificaciones y tareas (completada, FASE8-01–06)
+### Phase 8 — Automations, notifications, and tasks (completed, FASE8-01–06)
 
-Módulos `task` y `notification`:
-- **Modelado de `Task` y CRUD básico (FASE8-01):**
-  - Entidad `Task` (extiende `TenantAwareEntity`; referencia polimórfica `related_entity_type/id` sin FK — intencional, nota en `schema.sql` §14; `assignedTo` UUID simple; `dueAt`; enums PG `TaskStatus`/`TaskPriority` con `@JdbcType(PostgreSQLEnumJdbcType.class)`).
-  - Migración `V21__create_tasks.sql` (índices `idx_tasks_tenant_assignee_status` e `idx_tasks_related_entity`, RLS).
-  - `TaskController` (`/api/v1/tasks`: crear con responsable validado contra el tenant → 404, listar, `GET /mine`, ver, PATCH sin estado, `POST /{id}/complete` idempotente con 409 si cancelada, DELETE).
-  - Verificado con `TaskIntegrationTest` (6/6 en verde).
-- **Regla automática de citas sin confirmar (FASE8-02):**
-  - `UnconfirmedAppointmentJob` (`@Scheduled` cada hora, cron configurable): citas `programada` con inicio <24h generan tarea de prioridad alta sin asignar; idempotencia vía tareas abiertas vinculadas; contexto de sistema multi-tenant con `tenantId` por cita.
-  - Verificado con `UnconfirmedAppointmentJobIntegrationTest` (2/2; aserciones por cita porque la BD se comparte entre suites y el job es global).
-- **Notificaciones desacopladas + email (FASE8-03):**
-  - Entidad `Notification` (canal, destinatario, `templateKey`, `payload` JSONB, estado, `sentAt`/`errorDetail`) + migración `V22__create_notifications.sql` (enums, RLS).
-  - Interfaz `NotificationSender` + `NotificationException`; `LoggingNotificationSender` por defecto y `SmtpEmailNotificationSender` con `enabled=true` (todo por env, timeouts 5s; nueva dependencia `spring-boot-starter-mail`; `management.health.mail.enabled=false` porque el email es opcional).
-  - Actualización post-cierre (remitente por clínica): `V27__tenant_notification_email.sql` (`tenants.notification_email/name`); el `From` sale de la clínica con fallback al global y `Reply-To` a la clínica. Nota de proveedor: el `From` variable exige SMTP con múltiples remitentes verificados (Gmail no sirve). Verificado con `SmtpSenderIntegrationTest` (3/3). Sin endpoint de tenants: el correo se carga por BD/consola por ahora.
-  - Ajustes autogestionados (pre-Fase 12): `GET/PATCH /api/v1/tenant/settings` (solo propietario, siempre su clínica) para ver y cambiar el remitente; vacío vuelve al global. Verificado con `TenantSettingsIntegrationTest` (3/3 + WhatsApp propio sin exponer token).
-  - WhatsApp por clínica (pre-Fase 12): `V28` (`whatsapp_phone_number_id` + token **cifrado** AES-GCM vía `DataEncryptionService` con `DATA_ENCRYPTION_KEY`); `PATCH /tenant/settings` guarda número + token write-only (el GET jamás lo devuelve); el adaptador envía desde el número propio con fallback al global; credencial a medias no sale por ningún lado. Verificado con `DataEncryptionServiceTest` (4/4) y envío con número propio. Límite declarado: recibir respuestas sigue sin existir.
-  - `NotificationService`: núcleo común que nunca lanza (fallos → `fallida`); `sendAppointmentConfirmation` y `sendAppointmentScheduled`.
-  - Verificado con `NotificationServiceIntegrationTest` (4/4 en verde).
-- **Disparo desde eventos de cita (FASE8-04):**
-  - `AppointmentService`: crear → aviso de agendada; transición real a `confirmada` → confirmación (sin reenvío en no-op). Misma transacción, sin ciclos.
-  - Verificado con `AppointmentNotificationIntegrationTest` (2/2) y `AppointmentNotificationResilienceIntegrationTest` (1/1, proveedor caído vía `@MockitoBean`: 201/200 igual, 2 `fallida`).
-- **Adaptador WhatsApp (FASE8-05):**
-  - `WhatsappNotificationSender` (`RestClient`, timeouts 5s, Cloud API, credenciales solo por env) + despacho por canal en el servicio (`List<NotificationSender>`) + `sendAppointmentWhatsAppConfirmation` (teléfono del paciente).
-  - Verificado sin red real: `WhatsappSenderIntegrationTest` (4/4, servidor falso JDK) y `WhatsappNotificationServiceIntegrationTest` (2/2, `@DynamicPropertySource`). Pendiente administrativo: número aprobado por Meta + token real.
-- **Recuperación de espacio (FASE8-06):**
-  - `AppointmentCancelledEvent` + `SlotRecoveryListener`: cita cancelada de alto valor (`risk_level = alto`) con candidatos → tarea automática para recepción con el detalle; eventos de Spring para no ciclar `appointment` ↔ `task`.
-  - Verificado con `SlotRecoveryAutomationIntegrationTest` (4/4 en verde).
-- Total de pruebas del proyecto al cierre de Fase 8: **298/298 pruebas en verde** en `./mvnw.cmd clean verify`.
+`task` and `notification` modules:
+- **`Task` modeling and basic CRUD (FASE8-01):**
+  - `Task` entity (extends `TenantAwareEntity`; polymorphic `related_entity_type/id` reference without FK — intentional, note in `schema.sql` §14; plain-UUID `assignedTo`; `dueAt`; PG `TaskStatus`/`TaskPriority` enums with `@JdbcType(PostgreSQLEnumJdbcType.class)`).
+  - `V21__create_tasks.sql` migration (`idx_tasks_tenant_assignee_status` and `idx_tasks_related_entity` indexes, RLS).
+  - `TaskController` (`/api/v1/tasks`: create with tenant-validated assignee → 404, list, `GET /mine`, view, PATCH without status, idempotent `POST /{id}/complete` with 409 if cancelled, DELETE).
+  - Verified with `TaskIntegrationTest` (6/6 green).
+- **Automatic unconfirmed-appointment rule (FASE8-02):**
+  - `UnconfirmedAppointmentJob` (hourly `@Scheduled`, configurable cron): `programada` appointments starting within 24h generate unassigned high-priority tasks; idempotency via linked open tasks; multi-tenant system context with per-appointment `tenantId`.
+  - Verified with `UnconfirmedAppointmentJobIntegrationTest` (2/2; per-appointment assertions because the DB is shared across suites and the job is global).
+- **Decoupled notifications + email (FASE8-03):**
+  - `Notification` entity (channel, recipient, `templateKey`, JSONB `payload`, status, `sentAt`/`errorDetail`) + `V22__create_notifications.sql` migration (enums, RLS).
+  - `NotificationSender` interface + `NotificationException`; default `LoggingNotificationSender` and `SmtpEmailNotificationSender` with `enabled=true` (everything via env, 5s timeouts; new `spring-boot-starter-mail` dependency; `management.health.mail.enabled=false` because email is optional).
+  - Post-closure update (per-clinic sender): `V27__tenant_notification_email.sql` (`tenants.notification_email/name`); the `From` comes from the clinic with global fallback and `Reply-To` to the clinic. Provider note: a variable `From` requires SMTP with multiple verified senders (Gmail won't do). Verified with `SmtpSenderIntegrationTest` (3/3). No tenants endpoint: the address is loaded via DB/console for now.
+  - Self-managed settings (pre-Phase 12): `GET/PATCH /api/v1/tenant/settings` (owner only, always their clinic) to view and change the sender; empty falls back to global. Verified with `TenantSettingsIntegrationTest` (3/3 + own WhatsApp without exposing the token).
+  - Per-clinic WhatsApp (pre-Phase 12): `V28` (`whatsapp_phone_number_id` + AES-GCM-**encrypted** token via `DataEncryptionService` with `DATA_ENCRYPTION_KEY`); `PATCH /tenant/settings` saves number + write-only token (GET never returns it); the adapter sends from the clinic's own number with global fallback; a half-set credential is never exposed anywhere. Verified with `DataEncryptionServiceTest` (4/4) and own-number sending. Stated limit: receiving replies still doesn't exist.
+  - `NotificationService`: common core that never throws (failures → `fallida`); `sendAppointmentConfirmation` and `sendAppointmentScheduled`.
+  - Verified with `NotificationServiceIntegrationTest` (4/4 green).
+- **Appointment-event triggers (FASE8-04):**
+  - `AppointmentService`: create → scheduled-notice; real transition to `confirmada` → confirmation (no resend on no-op). Same transaction, no cycles.
+  - Verified with `AppointmentNotificationIntegrationTest` (2/2) and `AppointmentNotificationResilienceIntegrationTest` (1/1, downed provider via `@MockitoBean`: 201/200 all the same, 2 `fallida`).
+- **WhatsApp adapter (FASE8-05):**
+  - `WhatsappNotificationSender` (`RestClient`, 5s timeouts, Cloud API, env-only credentials) + per-channel dispatch in the service (`List<NotificationSender>`) + `sendAppointmentWhatsAppConfirmation` (patient phone).
+  - Verified with no real network: `WhatsappSenderIntegrationTest` (4/4, fake JDK server) and `WhatsappNotificationServiceIntegrationTest` (2/2, `@DynamicPropertySource`). Administrative pending: Meta-approved number + real token.
+- **Slot recovery (FASE8-06):**
+  - `AppointmentCancelledEvent` + `SlotRecoveryListener`: cancelled high-value appointment (`risk_level = alto`) with candidates → automatic task for reception with details; Spring events to avoid `appointment` ↔ `task` cycles.
+  - Verified with `SlotRecoveryAutomationIntegrationTest` (4/4 green).
+- Total project tests at Phase 8 close: **298/298 green** in `./mvnw.cmd clean verify`.
 
-### Fase 9 — Motor de oportunidades (completada, FASE9-01–04)
+### Phase 9 — Opportunity engine (completed, FASE9-01–04)
 
-Módulo `opportunity` (el diferenciador del producto: detectar → proponer → ejecutar → medir):
-- **Modelado y primera regla (FASE9-01):** entidad `Opportunity` (tipo, referencia polimórfica sin FK, valor estimado, prioridad 1–5, estado, `detectedAt`/`resolvedAt`) + migración `V23__create_opportunities.sql` + job `TreatmentPlanFollowupJob` (plan presentado/en decisión sin contacto en 3 días, idempotente) + bandeja `GET /api/v1/opportunities`.
-- **Ampliación de reglas (FASE9-02):** 5 jobs (`LeadUnrespondedJob` cada 2h/24h; `HighRiskAppointmentJob` diario programada+alto a 48h; `InactivePatientJob` diario sin citas ni planes en 6 meses; `OverdueInstallmentOpportunityJob` 02:30 tras el marcado; `CriticalInventoryJob` cada 6h) + `SlotOpportunityListener` (cancelación con candidatos). Queries candidatas en sus repos; prioridades y valores determinísticos por regla; idempotencia por entidad abierta; contexto de sistema multi-tenant. Verificado con `OpportunityRulesIntegrationTest` (6/6) y `SlotOpportunityListenerIntegrationTest` (2/2). Notas: `Instant` no soporta MONTHS (corte con `OffsetDateTime`); la guarda es por entidad no por tipo.
-- **Acciones recomendadas (FASE9-03):** `V24__create_opportunity_actions.sql` (con `channel` extra), entidad `OpportunityAction` (`action_type` TEXT sin enum PG; título de tarea en la primera línea de `suggested_message`), `OpportunityActionFactory` (tarea siempre + mensaje si hay destinatario), `POST /{id}/actions/{actionId}/execute` (tarea vinculada o mensaje vía `sendCustomMessage` nuevo; 409 ejecutada/sin destinatario), bandeja con `actions`. Retrofit en los 7 detectores. Verificado con `OpportunityActionIntegrationTest` (4/4).
-- **Valor recuperado (FASE9-04):** criterio de atribución en Javadoc (`resuelta` + acción ejecutada con `executedAt <= resolvedAt` + `resolvedAt` en periodo; sin acción es orgánica). `PATCH /{id}/status` (prerrequisito: fija/limpia `resolvedAt`) + `GET /recovered-value` agrupado por categoría. Verificado con `RecoveredValueIntegrationTest` (3/3). Limitación declarada: `resuelta` la marca un humano.
-- Total de pruebas del proyecto al cierre de Fase 9: **323/323 pruebas en verde** en `./mvnw.cmd clean verify`.
+`opportunity` module (the product differentiator: detect → propose → execute → measure):
+- **Modeling and first rule (FASE9-01):** `Opportunity` entity (type, polymorphic FK-less reference, estimated value, 1–5 priority, status, `detectedAt`/`resolvedAt`) + `V23__create_opportunities.sql` migration + `TreatmentPlanFollowupJob` job (presented/deciding plan with no contact in 3 days, idempotent) + `GET /api/v1/opportunities` inbox.
+- **Rule expansion (FASE9-02):** 5 jobs (`LeadUnrespondedJob` every 2h/24h; `HighRiskAppointmentJob` daily scheduled+high at 48h; `InactivePatientJob` daily with no appointments or plans in 6 months; `OverdueInstallmentOpportunityJob` 02:30 after marking; `CriticalInventoryJob` every 6h) + `SlotOpportunityListener` (cancellation with candidates). Candidate queries in their repos; deterministic priorities and values per rule; idempotency by open entity; multi-tenant system context. Verified with `OpportunityRulesIntegrationTest` (6/6) and `SlotOpportunityListenerIntegrationTest` (2/2). Notes: `Instant` doesn't support MONTHS (cut with `OffsetDateTime`); the guard is per entity, not per type.
+- **Recommended actions (FASE9-03):** `V24__create_opportunity_actions.sql` (with extra `channel`), `OpportunityAction` entity (`action_type` TEXT without PG enum; task title on the first `suggested_message` line), `OpportunityActionFactory` (always a task + message if there's a recipient), `POST /{id}/actions/{actionId}/execute` (linked task or message via new `sendCustomMessage`; 409 if executed/no recipient), inbox with `actions`. Retrofit across the 7 detectors. Verified with `OpportunityActionIntegrationTest` (4/4).
+- **Recovered value (FASE9-04):** attribution criterion in Javadoc (`resuelta` + executed action with `executedAt <= resolvedAt` + `resolvedAt` in period; without action it's organic). `PATCH /{id}/status` (prerequisite: sets/clears `resolvedAt`) + `GET /recovered-value` grouped by category. Verified with `RecoveredValueIntegrationTest` (3/3). Stated limitation: a human marks `resuelta`.
+- Total project tests at Phase 9 close: **323/323 green** in `./mvnw.cmd clean verify`.
 
-### Fase 10 — IA administrativa (completada, FASE10-01–03)
+### Phase 10 — Administrative AI (completed, FASE10-01–03)
 
-Módulo `assistant/` (preguntas y mensajes sobre datos reales de la clínica, vía Groq):
-- **Asistente administrativo (FASE10-01):**
-  - `GroqChatClient` (`RestClient` sin deps nuevas): `POST {base}/chat/completions` con Bearer `GROQ_API_KEY`; `GROQ_MODEL` configurable (default `openai/gpt-oss-20b`, ejemplo vigente de sus docs); timeouts 15s; errores → `AssistantException` mapeada a 502. Sin key responde 502 claro, nada se rompe.
-  - `AssistantContextService`: foto del tenant solo con `TenantContext` (oportunidades abiertas, planes sin decidir + total, citas 24h, cartera vencida + total, críticos con nombre, leads nuevos; top 5 por sección para acotar costo).
-  - `POST /api/v1/assistant/ask` (pregunta validada max 500, respuesta `{answer, model}`; system prompt anti-alucinación en código; roles amplios de lectura).
-  - Verificado con `AssistantIntegrationTest` (3/3: cuerpo al proveedor con Bearer/modelo/datos de A y nada de B; 400/401) y `GroqChatClientTest` (4/4: parseo, rechazo, malformada, sin key) contra servidor falso local. Notas: no hay bean `RestClient.Builder` (se usa `RestClient.builder()` estático); un fallo previo fue caché incremental (`clean` lo resolvió).
-- **Generación asistida de mensajes (FASE10-02):**
-  - `POST /api/v1/assistant/suggest-message` (cita del tenant + hint opcional): devuelve `{message, suggestedChannel, model}` como borrador editable. Generación pura, verificable por ausencia de filas en `notifications`/`tasks`.
-  - Verificado con `SuggestMessageIntegrationTest` (2/2).
-- **Resiliencia de IA (FASE10-03):**
-  - Fallback a plantilla fija con `fallback: true` (ask → resumen real del snapshot; suggest → plantilla con nombre/fecha), ambas 200. Registro con `log.warn` estructurado (operación, modelo, latencia, error truncado, sin PII); sin tabla porque no hay intento por paciente que auditar. Se mantienen los 15s (endurecer más rompería respuestas legítimas).
-  - Verificado con `AssistantFallbackIntegrationTest` (2/2, proveedor HTTP 500).
-- **Infraestructura de tests:** `max_connections=200` en el PG de `AbstractIntegrationTest` (los contextos en caché con pools propios agotaban el default de 100: `too many clients`).
-- Total de pruebas del proyecto al cierre de Fase 10: **334/334 pruebas en verde** en `./mvnw.cmd clean verify`.
+`assistant/` module (questions and messages over real clinic data, via Groq):
+- **Administrative assistant (FASE10-01):**
+  - `GroqChatClient` (`RestClient` with no new deps): `POST {base}/chat/completions` with Bearer `GROQ_API_KEY`; configurable `GROQ_MODEL` (default `openai/gpt-oss-20b`, current example from their docs); 15s timeouts; errors → `AssistantException` mapped to 502. Without a key it responds with a clear 502, nothing breaks.
+  - `AssistantContextService`: tenant snapshot only with `TenantContext` (open opportunities, undecided plans + total, 24h appointments, overdue receivables + total, criticals by name, new leads; top 5 per section to bound cost).
+  - `POST /api/v1/assistant/ask` (validated question max 500, `{answer, model}` response; anti-hallucination system prompt in code; broad read roles).
+  - Verified with `AssistantIntegrationTest` (3/3: body to the provider with Bearer/model/A's data and nothing of B; 400/401) and `GroqChatClientTest` (4/4: parsing, rejection, malformed, no key) against a local fake server. Notes: no `RestClient.Builder` bean (static `RestClient.builder()` is used); an earlier failure was incremental cache (`clean` fixed it).
+- **Assisted message generation (FASE10-02):**
+  - `POST /api/v1/assistant/suggest-message` (tenant appointment + optional hint): returns `{message, suggestedChannel, model}` as an editable draft. Pure generation, verifiable by absence of rows in `notifications`/`tasks`.
+  - Verified with `SuggestMessageIntegrationTest` (2/2).
+- **AI resilience (FASE10-03):**
+  - Fixed-template fallback with `fallback: true` (ask → real snapshot summary; suggest → template with name/date), both 200. Logging with structured `log.warn` (operation, model, latency, truncated error, no PII); no table because there's no per-patient attempt to audit. The 15s stay (hardening further would break legitimate responses).
+  - Verified with `AssistantFallbackIntegrationTest` (2/2, HTTP 500 provider).
+- **Test infrastructure:** `max_connections=200` on the `AbstractIntegrationTest` PG (cached contexts with their own pools exhausted the 100 default: `too many clients`).
+- Total project tests at Phase 10 close: **334/334 green** in `./mvnw.cmd clean verify`.
 
-### Fase 11 — Suscripciones y planes (completada, FASE11-01–05)
+### Phase 11 — Subscriptions and plans (completed, FASE11-01–05)
 
-El propio SaaS cobra y gobierna el acceso (módulos `subscription/` y `saas/`):
-- **Entidades (FASE11-01):** `Plan`, `PlanFeature`/`FeatureKey`, `PlanLimit`/`LimitKey`, `TenantSubscription` + `V25__create_plans_and_subscriptions.sql` con seeds (verificado con `SubscriptionIntegrationTest` 4/4).
-- **Feature-gating (FASE11-02):** `@PreAuthorize` SpEL con `@subscriptionService.requireFeature` junto a roles (Boot 4.1 eliminó el starter AOP: sin aspecto, cero deps). Matriz: leads, cartera (no facturación simple), settlements, inventario vs alertas por método, oportunidades, IA. 403 con mensaje de upgrade; fail-open sin suscripción (pre-billing). Verificado con `FeatureGateIntegrationTest` (4/4).
-- **Límites numéricos (FASE11-03):** `LimitExceededException` → 429 (+`Retry-After` en cuota). `max_patients`/`max_users` sobre activos; cuota WhatsApp desde `notifications` enviadas del periodo; NULL = ilimitado. Verificado con `LimitEnforcementIntegrationTest` (5/5).
-- **Bold (FASE11-04):** `BoldClient` solo con lo documentado (links + consulta, `x-api-key`); checkout idempotente por ciclo; webhook HMAC + 200 rápido + idempotencia (`SALE_APPROVED`→active+extiende, rechazada/anulada→past_due); job diario (gracia 7 días→cancelled, renovación a ≤3 días). `V26__create_saas_payments.sql`. Verificado con `SaasBillingIntegrationTest` (5/5, HMAC real contra falso local). Pendiente administrativo: llaves y URL en panel.bold.co + Render.
-- **Ciclo anual (FASE11-05):** `GET /billing/subscription` + descuento blindado (`annual < 12×monthly` en seeds) + cambio de ciclo (idempotencia solo mismo ciclo). Verificado con `BillingCycleIntegrationTest` (3/3).
-- Total de pruebas del proyecto al cierre de Fase 11: **355/355 pruebas en verde** en `./mvnw.cmd clean verify`.
+The SaaS itself bills and governs access (`subscription/` and `saas/` modules):
+- **Entities (FASE11-01):** `Plan`, `PlanFeature`/`FeatureKey`, `PlanLimit`/`LimitKey`, `TenantSubscription` + `V25__create_plans_and_subscriptions.sql` with seeds (verified with `SubscriptionIntegrationTest` 4/4).
+- **Feature-gating (FASE11-02):** `@PreAuthorize` SpEL with `@subscriptionService.requireFeature` alongside roles (Boot 4.1 removed the AOP starter: no aspect, zero deps). Matrix: leads, receivables (not simple invoicing), settlements, inventory vs per-method alerts, opportunities, AI. 403 with upgrade message; fail-open without subscription (pre-billing). Verified with `FeatureGateIntegrationTest` (4/4).
+- **Numeric limits (FASE11-03):** `LimitExceededException` → 429 (+`Retry-After` on quota). `max_patients`/`max_users` over active ones; WhatsApp quota from period-sent `notifications`; NULL = unlimited. Verified with `LimitEnforcementIntegrationTest` (5/5).
+- **Bold (FASE11-04):** `BoldClient` with only documented features (links + lookup, `x-api-key`); per-cycle idempotent checkout; HMAC webhook + fast 200 + idempotency (`SALE_APPROVED`→active+extends, rejected/voided→past_due); daily job (7-day grace→cancelled, renewal at ≤3 days). `V26__create_saas_payments.sql`. Verified with `SaasBillingIntegrationTest` (5/5, real HMAC against local fake). Administrative pending: keys and URL in panel.bold.co + Render.
+- **Annual cycle (FASE11-05):** `GET /billing/subscription` + locked-in discount (`annual < 12×monthly` in seeds) + cycle switching (same-cycle-only idempotency). Verified with `BillingCycleIntegrationTest` (3/3).
+- Total project tests at Phase 11 close: **355/355 green** in `./mvnw.cmd clean verify`.
 
-### Fase 12 — Endurecimiento y producción (en curso, FASE12-01–04 cerrados antes)
+### Phase 12 — Hardening and production (in progress, FASE12-01–04 previously closed)
 
-- **FASE12-01 rate limiting, 12-02 secretos, 12-03 observabilidad, 12-04 logs:** cerrados previamente (login con 429/`Retry-After`, auditoría de secretos, Sentry + Actuator, logs JSON con `tenant_id` en MDC).
-- **FASE12-05 CI/CD:** job `deploy` en `ci.yml` (push a `main` tras CI verde → Deploy Hook de Render). Pendiente manual: secret `RENDER_DEPLOY_HOOK_URL`, protección de `main` con CI requerido, desactivar auto-deploy duplicado y verificar con un merge real.
-- **FASE12-06 backups:** ⛔ bloqueado — el plan free de Render no incluye backups. Condición de salida no negociable antes del primer cliente pagando: subir plan, activar backups y probar una restauración real.
-- **Endurecimiento de arranque/prod (hallazgos de deploys reales 2026-09-19):** heap dimensionado al contenedor (`JAVA_OPTS` con `MaxRAMPercentage=50`, metaspace acotado, GC serial); `bootstrap-mode: lazy` solo en prod (el parseo JPQL tardaba ~13 min en CPU free); `@Value` numéricos tolerantes a vars vacías; `health.mail.enabled=false`.
-- **Identidades de notificación por tenant (pre-Fase 12):** remitente email por clínica (`V27` + `GET/PATCH /tenant/settings`) y credenciales WhatsApp cifradas AES-GCM (`V28` + `DATA_ENCRYPTION_KEY`), token write-only.
-- Total de pruebas del proyecto: **367/367 pruebas en verde** en `./mvnw.cmd clean verify`.
-
+- **FASE12-01 rate limiting, 12-02 secrets, 12-03 observability, 12-04 logs:** previously closed (login with 429/`Retry-After`, secrets audit, Sentry + Actuator, JSON logs with MDC `tenant_id`).
+- **FASE12-05 CI/CD:** `deploy` job in `ci.yml` (push to `main` after green CI → Render Deploy Hook). Manual pending: `RENDER_DEPLOY_HOOK_URL` secret, `main` protection with required CI, disable duplicate auto-deploy, and verify with a real merge.
+- **FASE12-06 backups:** ⛔ blocked — Render's free plan has no backups. Non-negotiable exit condition before the first paying customer: upgrade plan, enable backups, and test a real restore.
+- **Boot/prod hardening (findings from real 2026-09-19 deploys):** container-sized heap (`JAVA_OPTS` with `MaxRAMPercentage=50`, bounded metaspace, serial GC); `bootstrap-mode: lazy` prod-only (JPQL parsing took ~13 min on free CPU); `@Value` numerics tolerant to empty vars; `health.mail.enabled=false`.
+- **Per-tenant notification identities (pre-Phase 12):** per-clinic email sender (`V27` + `GET/PATCH /tenant/settings`) and AES-GCM-encrypted WhatsApp credentials (`V28` + `DATA_ENCRYPTION_KEY`), write-only token.
+- Total project tests: **367/367 green** in `./mvnw.cmd clean verify`.

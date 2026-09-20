@@ -6,7 +6,7 @@ import java.time.LocalDate;
 /**
  * Solicitud para generar una liquidación de especialista (FASE7-02).
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 public class CreateSettlementRequest {
 
@@ -40,3 +40,4 @@ public class CreateSettlementRequest {
     this.periodEnd = periodEnd;
   }
 }
+

@@ -22,7 +22,7 @@ import java.util.UUID;
  * <p>Almacena el hash SHA-256 del token (nunca el token en texto plano) junto con
  * su estado de revocación, fecha de expiración y relaciones a User y Tenant.
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Entity
 @Table(name = "refresh_tokens")
@@ -174,3 +174,4 @@ public class RefreshToken {
     return getClass().hashCode();
   }
 }
+

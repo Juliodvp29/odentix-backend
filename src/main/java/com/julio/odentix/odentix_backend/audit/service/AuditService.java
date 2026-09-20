@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>Solo escribe (append-only): no expone actualización ni borrado.
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Service
 public class AuditService {
@@ -54,3 +54,4 @@ public class AuditService {
     return auditRepository.save(entry);
   }
 }
+

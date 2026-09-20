@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service;
  * <p>Los tokens emitidos contienen los claims mínimos requeridos por el sistema multi-tenant:
  * sub (user_id), tenant_id y role.
  *
- * <p>Convención: Sin Lombok (regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Service
 public class JwtService {
@@ -132,3 +132,4 @@ public class JwtService {
     return expirationMinutes;
   }
 }
+

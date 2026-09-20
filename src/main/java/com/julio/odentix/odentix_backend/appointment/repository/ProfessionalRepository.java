@@ -18,7 +18,7 @@ import org.springframework.stereotype.Repository;
 public interface ProfessionalRepository extends JpaRepository<Professional, UUID> {
 
   /**
-   * Busca un profesional por su ID y tenant (defensa en profundidad, regla §5.2 de AGENTS.md).
+   * Busca un profesional por su ID y tenant (defensa en profundidad por tenant).
    */
   Optional<Professional> findByIdAndTenantId(UUID id, UUID tenantId);
 
@@ -53,3 +53,4 @@ public interface ProfessionalRepository extends JpaRepository<Professional, UUID
    */
   boolean existsByUserId(UUID userId);
 }
+

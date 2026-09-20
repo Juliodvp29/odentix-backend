@@ -21,7 +21,7 @@ import java.util.UUID;
  * <p>Hereda de {@link TenantAwareEntity}, asegurando aislamiento automático
  * por {@code tenant_id}.
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Entity
 @Table(name = "lead_activities")
@@ -89,3 +89,4 @@ public class LeadActivity extends TenantAwareEntity {
     this.notes = notes;
   }
 }
+

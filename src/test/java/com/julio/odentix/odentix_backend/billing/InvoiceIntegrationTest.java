@@ -41,7 +41,7 @@ import org.springframework.test.web.servlet.MvcResult;
  *
  * <p>Cubre el DoD del ticket: pagos parciales hasta cubrir el total
  * cambian el estado a `pagada` automáticamente, más aislamiento
- * cross-tenant (§5.4 de AGENTS.md) y autorización por rol (§7).
+ * cross-tenant verificado con test y autorización por rol.
  */
 @AutoConfigureMockMvc
 class InvoiceIntegrationTest extends AbstractIntegrationTest {
@@ -318,3 +318,4 @@ class InvoiceIntegrationTest extends AbstractIntegrationTest {
         .andExpect(status().isUnauthorized());
   }
 }
+

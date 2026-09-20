@@ -20,7 +20,7 @@ import org.hibernate.type.SqlTypes;
  * automáticamente (@TenantId, FASE1-09) y nunca se exponen entradas de otro
  * tenant. Tabla append-only: no hay setters de actualización ni borrado.
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Entity
 @Table(name = "audit_log")
@@ -114,3 +114,4 @@ public class AuditLog extends TenantAwareEntity {
         + '}';
   }
 }
+

@@ -23,7 +23,7 @@ import org.hibernate.dialect.type.PostgreSQLEnumJdbcType;
  * ({@code trialing}, {@code active}, {@code past_due}) al mismo tiempo
  * —restricción en BD vía índice único parcial.
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Entity
 @Table(name = "tenant_subscriptions")
@@ -137,3 +137,4 @@ public class TenantSubscription extends TenantAwareEntity {
         + '}';
   }
 }
+

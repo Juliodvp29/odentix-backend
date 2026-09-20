@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Solicitud para crear una tarea (FASE8-01). Sin Lombok (§9 AGENTS.md).
+ * Solicitud para crear una tarea (FASE8-01). Sin Lombok.
  */
 public class CreateTaskRequest {
 
@@ -84,3 +84,4 @@ public class CreateTaskRequest {
     this.priority = priority;
   }
 }
+

@@ -34,7 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
  * </ul>
  *
  * <p>El tenant siempre sale del {@code TenantContext}: cualquier recurso de otro
- * tenant resulta invisible (404), conforme a la regla §5 de AGENTS.md.
+ * tenant resulta invisible (404), conforme a la regla de aislamiento multi-tenant del proyecto.
  */
 @Service
 public class PaymentPlanService {
@@ -181,3 +181,4 @@ public class PaymentPlanService {
     return InstallmentResponse.fromEntity(actualizada);
   }
 }
+

@@ -26,7 +26,7 @@ import org.springframework.dao.DataIntegrityViolationException;
  *   <li>Persistir y recuperar consultorios (salas).</li>
  *   <li>Búsqueda insensible a mayúsculas/minúsculas con {@code findByNameIgnoreCase}.</li>
  *   <li>Restricción de unicidad de nombre por tenant (mismo tenant falla, distintos tenants coexisten).</li>
- *   <li>Aislamiento cross-tenant estricto (regla §5 de AGENTS.md).</li>
+ *   <li>Aislamiento cross-tenant estricto (regla de aislamiento multi-tenant del proyecto).</li>
  * </ul>
  */
 class RoomRepositoryIntegrationTest extends AbstractIntegrationTest {
@@ -145,3 +145,4 @@ class RoomRepositoryIntegrationTest extends AbstractIntegrationTest {
     guardarComo(tenantB.getId(), room);
   }
 }
+

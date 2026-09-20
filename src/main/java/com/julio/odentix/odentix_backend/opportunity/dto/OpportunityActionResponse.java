@@ -9,7 +9,7 @@ import java.util.UUID;
  * DTO de lectura/ejecución para una acción de oportunidad (FASE9-03).
  *
  * <p>`taskId`/`notificationId` son el resultado de la ejecución (solo
- * respuesta, sin columnas en BD). Sin Lombok (§9 AGENTS.md).
+ * respuesta, sin columnas en BD). Sin Lombok.
  */
 public class OpportunityActionResponse {
 
@@ -110,3 +110,4 @@ public class OpportunityActionResponse {
     this.notificationId = notificationId;
   }
 }
+

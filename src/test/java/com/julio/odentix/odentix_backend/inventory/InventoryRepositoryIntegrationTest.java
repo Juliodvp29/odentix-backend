@@ -35,7 +35,7 @@ import org.springframework.dao.DataIntegrityViolationException;
  *       base (la transacción revierte y el stock queda intacto).</li>
  *   <li>Aislamiento cross-tenant: un usuario del tenant B no ve los ítems del
  *       tenant A, y un movimiento de B sobre un ítem de A lo rechaza el propio
- *       trigger (regla §5 de AGENTS.md).</li>
+ *       trigger (regla de aislamiento multi-tenant del proyecto).</li>
  * </ul>
  *
  * <p>Detalle importante: el trigger actúa fuera de JPA, así que después de cada
@@ -212,7 +212,7 @@ class InventoryRepositoryIntegrationTest extends AbstractIntegrationTest {
   }
 
   // ---------------------------------------------------------------------------
-  // Test de aislamiento cross-tenant (regla §5 de AGENTS.md — obligatorio)
+  // Test de aislamiento cross-tenant (regla de aislamiento multi-tenant del proyecto — obligatorio)
   // ---------------------------------------------------------------------------
 
   @Test
@@ -245,3 +245,4 @@ class InventoryRepositoryIntegrationTest extends AbstractIntegrationTest {
     assertThat(stockActual(tenantA.getId(), idItemA)).isEqualTo(7);
   }
 }
+

@@ -231,7 +231,7 @@ class PaymentPlanIntegrationTest extends AbstractIntegrationTest {
   }
 
   // ---------------------------------------------------------------------------
-  // Tests de aislamiento cross-tenant (regla §5 de AGENTS.md — obligatorio)
+  // Tests de aislamiento cross-tenant (regla de aislamiento multi-tenant del proyecto — obligatorio)
   // ---------------------------------------------------------------------------
 
   @Test
@@ -260,3 +260,4 @@ class PaymentPlanIntegrationTest extends AbstractIntegrationTest {
         .andExpect(status().isNotFound());
   }
 }
+

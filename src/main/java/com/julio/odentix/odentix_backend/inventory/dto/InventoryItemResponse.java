@@ -3,7 +3,7 @@ package com.julio.odentix.odentix_backend.inventory.dto;
 import java.util.UUID;
 
 /**
- * Ítem de inventario con su stock actual (FASE7-04). Sin Lombok (§9 AGENTS.md).
+ * Ítem de inventario con su stock actual (FASE7-04). Sin Lombok.
  */
 public class InventoryItemResponse {
 
@@ -56,3 +56,4 @@ public class InventoryItemResponse {
     this.minThreshold = minThreshold;
   }
 }
+

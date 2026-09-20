@@ -22,7 +22,7 @@ import java.util.UUID;
  * <p>{@code procedureId} es un UUID nullable sin FK estricta hasta que exista la tabla de
  * catálogo de procedimientos (mismo precedente que en citas y lista de espera).
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Entity
 @Table(name = "treatment_plan_items")
@@ -121,3 +121,4 @@ public class TreatmentPlanItem extends TenantAwareEntity {
     return price.subtract(discount);
   }
 }
+

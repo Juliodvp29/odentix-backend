@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 /**
  * Solicitud para cambiar el estado de una oportunidad (FASE9-04).
  *
- * <p>Sin Lombok (§9 AGENTS.md).
+ * <p>Sin Lombok.
  */
 public class UpdateOpportunityStatusRequest {
 
@@ -28,3 +28,4 @@ public class UpdateOpportunityStatusRequest {
     this.status = status;
   }
 }
+

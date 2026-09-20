@@ -13,8 +13,9 @@ import org.springframework.stereotype.Repository;
 public interface PaymentRepository extends JpaRepository<Payment, UUID> {
 
   /**
-   * Pagos de una factura dentro del tenant activo (doble filtro de tenant,
-   * regla §5.2 de AGENTS.md).
+   * Pagos de una factura dentro del tenant activo (doble filtro por tenant).
    */
   List<Payment> findAllByTenantIdAndInvoiceId(UUID tenantId, UUID invoiceId);
 }
+
+

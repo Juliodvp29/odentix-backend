@@ -17,7 +17,7 @@ import org.springframework.stereotype.Repository;
 public interface OpportunityActionRepository extends JpaRepository<OpportunityAction, UUID> {
 
   /**
-   * Busca una acción por su ID y tenant (defensa en profundidad, regla §5.2 de AGENTS.md).
+   * Busca una acción por su ID y tenant (defensa en profundidad por tenant).
    */
   Optional<OpportunityAction> findByIdAndTenantId(UUID id, UUID tenantId);
 
@@ -26,3 +26,4 @@ public interface OpportunityActionRepository extends JpaRepository<OpportunityAc
    */
   List<OpportunityAction> findByOpportunityId(UUID opportunityId);
 }
+

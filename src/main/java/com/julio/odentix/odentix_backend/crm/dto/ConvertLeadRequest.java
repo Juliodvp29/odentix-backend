@@ -6,7 +6,7 @@ import jakarta.validation.Valid;
  * Solicitud para convertir un prospecto comercial (Lead) en un paciente activo,
  * con la opción de programar su primera cita en la misma operación (FASE5-03).
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 public class ConvertLeadRequest {
 
@@ -40,3 +40,4 @@ public class ConvertLeadRequest {
     this.appointment = appointment;
   }
 }
+

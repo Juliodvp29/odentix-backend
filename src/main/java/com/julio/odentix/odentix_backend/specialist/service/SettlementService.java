@@ -44,7 +44,7 @@ import org.springframework.transaction.annotation.Transactional;
  * ({@code pagada} + {@code paid_at}) es una operación futura fuera de este ticket.
  *
  * <p>El tenant siempre sale del {@code TenantContext}: un especialista de otro
- * tenant resulta invisible (404), conforme a la regla §5 de AGENTS.md.
+ * tenant resulta invisible (404), conforme a la regla de aislamiento multi-tenant del proyecto.
  */
 @Service
 public class SettlementService {
@@ -133,3 +133,4 @@ public class SettlementService {
     }
   }
 }
+

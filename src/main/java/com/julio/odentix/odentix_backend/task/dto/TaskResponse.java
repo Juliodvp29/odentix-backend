@@ -6,7 +6,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Tarea con su estado actual (FASE8-01). Sin Lombok (§9 AGENTS.md).
+ * Tarea con su estado actual (FASE8-01). Sin Lombok.
  */
 public class TaskResponse {
 
@@ -95,3 +95,4 @@ public class TaskResponse {
     this.status = status;
   }
 }
+

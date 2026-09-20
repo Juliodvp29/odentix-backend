@@ -21,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>Maneja la generación de tokens criptográficamente seguros, almacenamiento de su hash
  * SHA-256 en base de datos, detección de reúso, rotación atómica en cada refresco y revocación en logout.
  *
- * <p>Convención: Sin Lombok (regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Service
 public class RefreshTokenService {
@@ -160,3 +160,4 @@ public class RefreshTokenService {
     }
   }
 }
+

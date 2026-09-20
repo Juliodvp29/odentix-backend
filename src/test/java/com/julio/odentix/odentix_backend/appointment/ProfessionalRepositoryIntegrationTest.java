@@ -32,7 +32,7 @@ import org.springframework.dao.DataIntegrityViolationException;
  * <ul>
  *   <li>Persistir y recuperar un {@link Professional} sin usuario (ej. especialista externo).</li>
  *   <li>Persistir y vincular opcionalmente un {@link Professional} a un {@link User} existente.</li>
- *   <li>Aislamiento cross-tenant estricto (regla §5 de AGENTS.md).</li>
+ *   <li>Aislamiento cross-tenant estricto (regla de aislamiento multi-tenant del proyecto).</li>
  *   <li>Restricción de unicidad de usuario (un usuario a lo sumo un profesional).</li>
  *   <li>Integridad referencial con {@link ClinicalRecord} habilitada por la migración V11.</li>
  * </ul>
@@ -206,3 +206,4 @@ class ProfessionalRepositoryIntegrationTest extends AbstractIntegrationTest {
     }
   }
 }
+

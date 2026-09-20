@@ -16,7 +16,7 @@ import org.springframework.stereotype.Repository;
  *
  * <p>El filtro automático de tenant ({@code @TenantId} de Hibernate) se aplica en
  * todas las queries derivadas. Los métodos que filtran por {@code tenantId} lo hacen
- * por defensa en profundidad (regla §5.2 de AGENTS.md).
+ * por defensa en profundidad (filtro explícito por tenant).
  */
 @Repository
 public interface OpportunityRepository extends JpaRepository<Opportunity, UUID> {
@@ -52,7 +52,7 @@ public interface OpportunityRepository extends JpaRepository<Opportunity, UUID> 
    * Oportunidades recuperadas en un periodo (FASE9-04): `resuelta` con
    * `resolvedAt` en el rango y al menos una acción ejecutada antes o al
    * resolver (orden causal). Con filtro explícito de `tenantId` además del
-   * automático @TenantId (defensa en profundidad, regla §5.2 de AGENTS.md).
+   * automático @TenantId (defensa en profundidad por tenant).
    */
   @Query("""
       SELECT o FROM Opportunity o
@@ -72,3 +72,4 @@ public interface OpportunityRepository extends JpaRepository<Opportunity, UUID> 
       @Param("from") Instant from,
       @Param("to") Instant to);
 }
+

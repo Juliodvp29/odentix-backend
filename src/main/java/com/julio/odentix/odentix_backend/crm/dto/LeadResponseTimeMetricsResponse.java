@@ -6,7 +6,7 @@ import java.time.Instant;
 /**
  * Métrica de velocidad de atención y tiempo de primera respuesta a leads (FASE5-04).
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 public class LeadResponseTimeMetricsResponse {
 
@@ -105,3 +105,4 @@ public class LeadResponseTimeMetricsResponse {
     this.averageResponseTimeHours = averageResponseTimeHours;
   }
 }
+

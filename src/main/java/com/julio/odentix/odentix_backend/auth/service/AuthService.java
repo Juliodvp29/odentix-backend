@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>Maneja el flujo de login por email y contraseña, rotación de refresh tokens y logout.
  * No filtra detalles del fallo (usuario inexistente vs contraseña errónea) para prevenir ataques de enumeración.
  *
- * <p>Convención: Sin Lombok (regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Service
 public class AuthService {
@@ -172,3 +172,4 @@ public class AuthService {
         tenantId, userId, AuditAction.login_failed, "users", userId, Map.of("email", request.getEmail()));
   }
 }
+

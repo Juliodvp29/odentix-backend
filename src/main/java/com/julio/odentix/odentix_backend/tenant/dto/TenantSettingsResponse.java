@@ -4,7 +4,7 @@ import com.julio.odentix.odentix_backend.tenant.entity.Tenant;
 import java.util.UUID;
 
 /**
- * Ajustes actuales de la clínica (pre-Fase 12). Sin Lombok (§9 AGENTS.md).
+ * Ajustes actuales de la clínica (pre-Fase 12). Sin Lombok.
  */
 public class TenantSettingsResponse {
 
@@ -81,3 +81,4 @@ public class TenantSettingsResponse {
     this.whatsappConfigured = whatsappConfigured;
   }
 }
+

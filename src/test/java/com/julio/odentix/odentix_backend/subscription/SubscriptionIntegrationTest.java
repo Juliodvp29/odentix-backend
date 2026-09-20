@@ -36,7 +36,7 @@ import org.springframework.dao.DataIntegrityViolationException;
  *   <li>Seeds de V25: 3 planes con precios, 8 features y 6 límites cada uno.</li>
  *   <li>Lectura del plan activo, features y límites de un tenant dado.</li>
  *   <li>Restricción de una sola suscripción viva por tenant.</li>
- *   <li>Aislamiento cross-tenant estricto (regla §5 de AGENTS.md).</li>
+ *   <li>Aislamiento cross-tenant estricto (regla de aislamiento multi-tenant del proyecto).</li>
  * </ul>
  */
 class SubscriptionIntegrationTest extends AbstractIntegrationTest {
@@ -217,3 +217,4 @@ class SubscriptionIntegrationTest extends AbstractIntegrationTest {
         .orElseThrow(() -> new AssertionError("Límite no sembrado: " + key));
   }
 }
+

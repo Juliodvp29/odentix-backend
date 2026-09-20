@@ -32,7 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Arma la foto de la clínica para el asistente (FASE10-01).
  *
  * <p>Todo sale del `TenantContext`: la foto contiene <b>solo</b> datos del
- * tenant activo, nunca de otra clínica (regla §5 de AGENTS.md). Reúsa
+ * tenant activo, nunca de otra clínica (regla de aislamiento multi-tenant del proyecto). Reúsa
  * repositorios existentes sin queries nuevas salvo derivadas mínimas. Las
  * listas se acotan (top 5) para acotar tokens y costo por pregunta.
  */
@@ -149,3 +149,4 @@ public class AssistantContextService {
     return (cita.getPatient().getFirstName() + " " + cita.getPatient().getLastName()).strip();
   }
 }
+

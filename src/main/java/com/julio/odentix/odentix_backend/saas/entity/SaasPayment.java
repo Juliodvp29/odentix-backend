@@ -27,7 +27,7 @@ import org.hibernate.dialect.type.PostgreSQLEnumJdbcType;
  *
  * <p>Hereda de {@link TenantAwareEntity} para aislamiento automático por tenant.
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Entity
 @Table(name = "saas_payments")
@@ -141,7 +141,7 @@ public class SaasPayment extends TenantAwareEntity {
 
   @Override
   public String toString() {
-    // Sin montos en logs (datos financieros, regla §5.5 de AGENTS.md).
+    // Sin montos en logs (datos financieros).
     return "SaasPayment{"
         + "id=" + getId()
         + ", status=" + status
@@ -149,3 +149,4 @@ public class SaasPayment extends TenantAwareEntity {
         + '}';
   }
 }
+

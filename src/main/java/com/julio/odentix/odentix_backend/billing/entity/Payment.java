@@ -22,7 +22,7 @@ import org.hibernate.dialect.type.PostgreSQLEnumJdbcType;
  * tenant. El cambio de estado de la factura según pagos acumulados lo
  * implementa el servicio en FASE4-04.
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Entity
 @Table(name = "payments")
@@ -106,3 +106,4 @@ public class Payment extends TenantAwareEntity {
         + '}';
   }
 }
+

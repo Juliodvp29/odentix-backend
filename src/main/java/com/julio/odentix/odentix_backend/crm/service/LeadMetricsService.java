@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>Calcula tasas de conversión por canal y campaña, así como velocidad
  * y tiempos de respuesta inicial a prospectos para el dashboard de gestión.
  *
- * <p>Aislamiento multi-tenant estricto (§5 de AGENTS.md): todas las consultas
+ * <p>Aislamiento multi-tenant estricto: todas las consultas
  * filtran obligatoriamente por el {@code tenant_id} activo en {@link TenantContext}.
  */
 @Service
@@ -211,3 +211,4 @@ public class LeadMetricsService {
     }
   }
 }
+

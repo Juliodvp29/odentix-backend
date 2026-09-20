@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Min;
  * Solicitud para actualizar un ítem de inventario (FASE7-04).
  *
  * <p>Todos los campos son opcionales (PATCH): solo los no nulos se aplican.
- * El stock no se edita por aquí — solo vía movimientos. Sin Lombok (§9 AGENTS.md).
+ * El stock no se edita por aquí — solo vía movimientos. Sin Lombok.
  */
 public class UpdateInventoryItemRequest {
 
@@ -44,3 +44,4 @@ public class UpdateInventoryItemRequest {
     this.minThreshold = minThreshold;
   }
 }
+

@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Size;
  *
  * <p>`notificationEmail` vacío/nulo limpia el valor y vuelve al remitente
  * global. El formato se valida en el servicio (la anotación `@Email` no
- * admite blancos y bloquearía el limpiado). Sin Lombok (§9 AGENTS.md).
+ * admite blancos y bloquearía el limpiado). Sin Lombok.
  */
 public class UpdateTenantSettingsRequest {
 
@@ -62,3 +62,4 @@ public class UpdateTenantSettingsRequest {
     this.whatsappToken = whatsappToken;
   }
 }
+

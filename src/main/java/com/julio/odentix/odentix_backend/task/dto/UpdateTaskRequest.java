@@ -9,7 +9,7 @@ import java.util.UUID;
  *
  * <p>Todos los campos son opcionales (PATCH): solo los no nulos se aplican.
  * El estado no se edita por aquí — solo vía el endpoint de completar.
- * Sin Lombok (§9 AGENTS.md).
+ * Sin Lombok.
  */
 public class UpdateTaskRequest {
 
@@ -66,3 +66,4 @@ public class UpdateTaskRequest {
     this.priority = priority;
   }
 }
+

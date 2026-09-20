@@ -24,7 +24,7 @@ import java.util.UUID;
  *
  * <p>Hereda de {@link TenantAwareEntity} para aislamiento automático por tenant.
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Entity
 @Table(name = "stock_movements")
@@ -93,3 +93,4 @@ public class StockMovement extends TenantAwareEntity {
         + '}';
   }
 }
+

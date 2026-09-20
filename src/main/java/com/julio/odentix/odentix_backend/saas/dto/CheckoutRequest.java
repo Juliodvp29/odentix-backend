@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 
 /**
  * Solicitud de checkout del SaaS (FASE11-04): plan + ciclo a contratar.
- * Sin Lombok (§9 AGENTS.md).
+ * Sin Lombok.
  */
 public class CheckoutRequest {
 
@@ -43,3 +43,4 @@ public class CheckoutRequest {
     this.payerEmail = payerEmail;
   }
 }
+

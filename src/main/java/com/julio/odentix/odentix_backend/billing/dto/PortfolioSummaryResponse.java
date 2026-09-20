@@ -14,7 +14,7 @@ import java.math.BigDecimal;
  *   <li>{@code outstandingAmountCop}: Saldo total por cobrar (vencida + por vencer).</li>
  * </ul>
  *
- * <p>Convención: Sin Lombok (regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 public class PortfolioSummaryResponse {
 
@@ -98,3 +98,4 @@ public class PortfolioSummaryResponse {
     return paidInstallmentsCount;
   }
 }
+

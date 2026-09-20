@@ -14,7 +14,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * Verifica que la documentación OpenAPI se genera y es pública en entornos
  * no productivos (en prod va deshabilitada vía application-prod.yml).
  *
- * <p>Lista exhaustiva de operaciones (regla §4 de AGENTS.md): si un
+ * <p>Lista exhaustiva de operaciones : si un
  * endpoint existe pero no sale en `/v3/api-docs`, este test falla.
  * Al agregar un endpoint, agregar aquí su path + método.
  */
@@ -115,3 +115,4 @@ class OpenApiDocsIntegrationTest extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.paths./api/v1/tenant/settings.patch").exists());
   }
 }
+

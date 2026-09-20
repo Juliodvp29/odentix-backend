@@ -34,7 +34,7 @@ import org.springframework.dao.DataIntegrityViolationException;
  *
  * <p>Cubre el DoD del ticket: se persiste una factura con ítems y su total
  * coincide con la suma de los ítems, más el aislamiento cross-tenant
- * obligatorio (regla §5.4 de AGENTS.md).
+ * verificado con test.
  */
 class BillingModelIntegrationTest extends AbstractIntegrationTest {
 
@@ -224,3 +224,4 @@ class BillingModelIntegrationTest extends AbstractIntegrationTest {
     }
   }
 }
+

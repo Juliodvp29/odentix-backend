@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>Siempre sobre el tenant del contexto —el endpoint nunca acepta ID por
  * parámetro, así que una clínica no puede editar la configuración de otra
- * (regla §5 de AGENTS.md). Solo el remitente de notificaciones es editable;
+ * (regla de aislamiento multi-tenant del proyecto). Solo el remitente de notificaciones es editable;
  * el resto de la ficha (nombre, NIT, plan) sigue siendo administrativo.
  */
 @Service
@@ -86,3 +86,4 @@ public class TenantService {
             "Clínica no encontrada: " + tenantId));
   }
 }
+

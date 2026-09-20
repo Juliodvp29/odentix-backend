@@ -8,7 +8,7 @@ import java.util.List;
 /**
  * Respuesta consolidada de métricas de conversión comercial en el CRM (FASE5-04).
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 public class LeadConversionMetricsResponse {
 
@@ -96,3 +96,4 @@ public class LeadConversionMetricsResponse {
     this.byCampaign = byCampaign;
   }
 }
+

@@ -17,7 +17,7 @@ import org.springframework.stereotype.Repository;
 public interface SpecialistSettlementRepository extends JpaRepository<SpecialistSettlement, UUID> {
 
   /**
-   * Busca una liquidación por su ID y tenant (defensa en profundidad, regla §5.2 de AGENTS.md).
+   * Busca una liquidación por su ID y tenant (defensa en profundidad por tenant).
    */
   Optional<SpecialistSettlement> findByIdAndTenantId(UUID id, UUID tenantId);
 
@@ -35,3 +35,4 @@ public interface SpecialistSettlementRepository extends JpaRepository<Specialist
    */
   boolean existsBySpecialistIdAndPeriodStart(UUID specialistId, java.time.LocalDate periodStart);
 }
+

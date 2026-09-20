@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 /**
  * Valor recuperado por categoría de oportunidad en un periodo (FASE9-04).
  *
- * <p>Sin Lombok (§9 AGENTS.md).
+ * <p>Sin Lombok.
  */
 public class RecoveredValueResponse {
 
@@ -47,3 +47,4 @@ public class RecoveredValueResponse {
     this.count = count;
   }
 }
+

@@ -28,7 +28,7 @@ import org.hibernate.dialect.type.PostgreSQLEnumJdbcType;
  * único por tenant, no global (dos clínicas distintas pueden tener usuarios con
  * el mismo email).
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Entity
 @Table(
@@ -209,3 +209,4 @@ public class User {
         '}';
   }
 }
+

@@ -19,7 +19,7 @@ import java.util.UUID;
  * <p>Hereda de {@link TenantAwareEntity} para aislamiento automático por tenant.
  * El nombre es único por tenant (permite el mismo insumo en clínicas distintas).
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Entity
 @Table(
@@ -94,3 +94,4 @@ public class InventoryItem extends TenantAwareEntity {
         + '}';
   }
 }
+

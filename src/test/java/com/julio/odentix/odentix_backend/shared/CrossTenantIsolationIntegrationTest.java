@@ -34,7 +34,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * <p>Verifica que un tenant bajo ninguna circunstancia pueda ver, modificar o inferir la
  * existencia de registros pertenecientes a otro tenant a través de la capa REST y repositorios.
  *
- * <p>Regla crítica (§5 de AGENTS.md):
+ * <p>Regla crítica (aislamiento multi-tenant del proyecto):
  * Las respuestas a intentos de acceso cross-tenant por ID deben ser 404 (Not Found)
  * y NUNCA 403 (Forbidden), evitando revelar la existencia de recursos ajenos.
  */
@@ -202,3 +202,4 @@ class CrossTenantIsolationIntegrationTest extends AbstractIntegrationTest {
         .andExpect(status().isUnauthorized());
   }
 }
+

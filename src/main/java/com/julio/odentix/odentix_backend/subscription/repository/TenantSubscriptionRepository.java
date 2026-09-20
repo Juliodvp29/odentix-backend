@@ -17,7 +17,7 @@ import org.springframework.stereotype.Repository;
  * <p>Aislamiento multi-tenant garantizado automáticamente por {@code @TenantId}
  * en {@link com.julio.odentix.odentix_backend.shared.entity.TenantAwareEntity}.
  * Métodos con {@code tenantId} explícito se proporcionan por defensa en profundidad
- * (regla §5 de AGENTS.md): nunca una query de negocio sin filtrar por tenant.
+ * (regla de aislamiento multi-tenant del proyecto): nunca una query de negocio sin filtrar por tenant.
  */
 @Repository
 public interface TenantSubscriptionRepository extends JpaRepository<TenantSubscription, UUID> {
@@ -49,3 +49,4 @@ public interface TenantSubscriptionRepository extends JpaRepository<TenantSubscr
    */
   List<TenantSubscription> findByStatusIn(Collection<SubscriptionStatus> statuses);
 }
+

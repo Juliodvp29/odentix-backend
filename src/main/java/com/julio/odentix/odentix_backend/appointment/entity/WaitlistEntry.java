@@ -26,7 +26,7 @@ import org.hibernate.dialect.type.PostgreSQLEnumJdbcType;
  * catálogo de procedimientos (mismo precedente que
  * {@code Appointment.procedureId} en FASE3-02).
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Entity
 @Table(name = "waitlist_entries")
@@ -109,3 +109,4 @@ public class WaitlistEntry extends TenantAwareEntity {
         + '}';
   }
 }
+

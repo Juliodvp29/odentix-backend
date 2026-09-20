@@ -28,7 +28,7 @@ import org.hibernate.type.SqlTypes;
  *
  * <p>Hereda de {@link TenantAwareEntity} para aislamiento automático por tenant.
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Entity
 @Table(name = "notifications")
@@ -147,3 +147,4 @@ public class Notification extends TenantAwareEntity {
         + '}';
   }
 }
+
