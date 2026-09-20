@@ -2776,15 +2776,23 @@ Poder depurar sin exponer datos entre clínicas.
 
 - [ ] Confirmar que el proveedor elegido (Render/Railway) tiene
       backups automáticos habilitados para la instancia de PostgreSQL.
+      ⛔ **Bloqueado (2026-09-19)**: verificado por Julio en el panel — el plan
+      free de Render no incluye backups. Se activa al subir a plan de pago,
+      **antes del primer cliente pagando** (condición de salida, no negociable).
 - [ ] Ejecutar una prueba real de restauración (no solo leer la
       documentación del proveedor) antes de tener el primer cliente
       pagando.
+      ⛔ Bloqueado por lo anterior: sin backups no hay nada que restaurar.
+      Alternativa futura si se quiere antes: `pg_dump` programado a
+      almacenamiento propio (fuera de alcance por ahora).
 
 **Criterios de aceptación:**
 
 - [ ] Se puede perder la base de datos de producción y restaurarla
       desde backup en un tiempo conocido, sin intervención manual
       compleja — verificado con una prueba real, no solo en teoría.
+      ⛔ Pendiente al upgrade del plan (ver arriba). **No se acepta el primer
+      cliente pagando sin este punto en verde.**
 
 ---
 

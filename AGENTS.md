@@ -324,7 +324,7 @@ que quede desactualizada visiblemente a que no exista.)_
 - Fase completada: **Fase 5 — CRM de leads** (todos los tickets FASE5-01 a FASE5-04 completados; checklist de salida verificado y `ARCHITECTURE.md` actualizado).
 - Fase completada: **Fase 6 — Cartera y pagos por etapas** (todos los tickets FASE6-01 a FASE6-04 completados; checklist de salida verificado y `ARCHITECTURE.md` actualizado).
 - Fase completada: **Fase 11 — Suscripciones y planes** (todos los tickets FASE11-01 a FASE11-05 completados; checklist de salida verificado y `ARCHITECTURE.md` actualizado).
-- Última verificación local: `./mvnw.cmd clean verify` el **19 de septiembre de 2026**, con **355/355 pruebas sin fallos** (incluyendo suites de gating, límites, Bold y ciclo anual, más todas las previas). Este resultado no implica verificación en CI ni despliegue a producción.
-- Fase siguiente: **Fase 12 — Endurecimiento y producción** (siguiente ticket: **FASE12-01 — Rate limiting y revisión de seguridad**).
+- Última verificación local: `./mvnw.cmd clean verify` el **19 de septiembre de 2026**, con **367/367 pruebas sin fallos** (incluyendo gating, límites, Bold, ciclo anual, más identidades por tenant, ajustes autogestionados y endurecimiento de arranque, producción.
+- Fase siguiente: **Fase 12 — Endurecimiento y producción** (cerrados 12-01 a 12-04; 12-05 en código pendiente de verificación con un merge real; 12-06 bloqueado por plan free sin backups).
 - Documentación interactiva: Swagger UI activo en dev/test (`/swagger-ui.html`, JSON en `/v3/api-docs`) con `springdoc-openapi` 3.1.1 y esquema `bearerAuth` JWT; deshabilitado en prod. Regla vigente (§4): todo endpoint nuevo se anota con `@Tag`/`@Operation` y cada cierre de fase verifica la UI. Cobertura de endpoints verificada en `OpenApiDocsIntegrationTest` incluyendo `GET /api/v1/opportunities`.
 

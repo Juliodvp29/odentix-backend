@@ -2,7 +2,7 @@
 
 > Documento vivo de arquitectura y decisiones del backend SaaS para clínicas
 > odontológicas (multi-tenant: cada clínica es un `tenant`).
-> **Estado:** documenta Fase 0 a Fase 11. Al cerrar cada fase este archivo debe
+> **Estado:** documenta Fase 0 a Fase 11 y Fase 12 en curso. Al cerrar cada fase este archivo debe
 > actualizarse (regla en `AGENTS.md` §11: sin esa actualización la fase no se
 > considera cerrada).
 >
@@ -662,5 +662,14 @@ El propio SaaS cobra y gobierna el acceso (módulos `subscription/` y `saas/`):
 - **Límites numéricos (FASE11-03):** `LimitExceededException` → 429 (+`Retry-After` en cuota). `max_patients`/`max_users` sobre activos; cuota WhatsApp desde `notifications` enviadas del periodo; NULL = ilimitado. Verificado con `LimitEnforcementIntegrationTest` (5/5).
 - **Bold (FASE11-04):** `BoldClient` solo con lo documentado (links + consulta, `x-api-key`); checkout idempotente por ciclo; webhook HMAC + 200 rápido + idempotencia (`SALE_APPROVED`→active+extiende, rechazada/anulada→past_due); job diario (gracia 7 días→cancelled, renovación a ≤3 días). `V26__create_saas_payments.sql`. Verificado con `SaasBillingIntegrationTest` (5/5, HMAC real contra falso local). Pendiente administrativo: llaves y URL en panel.bold.co + Render.
 - **Ciclo anual (FASE11-05):** `GET /billing/subscription` + descuento blindado (`annual < 12×monthly` en seeds) + cambio de ciclo (idempotencia solo mismo ciclo). Verificado con `BillingCycleIntegrationTest` (3/3).
-- Total de pruebas del proyecto: **355/355 pruebas en verde** en `./mvnw.cmd clean verify`.
+- Total de pruebas del proyecto al cierre de Fase 11: **355/355 pruebas en verde** en `./mvnw.cmd clean verify`.
+
+### Fase 12 — Endurecimiento y producción (en curso, FASE12-01–04 cerrados antes)
+
+- **FASE12-01 rate limiting, 12-02 secretos, 12-03 observabilidad, 12-04 logs:** cerrados previamente (login con 429/`Retry-After`, auditoría de secretos, Sentry + Actuator, logs JSON con `tenant_id` en MDC).
+- **FASE12-05 CI/CD:** job `deploy` en `ci.yml` (push a `main` tras CI verde → Deploy Hook de Render). Pendiente manual: secret `RENDER_DEPLOY_HOOK_URL`, protección de `main` con CI requerido, desactivar auto-deploy duplicado y verificar con un merge real.
+- **FASE12-06 backups:** ⛔ bloqueado — el plan free de Render no incluye backups. Condición de salida no negociable antes del primer cliente pagando: subir plan, activar backups y probar una restauración real.
+- **Endurecimiento de arranque/prod (hallazgos de deploys reales 2026-09-19):** heap dimensionado al contenedor (`JAVA_OPTS` con `MaxRAMPercentage=50`, metaspace acotado, GC serial); `bootstrap-mode: lazy` solo en prod (el parseo JPQL tardaba ~13 min en CPU free); `@Value` numéricos tolerantes a vars vacías; `health.mail.enabled=false`.
+- **Identidades de notificación por tenant (pre-Fase 12):** remitente email por clínica (`V27` + `GET/PATCH /tenant/settings`) y credenciales WhatsApp cifradas AES-GCM (`V28` + `DATA_ENCRYPTION_KEY`), token write-only.
+- Total de pruebas del proyecto: **367/367 pruebas en verde** en `./mvnw.cmd clean verify`.
 
