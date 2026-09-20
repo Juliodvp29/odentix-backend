@@ -82,6 +82,13 @@ security:
       max-requests-per-minute: ${LOGIN_RATE_LIMIT_IP_MAX:10}
       max-failed-attempts: ${LOGIN_RATE_LIMIT_EMAIL_MAX_ATTEMPTS:5}
       lockout-duration-minutes: ${LOGIN_RATE_LIMIT_LOCKOUT_MINUTES:15}
+    public:
+      # FASE12-01: demás endpoints públicos sin JWT. Refresh es force-bruteable
+      # (token opaco) → límite medio. Webhook recibe reintentos de Bold → generoso.
+      refresh:
+        max-requests-per-minute: ${REFRESH_RATE_LIMIT_IP_MAX:30}
+      webhook:
+        max-requests-per-minute: ${WEBHOOK_RATE_LIMIT_IP_MAX:120}
 
 odentix:
   crypto:

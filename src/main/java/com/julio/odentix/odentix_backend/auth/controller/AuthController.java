@@ -49,8 +49,10 @@ public class AuthController {
 
   @PostMapping("/refresh")
   @Operation(summary = "Renovar access token mediante refresh token con rotación atómica")
-  public ResponseEntity<TokenRefreshResponse> refresh(@Valid @RequestBody TokenRefreshRequest request) {
-    TokenRefreshResponse response = authService.refreshToken(request);
+  public ResponseEntity<TokenRefreshResponse> refresh(
+      @Valid @RequestBody TokenRefreshRequest request,
+      HttpServletRequest httpRequest) {
+    TokenRefreshResponse response = authService.refreshToken(request, extractClientIp(httpRequest));
     return ResponseEntity.ok(response);
   }
 

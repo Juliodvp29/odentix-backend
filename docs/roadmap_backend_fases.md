@@ -2609,19 +2609,34 @@ pasarela — Wompi, Stripe, etc.)
 
 **Tareas:**
 
-- [ ] Rate limiting básico (por IP y/o por tenant) en los endpoints
+- [x] Rate limiting básico (por IP y/o por tenant) en los endpoints
       públicos y de autenticación.
-- [ ] Revisión de protección contra inyección (ya mitigado en gran
+      (Login ya lo tenía —`LoginRateLimitService`: IP 10 req/min + bloqueo
+      por email 5 fallos/15 min→429—; FASE12-01 lo extiende a los demás
+      públicos sin JWT con `PublicEndpointRateLimitService`: `refresh`
+      30 req/min por IP y webhook Bold 120 req/min por IP, ambos 429 con
+      `Retry-After`. Configurable por env; in-memory a propósito para el
+      monolito single-instance.)
+- [x] Revisión de protección contra inyección (ya mitigado en gran
       parte por usar JPA/queries parametrizadas — auditar cualquier
       query nativa escrita a mano).
-- [ ] Revisión de CSRF/XSS según corresponda a una API REST pura
+      (Auditados los 27 sitios con `@Query`/`EntityManager`: todo con
+      binding; los 2 nativos no reciben input; el JPQL dinámico de
+      `LeadMetricsService` solo concatena fragmentos fijos. Sin hallazgos.)
+- [x] Revisión de CSRF/XSS según corresponda a una API REST pura
       (normalmente no aplica CSRF si no hay sesiones basadas en
       cookies, pero verifícalo explícitamente, no lo asumas).
+      (Verificado con `SecurityHeadersIntegrationTest`: 401 en JSON, sin
+      `Set-Cookie`, `nosniff` + `DENY` explícitos en `SecurityConfig`;
+      justificación documentada en comentario.)
 
 **Criterios de aceptación:**
 
-- [ ] Superar el límite de rate limiting en el endpoint de login
+- [x] Superar el límite de rate limiting en el endpoint de login
       devuelve `429`, no deja intentar indefinidamente.
+      (Cubierto por `LoginRateLimitIntegrationTest` 4/4; además
+      `PublicEndpointRateLimitIntegrationTest` 3/3 verifica 429 en
+      `refresh` y webhook Bold. `./mvnw.cmd clean verify`: 372/372 en verde.)
 
 ---
 

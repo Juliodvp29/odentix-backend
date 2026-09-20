@@ -1,5 +1,7 @@
 package com.julio.odentix.odentix_backend.saas.controller;
 
+import com.julio.odentix.odentix_backend.auth.exception.RateLimitExceededException;
+import com.julio.odentix.odentix_backend.auth.service.PublicEndpointRateLimitService;
 import com.julio.odentix.odentix_backend.saas.dto.CheckoutRequest;
 import com.julio.odentix.odentix_backend.saas.dto.CheckoutResponse;
 import com.julio.odentix.odentix_backend.saas.dto.SubscriptionResponse;
@@ -7,10 +9,14 @@ import com.julio.odentix.odentix_backend.saas.service.SaasBillingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.Map;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -28,9 +34,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class SaasBillingController {
 
   private final SaasBillingService billingService;
+  private final PublicEndpointRateLimitService publicEndpointRateLimitService;
 
-  public SaasBillingController(SaasBillingService billingService) {
+  public SaasBillingController(
+      SaasBillingService billingService,
+      PublicEndpointRateLimitService publicEndpointRateLimitService) {
     this.billingService = billingService;
+    this.publicEndpointRateLimitService = publicEndpointRateLimitService;
   }
 
   /**
@@ -77,12 +87,39 @@ public class SaasBillingController {
   )
   public ResponseEntity<Void> webhookBold(
       @RequestBody String rawBody,
-      @RequestHeader(value = "x-bold-signature", required = false) String signature) {
+      @RequestHeader(value = "x-bold-signature", required = false) String signature,
+      HttpServletRequest httpRequest) {
+    // FASE12-01: el webhook es público (sin JWT) y recibe reintentos de Bold;
+    // el límite es generoso para no romper reintentos legítimos, pero frena spam/DoS.
+    publicEndpointRateLimitService.checkWebhookLimit(extractClientIp(httpRequest));
     if (!billingService.firmaValida(rawBody, signature)) {
       return ResponseEntity.badRequest().build();
     }
     String[] evento = billingService.parsearEvento(rawBody);
     billingService.aplicarEvento(evento[0], evento[1], evento[2]);
     return ResponseEntity.ok().build();
+  }
+
+  @ExceptionHandler(RateLimitExceededException.class)
+  public ResponseEntity<Map<String, Object>> handleRateLimitExceeded(RateLimitExceededException ex) {
+    return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+        .header("Retry-After", String.valueOf(ex.getRetryAfterSeconds()))
+        .body(Map.of(
+            "error", "Límite de peticiones excedido",
+            "message", ex.getMessage(),
+            "retryAfterSeconds", ex.getRetryAfterSeconds()
+        ));
+  }
+
+  private String extractClientIp(HttpServletRequest request) {
+    if (request == null) {
+      return "unknown";
+    }
+    String forwarded = request.getHeader("X-Forwarded-For");
+    if (forwarded != null && !forwarded.isBlank()) {
+      return forwarded.split(",")[0].trim();
+    }
+    String remoteAddr = request.getRemoteAddr();
+    return (remoteAddr != null && !remoteAddr.isBlank()) ? remoteAddr : "unknown";
   }
 }
