@@ -51,15 +51,34 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        # FASE12-03: health/info públicos (ver SecurityConfig); metrics y
+        # prometheus requieren JWT (anyRequest().authenticated) — son conteos
+        # JVM/HTTP, nunca datos de negocio.
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       show-details: never
+  # FASE12-03: el registro Prometheus debe habilitarse explícito (sin esto la
+  # auto-configuración considera el export deshabilitado y no crea el endpoint).
+  prometheus:
+    metrics:
+      export:
+        enabled: true
   health:
     mail:
       # El email es opcional (adaptador de log por defecto, FASE8-03): la
       # ausencia de proveedor SMTP no debe marcar la app como DOWN.
       enabled: false
+
+sentry:
+  # Sin DSN el SDK queda inactivo (dev/test no envían nada). En prod Render
+  # inyecta SENTRY_DSN. PII desactivado: nunca viajan datos de pacientes.
+  dsn: ${SENTRY_DSN:}
+  environment: ${SENTRY_ENVIRONMENT:development}
+  send-default-pii: false
+  # Sin tracing por ahora: solo errores (un OTel collector propio sería infra
+  # nueva sin escala que la justifique — AGENTS.md §10).
+  traces-sample-rate: 0.0
 
 jwt:
   # Clave HMAC-SHA256 (al menos 256 bits = 32 caracteres). En prod se sobreescribe con JWT_SECRET.

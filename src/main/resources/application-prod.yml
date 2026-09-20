@@ -28,3 +28,8 @@ springdoc:
     enabled: false
   swagger-ui:
     enabled: false
+
+# FASE12-03: Sentry activo en prod vía SENTRY_DSN (inyectado por Render).
+# Sin DSN no se envía nada; el entorno por defecto distingue los eventos.
+sentry:
+  environment: ${SENTRY_ENVIRONMENT:production}

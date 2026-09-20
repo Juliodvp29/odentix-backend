@@ -64,6 +64,9 @@ public class SecurityConfig {
         )
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+            // FASE12-03: /actuator/metrics y /actuator/prometheus quedan bajo
+            // anyRequest().authenticated (requieren JWT): son métricas JVM/HTTP
+            // para scrapear desde red interna, no endpoints públicos.
             .requestMatchers("/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/logout").permitAll()
             // Webhook de Bold (FASE11-04): lo llama Bold sin JWT; se autentica
             // por firma HMAC (x-bold-signature) en el propio endpoint.

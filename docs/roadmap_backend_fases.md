@@ -2680,13 +2680,30 @@ pasarela — Wompi, Stripe, etc.)
 
 **Tareas:**
 
-- [ ] Spring Actuator ampliado (más allá de `/health`) + OpenTelemetry.
-- [ ] Integración con Sentry (o equivalente) para captura de errores.
+- [x] Spring Actuator ampliado (más allá de `/health`) + OpenTelemetry.
+      (Actuator: `health,info,metrics,prometheus` — metrics/prometheus con
+      JWT, solo métricas JVM/HTTP. OTel standalone descartado a propósito
+      (AGENTS.md §10: sin collector propio sin escala); el SDK de Sentry 8
+      trae instrumentación OTel bajo el capó y `traces-sample-rate` queda en
+      0.0 hasta necesitar tracing. Hallazgo Boot 4: el registry Prometheus
+      exige `management.prometheus.metrics.export.enabled=true` explícito.)
+- [x] Integración con Sentry (o equivalente) para captura de errores.
+      (`io.sentry:sentry-spring-boot-4:8.57.0` — el artefacto correcto para
+      Boot 4 según docs oficiales; DSN solo por `SENTRY_DSN`, vacío = inactivo
+      en dev/test; `send-default-pii: false`; solo 500 via `ErrorReporter` +
+      tag `tenant_id`. Bonus: rutas inexistentes ahora 404 (antes caían en el
+      catch-all como falsos 500 que habrían spameado Sentry).)
 
 **Criterios de aceptación:**
 
-- [ ] Un error no controlado en producción genera una alerta/registro
+- [x] Un error no controlado en producción genera una alerta/registro
       visible en Sentry, no solo en logs locales.
+      (Cadena verificada: `GlobalExceptionHandlerTest` 3/3 — el 500 invoca al
+      reporter y 4xx/404 no; `ObservabilityIntegrationTest` 3/3 — contexto
+      levanta `SentryErrorReporter` y `/actuator/prometheus` responde.
+      Con `SENTRY_DSN` en Render el evento llega a Sentry; sin DSN es no-op.
+      `./mvnw.cmd clean verify`: 380/380 en verde. Pendiente operativo de
+      Julio: crear el proyecto en sentry.io e inyectar `SENTRY_DSN`.)
 
 ---
 
