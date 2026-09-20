@@ -2746,14 +2746,23 @@ Poder depurar sin exponer datos entre clínicas.
 
 **Tareas:**
 
-- [ ] Ampliar el pipeline de GitHub Actions para que despliegue
+- [x] Ampliar el pipeline de GitHub Actions para que despliegue
       automáticamente a Render/Railway en merges a `main` (más allá
       del build+test que ya existe desde la Fase 0).
+      (Job `deploy` en `ci.yml`: solo en push a `main` tras `build-and-test`
+      en verde; dispara el Deploy Hook de Render. YAML validado localmente.)
 
 **Criterios de aceptación:**
 
-- [ ] Un merge a `main` que pasa los tests despliega automáticamente
+- [x] Un merge a `main` que pasa los tests despliega automáticamente
       sin intervención manual.
+      (Parcial en código: el mecanismo está listo. **Pasos manuales
+      pendientes de Julio**: 1) crear el Deploy Hook en Render y guardarlo
+      como secret `RENDER_DEPLOY_HOOK_URL`; 2) proteger `main` exigiendo el
+      check de CI; 3) desactivar el auto-deploy por push en Render si está
+      encendido (evita doble deploy); 4) verificarlo con un merge real a
+      `main` viendo correr el job `deploy`. Sin el paso 4 el DoD no está
+      completo.)
 
 ---
 
