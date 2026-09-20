@@ -26,7 +26,7 @@ import org.hibernate.dialect.type.PostgreSQLEnumJdbcType;
  * el cálculo de totales viven en el servicio de FASE4-04; esta entidad
  * es solo el modelo de datos.
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Entity
 @Table(
@@ -135,7 +135,7 @@ public class Invoice extends TenantAwareEntity {
 
   @Override
   public String toString() {
-    // Sin montos en logs (datos financieros del tenant, regla §5.5 de AGENTS.md).
+    // Sin montos en logs (datos financieros del tenant).
     return "Invoice{"
         + "id=" + getId()
         + ", invoiceNumber='" + invoiceNumber + '\''
@@ -143,3 +143,4 @@ public class Invoice extends TenantAwareEntity {
         + '}';
   }
 }
+

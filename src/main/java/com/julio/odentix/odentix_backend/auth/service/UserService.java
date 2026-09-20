@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
  * o un proceso interno. La contraseña siempre se guarda con hash BCrypt,
  * nunca en texto plano.
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Service
 public class UserService {
@@ -66,3 +66,4 @@ public class UserService {
     return userRepository.save(user);
   }
 }
+

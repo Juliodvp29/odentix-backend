@@ -37,7 +37,7 @@ import org.springframework.test.web.servlet.MvcResult;
 /**
  * Suite crítica de pruebas de aislamiento cross-tenant para el módulo de pacientes (FASE2-04).
  *
- * <p>Reglas no negociables (AGENTS.md §5):
+ * <p>Reglas no negociables (aislamiento multi-tenant):
  * <ul>
  *   <li>Ninguna consulta o listado puede exponer datos de pacientes entre clínicas distintas.</li>
  *   <li>Cualquier intento de acceso a un paciente de otro tenant por ID directo DEBE responder
@@ -272,3 +272,4 @@ class PatientCrossTenantIsolationIntegrationTest extends AbstractIntegrationTest
     }
   }
 }
+

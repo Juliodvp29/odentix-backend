@@ -23,7 +23,7 @@ public class SentryErrorReporter implements ErrorReporter {
   @Override
   public void reportUnhandled(Exception ex, String path) {
     // El tenant actual como tag (no como dato): permite filtrar en Sentry por
-    // clínica sin exponer datos entre tenants (AGENTS.md §5). Si no hay tenant
+    // clínica sin exponer datos entre tenants (aislamiento multi-tenant). Si no hay tenant
     // atribuible, el error se reporta igual, sin tag.
     UUID tenantId = TenantContext.getTenantId();
     if (tenantId != null) {
@@ -33,3 +33,4 @@ public class SentryErrorReporter implements ErrorReporter {
     log.debug("Error no controlado en {} reportado a Sentry.", path);
   }
 }
+

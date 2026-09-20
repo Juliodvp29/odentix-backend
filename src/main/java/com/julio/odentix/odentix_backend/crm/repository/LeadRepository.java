@@ -20,7 +20,7 @@ import org.springframework.stereotype.Repository;
  * <p>Aislamiento multi-tenant garantizado automáticamente por {@code @TenantId}
  * en {@link com.julio.odentix.odentix_backend.shared.entity.TenantAwareEntity}.
  * Métodos con {@code tenantId} explícito se proporcionan por defensa en profundidad
- * (regla §5 de AGENTS.md).
+ * (regla de aislamiento multi-tenant del proyecto).
  */
 @Repository
 public interface LeadRepository extends JpaRepository<Lead, UUID>, JpaSpecificationExecutor<Lead> {
@@ -63,3 +63,4 @@ public interface LeadRepository extends JpaRepository<Lead, UUID>, JpaSpecificat
   List<Lead> findUnresponded(
       @Param("status") LeadStatus status, @Param("cutoff") Instant cutoff);
 }
+

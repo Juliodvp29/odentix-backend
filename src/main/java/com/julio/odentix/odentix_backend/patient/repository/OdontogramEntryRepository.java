@@ -12,7 +12,7 @@ import org.springframework.stereotype.Repository;
  *
  * <p>El filtro automático @TenantId (heredado de TenantAwareEntity, FASE1-09)
  * ya aísla por tenant, pero cada método filtra además por {@code tenantId}
- * explícito: defensa en profundidad (regla §5.2 de AGENTS.md). Nunca agregar
+ * explícito: defensa en profundidad (filtro explícito por tenant). Nunca agregar
  * aquí una query JPQL/nativa sin filtrar por {@code tenant_id}.
  *
  * <p>El listado agrupado por pieza y tipo para el GET de FASE2-08 se apoyará
@@ -27,3 +27,4 @@ public interface OdontogramEntryRepository extends JpaRepository<OdontogramEntry
 
   Optional<OdontogramEntry> findByIdAndTenantId(UUID id, UUID tenantId);
 }
+

@@ -18,7 +18,7 @@ import org.springframework.stereotype.Repository;
 public interface TaskRepository extends JpaRepository<Task, UUID> {
 
   /**
-   * Busca una tarea por su ID y tenant (defensa en profundidad, regla §5.2 de AGENTS.md).
+   * Busca una tarea por su ID y tenant (defensa en profundidad por tenant).
    */
   Optional<Task> findByIdAndTenantId(UUID id, UUID tenantId);
 
@@ -41,3 +41,4 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
   boolean existsByRelatedEntityTypeAndRelatedEntityIdAndStatusIn(
       String relatedEntityType, UUID relatedEntityId, List<TaskStatus> statuses);
 }
+

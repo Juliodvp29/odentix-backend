@@ -21,7 +21,7 @@ public interface WaitlistEntryRepository extends JpaRepository<WaitlistEntry, UU
    * Busca una entrada por ID dentro del tenant activo.
    *
    * <p>Filtra por {@code tenantId} explícito además del automático @TenantId
-   * (defensa en profundidad, regla §5.2 de AGENTS.md).
+   * (defensa en profundidad por tenant).
    */
   Optional<WaitlistEntry> findByIdAndTenantId(UUID id, UUID tenantId);
 
@@ -64,3 +64,4 @@ public interface WaitlistEntryRepository extends JpaRepository<WaitlistEntry, UU
       @Param("slotStart") Instant slotStart,
       @Param("slotEnd") Instant slotEnd);
 }
+

@@ -11,8 +11,7 @@ import org.springframework.stereotype.Repository;
 /**
  * Repositorio JPA para la entidad User (FASE1-02 y FASE1-03).
  *
- * <p>Todas las consultas filtran obligatoriamente por tenantId (defensa en profundidad,
- * regla §5.2 de AGENTS.md).
+ * <p>Todas las consultas filtran obligatoriamente por tenantId (defensa en profundidad por tenant).
  */
 @Repository
 public interface UserRepository extends JpaRepository<User, UUID> {
@@ -34,3 +33,4 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
   List<User> findAllByTenantIdAndRole(UUID tenantId, UserRole role);
 }
+

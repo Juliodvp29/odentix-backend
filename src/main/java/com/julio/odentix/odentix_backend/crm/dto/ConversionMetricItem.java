@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 /**
  * Métrica de conversión agrupada por una dimensión comercial (fuente o campaña) (FASE5-04).
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 public class ConversionMetricItem {
 
@@ -60,3 +60,4 @@ public class ConversionMetricItem {
     this.conversionRatePercentage = conversionRatePercentage;
   }
 }
+

@@ -10,7 +10,7 @@ import java.util.UUID;
 /**
  * Datos para programar opcionalmente una cita inicial al convertir un lead en paciente (FASE5-03).
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 public class ConvertLeadAppointmentData {
 
@@ -97,3 +97,4 @@ public class ConvertLeadAppointmentData {
     this.notes = notes;
   }
 }
+

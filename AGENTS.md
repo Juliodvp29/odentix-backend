@@ -1,109 +1,108 @@
 # AGENTS.md — odentix-backend
 
-Este archivo son las instrucciones para cualquier agente de código (Claude
-Code, Cursor, Copilot Workspace, etc.) que trabaje en este repositorio.
-Si estás leyendo esto como agente: estas reglas tienen prioridad sobre tu
-criterio general por defecto. Si una instrucción del usuario en el chat
-contradice algo crítico de aquí (sobre todo la sección de multi-tenancy),
-señala la contradicción en vez de aplicarla en silencio.
+This file holds the instructions for any coding agent (Claude
+Code, Cursor, Copilot Workspace, etc.) working in this repository.
+If you are reading this as an agent: these rules take priority over your
+default general judgment. If a user instruction in the chat
+contradicts something critical here (especially the multi-tenancy section),
+flag the contradiction instead of applying it silently.
 
 ---
 
-## 1. Qué es este proyecto
+## 1. What this project is
 
-Backend de un SaaS de gestión para clínicas odontológicas en Colombia
-(multi-tenant: cada clínica es un `tenant`). El diferenciador del producto
-no es solo llevar registros, sino detectar oportunidades de negocio
-perdidas (leads sin responder, tratamientos sin seguimiento, cartera
-vencida, etc.) y proponer una acción — no lo tengas presente para el
-código de infraestructura, pero si tocas lógica de negocio, el criterio
-de diseño es "esto ayuda a la clínica a actuar", no solo "esto registra
-un dato".
+Backend of a management SaaS for dental clinics in Colombia
+(multi-tenant: each clinic is a `tenant`). The product differentiator
+is not just keeping records, but detecting lost business
+opportunities (unanswered leads, treatments without follow-up, overdue
+receivables, etc.) and proposing an action — don't keep this in mind for
+infrastructure code, but if you touch business logic, the design
+criterion is "this helps the clinic act", not just "this records
+a data point".
 
-Documentos de referencia en la raíz del repo (léelos antes de tocar algo
-que no entiendas del todo):
+Reference documents at the repo root (read them before touching anything
+you don't fully understand):
 
-- `docs/documentacion_sistema_gestion_odontologica_v1.1.md  ` — arquitectura y producto.
-- `docs/roadmap_backend_fases.md` — roadmap por fases y tickets.
-- `docs/schema.sql` — esquema de base de datos de referencia.
+- `docs/documentacion_sistema_gestion_odontologica_v1.1.md  ` — architecture and product.
+- `docs/roadmap_backend_fases.md` — phased roadmap and tickets.
+- `docs/schema.sql` — reference database schema.
 
-Este backend se construye **solo** de momento (el frontend Angular es un
-proyecto/roadmap separado). No asumas que existe un cliente Angular
-consumiendo estos endpoints todavía — no hay contrato de API congelado.
+This backend is being built **alone** for now (the Angular frontend is a
+separate project/roadmap). Don't assume an Angular client
+is already consuming these endpoints — there is no frozen API contract.
 
-### Skills disponibles
+### Available skills
 
-Existe una carpeta `.agents/skills/` en la raíz del repo con instrucciones
-específicas para tareas puntuales (ej. cómo generar un tipo de reporte,
-una convención particular, un checklist para cierto tipo de cambio).
-**Antes de empezar cualquier tarea, revisa si `.agents/skills/` contiene
-un skill relevante para lo que vas a hacer y síguelo** — tiene prioridad
-sobre tu criterio general por defecto, igual que el resto de este
-archivo. Si la carpeta todavía no tiene ningún skill relacionado con la
-tarea actual, simplemente sigue las reglas de este `AGENTS.md`.
+There is a `.agents/skills/` folder at the repo root with
+task-specific instructions (e.g. how to generate a certain report,
+a particular convention, a checklist for a certain kind of change).
+**Before starting any task, check whether `.agents/skills/` contains
+a skill relevant to what you are about to do and follow it** — it takes
+priority over your default general judgment, just like the rest of this
+file. If the folder doesn't have any skill related to the
+current task yet, simply follow the rules in this `AGENTS.md`.
 
 ---
 
-## 2. Stack y versiones exactas
+## 2. Exact stack and versions
 
-- **Java 25 (LTS)** — nunca sugerir ni usar versiones no-LTS (26, etc.).
-- **Spring Boot 4.1.1** — ⚠️ IMPORTANTE: en esta versión los paquetes de
-  autoconfiguración se reorganizaron respecto a Spring Boot 3.x. La
-  inmensa mayoría de tutoriales, respuestas de Stack Overflow y del
-  propio conocimiento de un modelo de lenguaje usan los paquetes viejos.
-  **Antes de escribir cualquier import o referencia a una clase de
-  autoconfiguración de Spring Boot, verifica el nombre real del paquete**
-  (ejemplos ya confirmados en este proyecto):
+- **Java 25 (LTS)** — never suggest or use non-LTS versions (26, etc.).
+- **Spring Boot 4.1.1** — ⚠️ IMPORTANT: in this version the
+  autoconfiguration packages were reorganized compared to Spring Boot 3.x. The
+  vast majority of tutorials, Stack Overflow answers, and even a
+  language model's own knowledge use the old packages.
+  **Before writing any import or reference to a Spring Boot
+  autoconfiguration class, verify the real package name**
+  (examples already confirmed in this project):
   - `org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration`
   - `org.springframework.boot.hibernate.autoconfigure.HibernateJpaAutoConfiguration`
   - `org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration`
-    Si no estás seguro del paquete de una clase de autoconfiguración en
-    4.1.1, dilo explícitamente en vez de asumir el paquete de Spring Boot 3.
-- **Maven** (no Gradle).
-- **PostgreSQL 16+** — nunca H2 ni ninguna base embebida, ni siquiera para
-  pruebas rápidas (ver sección de testing).
-- **Flyway** para todo cambio de esquema.
-- **Spring Security** con JWT (implementación propia, sin OAuth2/Keycloak
-  en este alcance).
-- Despliegue objetivo: Docker + Render/Railway (no Kubernetes, no
-  microservicios — es un monolito modular a propósito).
+    If you are unsure about an autoconfiguration class's package in
+    4.1.1, say so explicitly instead of assuming the Spring Boot 3 package.
+- **Maven** (not Gradle).
+- **PostgreSQL 16+** — never H2 or any embedded database, not even for
+  quick tests (see the testing section).
+- **Flyway** for every schema change.
+- **Spring Security** with JWT (own implementation, no OAuth2/Keycloak
+  in this scope).
+- Target deployment: Docker + Render/Railway (no Kubernetes, no
+  microservices — a modular monolith on purpose).
 
 ---
 
-## 3. Comandos esenciales
+## 3. Essential commands
 
 ```bash
-# Levantar Postgres local (una vez exista docker-compose.yml, Fase 0.4)
+# Start local Postgres (once docker-compose.yml exists, Phase 0.4)
 docker compose up -d
 
-# Compilar y correr tests
+# Compile and run tests
 ./mvnw clean verify
 
-# Solo tests
+# Tests only
 ./mvnw test
 
-# Correr la app (perfil dev)
+# Run the app (dev profile)
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-Si alguno de estos comandos no existe todavía en el estado actual del
-repo (por ejemplo `docker-compose.yml` antes de la Fase 0.4), no lo
-inventes ni lo simules: dilo y pregunta en qué fase del roadmap estamos.
+If any of these commands doesn't exist yet in the repo's current state
+(e.g. `docker-compose.yml` before Phase 0.4), don't invent or simulate it:
+say so and ask which roadmap phase we are at.
 
 ---
 
-## 4. Arquitectura y convenciones de paquetes
+## 4. Architecture and package conventions
 
-Organización **por módulo de negocio**, no por capa técnica (decisión de
-FASE0-03, documentada porque Julio viene de un mundo más orientado a
-módulos en Angular):
+Organized **by business module**, not by technical layer (FASE0-03 decision,
+documented because Julio comes from a more Angular-style module-oriented world):
 
 ```
 com.julio.odentix.odentix_backend/
-├── shared/           # TenantAwareEntity, TenantContext, excepciones comunes
+├── shared/           # TenantAwareEntity, TenantContext, common exceptions
 ├── tenant/
 ├── auth/
-├── audit/            # AuditLog, AuditService (append-only, desde FASE1-13)
+├── audit/            # AuditLog, AuditService (append-only, since FASE1-13)
 ├── patient/
 ├── appointment/
 ├── treatmentplan/
@@ -113,218 +112,217 @@ com.julio.odentix.odentix_backend/
 └── ...
 ```
 
-Cada módulo se organiza internamente por sub-capas (`controller`,
-`service`, `repository`, `entity`, `dto`) **dentro de su propio paquete**,
-no como paquetes top-level compartidos. Si vas a crear un módulo nuevo,
-sigue este mismo patrón sin pedir permiso; si vas a _cambiar_ el patrón,
-pregunta primero — es una decisión ya tomada y documentada.
+Each module is internally organized by sub-layer (`controller`,
+`service`, `repository`, `entity`, `dto`) **inside its own package**,
+not as shared top-level packages. If you are creating a new module,
+follow this same pattern without asking; if you are going to _change_ the
+pattern, ask first — it's a decision already made and documented.
 
-### Documentación interactiva (Swagger UI)
+### Interactive documentation (Swagger UI)
 
-El proyecto expone OpenAPI/Swagger UI (`springdoc-openapi` 3.x, línea
-compatible con Spring Boot 4 — la 2.x es solo para Boot 3): UI en
-`/swagger-ui.html`, JSON en `/v3/api-docs`. Reglas:
+The project exposes OpenAPI/Swagger UI (`springdoc-openapi` 3.x, the line
+compatible with Spring Boot 4 — 2.x is Boot 3 only): UI at
+`/swagger-ui.html`, JSON at `/v3/api-docs`. Rules:
 
-- Todo endpoint nuevo lleva `@Tag` (a nivel de controlador) y `@Operation`
-  con un resumen claro; sin esto la UI nace vacía y se vuelve inútil.
-- Al cerrar cada fase se verifica que Swagger UI renderiza los endpoints
-  nuevos (con la app en dev + botón *Authorize* con un JWT real).
-- La documentación va **deshabilitada en prod** (`application-prod.yml`):
-  es una herramienta de desarrollo, no debe exponerse públicamente.
-
----
-
-## 5. Multi-tenancy — reglas críticas (no negociables)
-
-Este es el aspecto más importante de todo el proyecto. Un bug aquí filtra
-datos de pacientes entre clínicas distintas, que es el peor escenario de
-seguridad posible para este producto.
-
-1. **Toda entidad de negocio nueva** (no catálogos globales como `plans`)
-   debe extender/incluir `tenant_id` desde su primera migración, y la
-   clase Java debe heredar de `TenantAwareEntity` (o el patrón equivalente
-   que exista para ese momento del proyecto).
-2. **Nunca escribas una query JPQL/nativa manual que toque una tabla de
-   negocio sin filtrar por `tenant_id`**, incluso si crees que el filtro
-   automático (Hibernate Filter / `TenantContext`) ya lo cubre. Defensa en
-   profundidad: dos capas independientes, ninguna sustituye a la otra.
-3. Row Level Security en PostgreSQL (ver `schema.sql`) es la segunda capa.
-   Si escribes una migración Flyway que crea una tabla con `tenant_id`,
-   **debe** quedar con RLS activado siguiendo el mismo patrón que las
-   demás (política `tenant_isolation` sobre `current_tenant_id()`).
-4. Si escribes un test de un endpoint o repositorio que toque una tabla
-   de negocio, **incluye siempre un caso que verifique aislamiento
-   cross-tenant** (crear datos en tenant A, autenticarte/simular como
-   tenant B, verificar que no se ve ni se puede modificar). No es
-   opcional ni "algo que se puede agregar después".
-5. Nunca loguees ni expongas en mensajes de error el contenido de datos
-   de un tenant distinto al de la request actual, ni siquiera en logs de
-   debug.
+- Every new endpoint gets `@Tag` (at controller level) and `@Operation`
+  with a clear summary; without this the UI is born empty and becomes useless.
+- When closing each phase, verify that Swagger UI renders the new
+  endpoints (with the app in dev + the *Authorize* button with a real JWT).
+- Documentation is **disabled in prod** (`application-prod.yml`):
+  it's a development tool, it must not be publicly exposed.
 
 ---
 
-## 6. Base de datos y migraciones
+## 5. Multi-tenancy — critical rules (non-negotiable)
 
-- **`ddl-auto` siempre en `validate`**, en todos los perfiles, sin
-  excepción. Nunca `update` ni `create`, ni "solo para probar rápido".
-- Todo cambio de esquema va en una migración Flyway nueva
-  (`V{n}__descripcion.sql`), nunca editando una migración ya aplicada
-  (aunque sea reciente) ni modificando el `schema.sql` de referencia
-  directamente esperando que se aplique solo.
-- Sigue las convenciones ya establecidas en `schema.sql`: UUID como PK
-  (`gen_random_uuid()`), `snake_case`, tablas en plural, `TIMESTAMPTZ` (no
-  `TIMESTAMP`), montos en `NUMERIC(12,2)` con sufijo `_cop`, `updated_at`
-  gestionado por el trigger genérico `set_updated_at()` (no lo setees a
-  mano desde Java).
-- Antes de crear una tabla nueva, revisa si ya existe una definición de
-  referencia para ella en `docs/schema.sql` y mantente consistente con
-  esa definición salvo que el usuario pida explícitamente cambiarla.
+This is the most important aspect of the whole project. A bug here leaks
+patient data across different clinics, which is the worst possible security
+scenario for this product.
+
+1. **Every new business entity** (not global catalogs like `plans`)
+   must extend/include `tenant_id` from its first migration, and the
+   Java class must inherit from `TenantAwareEntity` (or the equivalent
+   pattern in place at that point in the project).
+2. **Never write a manual JPQL/native query touching a business table
+   without filtering by `tenant_id`**, even if you believe the automatic
+   filter (Hibernate Filter / `TenantContext`) already covers it. Defense in
+   depth: two independent layers, neither replaces the other.
+3. Row Level Security in PostgreSQL (see `schema.sql`) is the second layer.
+   If you write a Flyway migration creating a table with `tenant_id`,
+   it **must** end up with RLS enabled following the same pattern as the
+   rest (`tenant_isolation` policy on `current_tenant_id()`).
+4. If you write a test for an endpoint or repository touching a business
+   table, **always include a case verifying cross-tenant
+   isolation** (create data in tenant A, authenticate/simulate as
+   tenant B, verify it can neither be seen nor modified). It's not
+   optional nor "something to add later".
+5. Never log or expose in error messages the data contents of a
+   tenant other than the current request's, not even in debug logs.
+
+---
+
+## 6. Database and migrations
+
+- **`ddl-auto` always `validate`**, in every profile, with no
+  exceptions. Never `update` nor `create`, not even "just for a quick test".
+- Every schema change goes in a new Flyway migration
+  (`V{n}__descripcion.sql`), never by editing an already-applied migration
+  (even a recent one) nor by modifying the reference `schema.sql`
+  directly expecting it to apply on its own.
+- Follow the conventions already established in `schema.sql`: UUID as PK
+  (`gen_random_uuid()`), `snake_case`, plural tables, `TIMESTAMPTZ` (not
+  `TIMESTAMP`), amounts in `NUMERIC(12,2)` with the `_cop` suffix, `updated_at`
+  managed by the generic `set_updated_at()` trigger (don't set it by
+  hand from Java).
+- Before creating a new table, check whether a reference definition for
+  it already exists in `docs/schema.sql` and stay consistent with
+  that definition unless the user explicitly asks to change it.
 
 ---
 
 ## 7. Testing
 
-- **Testcontainers con PostgreSQL real**, nunca H2 ni mocks de base de
-  datos para pruebas de integración. Ya existe una clase base para esto
-  (ver FASE0-06 del roadmap) — reutilízala en vez de crear una nueva.
-- Todo endpoint o repositorio nuevo que toque una tabla de negocio
-  necesita al menos: un test de comportamiento normal, un test de
-  aislamiento cross-tenant (sección 5), y un test de autorización por rol
-  si el endpoint tiene restricción de rol.
-- No marques un ticket/tarea como terminado si el DoD (Definition of
-  Done) descrito en `roadmap_backend_fases.md` para ese ticket no está
-  cubierto por una prueba automatizada verificable, no solo "probado a
-  mano una vez".
+- **Testcontainers with a real PostgreSQL**, never H2 nor database
+  mocks for integration tests. A base class for this already exists
+  (see roadmap FASE0-06) — reuse it instead of creating a new one.
+- Every new endpoint or repository touching a business table
+  needs at least: a normal-behavior test, a
+  cross-tenant isolation test (section 5), and a role-authorization test
+  if the endpoint has a role restriction.
+- Don't mark a ticket/task as done if the DoD (Definition of
+  Done) described in `roadmap_backend_fases.md` for that ticket isn't
+  covered by a verifiable automated test, not just "manually tested once".
 
 ---
 
-## 8. Seguridad
+## 8. Security
 
-- Nunca hardcodees secretos, credenciales o claves de API en código ni en
-  archivos versionados. Van en variables de entorno.
-- El rol de base de datos que use la aplicación en producción no debe
-  tener `BYPASSRLS` — si necesitas escribir una migración o script
-  administrativo que sí lo requiera, dilo explícitamente en vez de
-  asumir permisos elevados por defecto.
-- Nunca implementes ni sugieras deshabilitar RLS o el filtro de tenant
-  "temporalmente para probar algo más rápido". Si algo es difícil de
-  probar con el aislamiento activo, el problema es del test, no una
-  razón para bajar la guardia de seguridad.
-- Los endpoints de IA o de integraciones externas (WhatsApp, proveedores
-  de IA) deben implementarse con manejo de fallos que **nunca bloquee**
-  el flujo operativo que los originó (ver sección 8.3/10.3 del roadmap:
-  timeout corto + fallback a plantilla fija + registro del fallo).
-
----
-
-## 9. Estilo de código
-
-- Sin Lombok por ahora (decisión de FASE0-01, mientras se está
-  aprendiendo el framework — código explícito). Si en algún momento se
-  agrega Lombok al proyecto, esta regla queda obsoleta; verifica el
-  `pom.xml` real antes de asumir.
-- Nombres de variables, métodos y comentarios de código en español o
-  inglés, mantente consistente con lo que ya exista en el archivo que
-  estés editando en vez de mezclar.
-- Prefiere código explícito y legible sobre "clever". Julio está
-  aprendiendo Spring Boot activamente — si tomas una decisión no obvia
-  (ej. un patrón de Hibernate Filters, una configuración de seguridad no
-  trivial), agrega un comentario breve explicando el porqué, no solo el
-  qué.
+- Never hardcode secrets, credentials, or API keys in code or in
+  versioned files. They go in environment variables.
+- The database role used by the application in production must not
+  have `BYPASSRLS` — if you need to write a migration or administrative
+  script that does require it, say so explicitly instead of
+  assuming elevated permissions by default.
+- Never implement or suggest disabling RLS or the tenant filter
+  "temporarily to test something faster". If something is hard to
+  test with isolation enabled, the problem is in the test, not a
+  reason to lower the security bar.
+- AI or external-integration endpoints (WhatsApp, AI
+  providers) must be implemented with failure handling that **never blocks**
+  the operational flow that originated them (see roadmap section 8.3/10.3:
+  short timeout + fixed-template fallback + failure logging).
 
 ---
 
-## 10. Qué NO hacer nunca
+## 9. Code style
 
-- No agregues Kubernetes, un segundo servicio, colas de mensajería
-  pesadas (Kafka, RabbitMQ) u otra infraestructura no pedida "porque es
-  buena práctica". El principio arquitectónico explícito del proyecto es
-  no introducir complejidad de infraestructura antes de que la escala la
-  justifique.
-- No asumas que el frontend Angular ya consume un endpoint de una forma
-  específica — no existe todavía.
-- No inventes valores de configuración, endpoints de proveedores externos
-  (WhatsApp, pasarelas de pago) ni credenciales de ejemplo como si fueran
-  reales.
-- No marques como resuelto un ticket del roadmap sin cumplir su DoD tal
-  como está escrito en `roadmap_backend_fases.md`.
-- No cambies la convención de paquetes, el modelo de multi-tenancy, o las
-  claves de `plan_features`/`plan_limits` sin señalarlo explícitamente —
-  son decisiones ya tomadas con su razonamiento documentado.
-
----
-
-## 11. Flujo de trabajo obligatorio en cada tarea
-
-Este flujo aplica a **cualquier cambio no trivial** (una fase completa,
-un ticket del roadmap, o incluso un ajuste puntual dentro de un ticket ya
-empezado). No lo saltes por parecer "obvio" o "rápido" — la idea es que
-Julio pueda revisar y aprender de cada paso, no solo recibir código ya
-hecho.
-
-1. **Plan antes de código.** Antes de crear o modificar cualquier
-   archivo, presenta un plan breve: qué vas a hacer, qué archivos vas a
-   tocar o crear, y qué decisiones no triviales vas a tomar (si hay más
-   de una forma razonable de resolverlo, dilo y explica cuál eliges y
-   por qué). No hace falta un documento largo — unas pocas líneas
-   claras bastan.
-2. **Esperar aprobación.** No ejecutes el plan hasta que Julio lo
-   confirme explícitamente. Si pide cambios al plan, ajústalo y vuelve a
-   presentarlo antes de tocar código.
-3. **Ejecutar el plan aprobado.** Implementa exactamente lo acordado. Si
-   en el camino descubres que el plan no funciona o falta algo
-   importante, detente y explica el problema en vez de improvisar una
-   solución distinta sin avisar.
-4. **Probar antes de dar por terminado.** Corre las pruebas relevantes
-   (`./mvnw test` o `./mvnw clean verify` según el alcance) y verifica el
-   DoD del ticket correspondiente en `roadmap_backend_fases.md` si
-   aplica. Si algo fue difícil de probar automáticamente, dilo
-   explícitamente en vez de dar el cambio por bueno sin evidencia.
-5. **Commit solo al final, y solo si todo lo anterior pasó.** Un commit
-   por tarea/ticket completado, con mensaje claro (ver convención más
-   abajo). Nunca hagas commit de código que no compila o con pruebas en
-   rojo, y nunca hagas commit sin que Julio haya visto el resultado
-   final de los pasos 3 y 4.
-6. **Actualizar `ARCHITECTURE.md` al cerrar cada fase.** Cuando todos los
-   tickets de una fase estén en verde: documentar lo construido (nuevos
-   endpoints con ejemplos de uso, entidades y migraciones, decisiones
-   técnicas y desviaciones del roadmap/`schema.sql`) y tachar el checklist
-   de salida en `roadmap_backend_fases.md`. Sin esta actualización la fase
-   no se considera cerrada.
-
-Este ciclo (plan → aprobación → ejecución → pruebas → commit) se repite
-en cada fase y en cada ajuste dentro de una fase, no solo una vez al
-principio del proyecto.
-
-### Convención de commits
-
-Mensajes en ingles, formato corto: `[FASE0-01] Configurar proyecto base
-Spring Boot`. Si el cambio no corresponde a un ticket del roadmap (un
-ajuste menor, un fix), usa una descripción igual de clara sin el prefijo
-de ticket.
+- No Lombok for now (FASE0-01 decision, while learning
+  the framework — explicit code). If Lombok is ever added
+  to the project, this rule becomes obsolete; check the
+  real `pom.xml` before assuming.
+- Variable, method, and code-comment names in Spanish or
+  English — stay consistent with whatever already exists in the file you
+  are editing instead of mixing.
+- Prefer explicit, readable code over "clever". Julio is
+  actively learning Spring Boot — if you make a non-obvious decision
+  (e.g. a Hibernate Filters pattern, a non-trivial security configuration),
+  add a brief comment explaining the why, not just the what.
+- Comments are written in impersonal style (no first person) and without
+  emojis. References like "rule §5 of AGENTS.md" don't belong in source
+  comments either: state the rule in neutral terms
+  (e.g. "explicit per-tenant filter", "explicit code by project convention").
 
 ---
 
-## 12. Estado actual del proyecto / notas vivas
+## 10. What NEVER to do
 
-_(Actualiza esta sección a medida que el proyecto avanza — es más útil
-que quede desactualizada visiblemente a que no exista.)_
+- Don't add Kubernetes, a second service, heavy message queues
+  (Kafka, RabbitMQ), or any other unrequested infrastructure "because it's
+  best practice". The project's explicit architectural principle is
+  not to introduce infrastructure complexity before scale justifies it.
+- Don't assume the Angular frontend already consumes an endpoint in a
+  specific way — it doesn't exist yet.
+- Don't invent configuration values, external provider endpoints
+  (WhatsApp, payment gateways), or sample credentials as if they were
+  real.
+- Don't mark a roadmap ticket as resolved without meeting its DoD as
+  written in `roadmap_backend_fases.md`.
+- Don't change the package convention, the multi-tenancy model, or the
+  `plan_features`/`plan_limits` keys without flagging it explicitly —
+  they are decisions already made with documented reasoning.
 
-- Fase completada: **Fase 0 — Fundamentos y esqueleto del proyecto** (todos los tickets FASE0-01 a FASE0-09 completados).
-- Despliegue en la nube: activo en Render (`https://odentix-backend.onrender.com/actuator/health`).
-- Base de datos de producción: PostgreSQL 16 administrada en Render (`odentix-postgres` en región Ohio).
-- Pipeline de CI: activo en GitHub Actions (`.github/workflows/ci.yml`) con Java 25 y Testcontainers sobre `dev` y `main`.
-- Fase 1 completada: FASE1-01 a FASE1-14 en verde (`Tenant`, `User`, `UserRole`, `TenantAwareEntity`, `UserService`, login JWT, `JwtAuthenticationFilter`, `TenantContext` por request, filtrado automático de tenant en repositorios con `@TenantId` y `TenantIdentifierResolver`, test crítico de aislamiento cross-tenant, autorización por rol con `@PreAuthorize`, test de autorización por rol con `RoleAuthorizationIntegrationTest` 5/5 en verde, base de auditoría `audit_log` con `AuditService` reutilizable y `AuditServiceIntegrationTest` en verde). Checklist de salida verificado: FASE1-10 5/5 y FASE1-12 5/5 en `clean verify` (lo que corre CI), `TenantAwareEntity` lista. Decisión tomada en FASE1-14: fallos sin tenant atribuible no se auditan (ver roadmap).
-- Fase completada: **Fase 2 — Pacientes e historia clínica base** (todos los tickets FASE2-01 a FASE2-10 completados; checklist de salida verificado y `ARCHITECTURE.md` actualizado).
-- **Mejoras de seguridad implementadas (pre-Fase 3):**
-  1. Sesión y refresh tokens con rotación atómica (`V10__create_refresh_tokens.sql`, `RefreshToken`, `RefreshTokenService`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout`); access token reducido a 15 min; validación en tiempo real de `user.isActive()` y rol sincronizado desde BD en cada request en `JwtAuthenticationFilter`.
-  2. Autorización por rol (`@PreAuthorize`) en `PatientController`: actos clínicos (historia clínica y odontograma) reservados a facultativos (`PROPIETARIO`, `ODONTOLOGO`, `ESPECIALISTA_EXTERNO`); historia clínica confidencial (recepción bloqueada); baja lógica reservada a `PROPIETARIO`.
-  3. Protección contra fuerza bruta y DoS en `POST /api/v1/auth/login`: rate limiting por IP (10 req/min) y bloqueo temporal por email (5 fallos consecutivos -> 15 min de bloqueo con HTTP 429 Too Many Requests y cabecera `Retry-After`) implementado en `LoginRateLimitService`.
-  4. Distinción granular de errores JWT (`JwtValidationResult`, `JwtAuthenticationEntryPoint`): cabecera RFC 6750 `WWW-Authenticate` y códigos JSON (`token_expired`, `token_invalid`, `user_inactive`, `token_missing`) para optimizar el refresco automático de sesión en frontend.
-- Fase completada: **Fase 5 — CRM de leads** (todos los tickets FASE5-01 a FASE5-04 completados; checklist de salida verificado y `ARCHITECTURE.md` actualizado).
-- Fase completada: **Fase 6 — Cartera y pagos por etapas** (todos los tickets FASE6-01 a FASE6-04 completados; checklist de salida verificado y `ARCHITECTURE.md` actualizado).
-- Fase completada: **Fase 11 — Suscripciones y planes** (todos los tickets FASE11-01 a FASE11-05 completados; checklist de salida verificado y `ARCHITECTURE.md` actualizado).
-- Última verificación local: `./mvnw.cmd clean verify` el **19 de septiembre de 2026**, con **367/367 pruebas sin fallos** (incluyendo gating, límites, Bold, ciclo anual, más identidades por tenant, ajustes autogestionados y endurecimiento de arranque, producción.
-- Fase siguiente: **Fase 12 — Endurecimiento y producción** (cerrados 12-01 a 12-04; 12-05 en código pendiente de verificación con un merge real; 12-06 bloqueado por plan free sin backups).
-- Documentación interactiva: Swagger UI activo en dev/test (`/swagger-ui.html`, JSON en `/v3/api-docs`) con `springdoc-openapi` 3.1.1 y esquema `bearerAuth` JWT; deshabilitado en prod. Regla vigente (§4): todo endpoint nuevo se anota con `@Tag`/`@Operation` y cada cierre de fase verifica la UI. Cobertura de endpoints verificada en `OpenApiDocsIntegrationTest` incluyendo `GET /api/v1/opportunities`.
+---
 
+## 11. Mandatory workflow for every task
+
+This flow applies to **any non-trivial change** (a full phase,
+a roadmap ticket, or even a one-off adjustment inside an already-started
+ticket). Don't skip it for looking "obvious" or "quick" — the idea is for
+Julio to review and learn from each step, not just receive finished code.
+
+1. **Plan before code.** Before creating or modifying any
+   file, present a brief plan: what you are going to do, which files you
+   are going to touch or create, and which non-trivial decisions you are
+   going to make (if there is more than one reasonable way to solve it,
+   say so and explain which one you pick and why). No long document
+   needed — a few clear lines are enough.
+2. **Wait for approval.** Don't execute the plan until Julio
+   explicitly confirms it. If he requests changes to the plan, adjust it and
+   present it again before touching code.
+3. **Execute the approved plan.** Implement exactly what was agreed. If
+   along the way you discover the plan doesn't work or something
+   important is missing, stop and explain the problem instead of improvising
+   a different solution without notice.
+4. **Test before calling it done.** Run the relevant tests
+   (`./mvnw test` or `./mvnw clean verify` depending on scope) and verify the
+   DoD of the corresponding ticket in `roadmap_backend_fases.md` if
+   applicable. If something was hard to test automatically, say
+   so explicitly instead of calling the change good without evidence.
+5. **Julio commits at the end, and only if everything above passed.** One
+   commit per completed task/ticket, with a clear message (see convention
+   below). The agent never commits on its own: it marks tickets, verifies
+   tests, and proposes the commit message. Never consider code done that
+   doesn't compile or has red tests, and never treat a change as committed
+   without Julio having seen the final result of steps 3 and 4.
+6. **Update `ARCHITECTURE.md` when closing each phase.** When every
+   ticket in a phase is green: document what was built (new
+   endpoints with usage examples, entities and migrations, technical
+   decisions and deviations from the roadmap/`schema.sql`) and check off the
+   exit checklist in `roadmap_backend_fases.md`. Without this update the phase
+   is not considered closed.
+
+This cycle (plan → approval → execution → tests → commit) repeats
+in each phase and in each adjustment within a phase, not just once at
+the start of the project.
+
+### Commit convention
+
+Messages in English, short format: `[FASE0-01] Configure base
+Spring Boot project`. If the change doesn't belong to a roadmap ticket (a
+minor adjustment, a fix), use an equally clear description without the
+ticket prefix.
+
+---
+
+## 12. Current project status / living notes
+
+_(Update this section as the project moves forward — visibly outdated
+is more useful than nonexistent.)_
+
+- Completed phase: **Phase 0 — Project foundations and skeleton** (all FASE0-01 to FASE0-09 tickets completed).
+- Cloud deployment: live on Render (`https://odentix-backend.onrender.com/actuator/health`).
+- Production database: managed PostgreSQL 16 on Render (`odentix-postgres` in the Ohio region).
+- CI pipeline: live in GitHub Actions (`.github/workflows/ci.yml`) with Java 25 and Testcontainers on `dev` and `main`.
+- Phase 1 completed: FASE1-01 to FASE1-14 green (`Tenant`, `User`, `UserRole`, `TenantAwareEntity`, `UserService`, JWT login, `JwtAuthenticationFilter`, per-request `TenantContext`, automatic tenant filtering in repositories with `@TenantId` and `TenantIdentifierResolver`, critical cross-tenant isolation test, role authorization with `@PreAuthorize`, role authorization test with `RoleAuthorizationIntegrationTest` 5/5 green, audit base `audit_log` with reusable `AuditService` and green `AuditServiceIntegrationTest`). Exit checklist verified: FASE1-10 5/5 and FASE1-12 5/5 in `clean verify` (what CI runs), `TenantAwareEntity` ready. Decision made in FASE1-14: failures with no attributable tenant are not audited (see roadmap).
+- Completed phase: **Phase 2 — Patients and base clinical history** (all FASE2-01 to FASE2-10 tickets completed; exit checklist verified and `ARCHITECTURE.md` updated).
+- **Security improvements implemented (pre-Phase 3):**
+  1. Session and refresh tokens with atomic rotation (`V10__create_refresh_tokens.sql`, `RefreshToken`, `RefreshTokenService`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout`); access token reduced to 15 min; real-time validation of `user.isActive()` and DB-synced role on every request in `JwtAuthenticationFilter`.
+  2. Role authorization (`@PreAuthorize`) in `PatientController`: clinical acts (clinical history and odontogram) reserved to practitioners (`PROPIETARIO`, `ODONTOLOGO`, `ESPECIALISTA_EXTERNO`); confidential clinical history (reception blocked); soft delete reserved to `PROPIETARIO`.
+  3. Brute-force and DoS protection on `POST /api/v1/auth/login`: per-IP rate limiting (10 req/min) and temporary per-email lockout (5 consecutive failures -> 15 min lockout with HTTP 429 Too Many Requests and `Retry-After` header) implemented in `LoginRateLimitService`.
+  4. Granular JWT error distinction (`JwtValidationResult`, `JwtAuthenticationEntryPoint`): RFC 6750 `WWW-Authenticate` header and JSON codes (`token_expired`, `token_invalid`, `user_inactive`, `token_missing`) to optimize automatic frontend session refresh.
+- Completed phase: **Phase 5 — Lead CRM** (all FASE5-01 to FASE5-04 tickets completed; exit checklist verified and `ARCHITECTURE.md` updated).
+- Completed phase: **Phase 6 — Receivables and staged payments** (all FASE6-01 to FASE6-04 tickets completed; exit checklist verified and `ARCHITECTURE.md` updated).
+- Completed phase: **Phase 11 — Subscriptions and plans** (all FASE11-01 to FASE11-05 tickets completed; exit checklist verified and `ARCHITECTURE.md` updated).
+- Last local verification: `./mvnw.cmd clean verify` on **September 19, 2026**, with **367/367 tests passing** (including gating, limits, Bold, annual cycle, plus per-tenant identities, self-managed adjustments and boot hardening, production.
+- Next phase: **Phase 12 — Hardening and production** (12-01 to 12-04 closed; 12-05 in code pending verification with a real merge; 12-06 blocked by free plan without backups).
+- Interactive documentation: Swagger UI live in dev/test (`/swagger-ui.html`, JSON at `/v3/api-docs`) with `springdoc-openapi` 3.1.1 and JWT `bearerAuth` scheme; disabled in prod. Standing rule (§4): every new endpoint is annotated with `@Tag`/`@Operation` and each phase closing verifies the UI. Endpoint coverage verified in `OpenApiDocsIntegrationTest` including `GET /api/v1/opportunities`.

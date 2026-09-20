@@ -25,7 +25,7 @@ import java.util.UUID;
  * la tabla {@code professionals} se crea en Fase 3 (FASE3-01), momento
  * en el que se añadirá la relación JPA correspondiente.
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Entity
 @Table(name = "clinical_records")
@@ -124,10 +124,11 @@ public class ClinicalRecord extends TenantAwareEntity {
 
   @Override
   public String toString() {
-    // Sin datos clínicos en logs (PII/PHI del tenant, regla §5.5 de AGENTS.md).
+    // Sin datos clínicos en logs (PII/PHI del tenant).
     return "ClinicalRecord{"
         + "id=" + getId()
         + ", patientId=" + (patient != null ? patient.getId() : "null")
         + '}';
   }
 }
+

@@ -34,7 +34,7 @@ import org.springframework.orm.jpa.JpaSystemException;
  * <ul>
  *   <li>Persistir un plan de tratamiento con varios ítems asociados en cascada.</li>
  *   <li>Recuperar el plan con sus ítems vía consulta fetch join.</li>
- *   <li>Aislamiento multi-tenant estricto (regla §5 de AGENTS.md).</li>
+ *   <li>Aislamiento multi-tenant estricto (regla de aislamiento multi-tenant del proyecto).</li>
  *   <li>Trigger de consistencia de tenant para paciente y profesional.</li>
  *   <li>Restricción de notación FDI para números de diente (11 a 48).</li>
  *   <li>Soporte de orphan removal al desasociar un ítem del plan.</li>
@@ -245,3 +245,4 @@ class TreatmentPlanRepositoryIntegrationTest extends AbstractIntegrationTest {
     }
   }
 }
+

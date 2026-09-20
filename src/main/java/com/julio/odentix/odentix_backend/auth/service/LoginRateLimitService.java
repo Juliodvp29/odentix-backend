@@ -22,7 +22,7 @@ import org.springframework.stereotype.Service;
  *       Al superar el umbral, bloquea temporalmente los intentos para ese email durante K minutos.</li>
  * </ul>
  *
- * <p>Convención: Sin Lombok (regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Service
 public class LoginRateLimitService {
@@ -212,3 +212,4 @@ public class LoginRateLimitService {
     }
   }
 }
+

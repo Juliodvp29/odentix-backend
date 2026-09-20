@@ -10,7 +10,7 @@ import java.util.UUID;
  * <p>Si el prospecto ya había sido convertido previamente a un paciente, se retorna
  * la información existente con {@code alreadyConverted = true}, garantizando idempotencia.
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 public class ConvertLeadResponse {
 
@@ -87,3 +87,4 @@ public class ConvertLeadResponse {
     this.alreadyConverted = alreadyConverted;
   }
 }
+

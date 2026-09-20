@@ -39,7 +39,7 @@ import org.springframework.test.web.servlet.MockMvc;
  *   <li>{@code GET /api/v1/portfolio/summary} devuelve totales coherentes con los
  *       datos de {@code Installment} en ese momento (cartera total, vencida, por vencer y al día).</li>
  *   <li>Clínica sin cuotas devuelve ceros limpios (sin nulos ni errores 500).</li>
- *   <li>Aislamiento cross-tenant estricto (§5 de AGENTS.md): las cuotas de un tenant
+ *   <li>Aislamiento cross-tenant estricto: las cuotas de un tenant
  *       no contaminan los totales de otro tenant.</li>
  *   <li>Acceso no autenticado devuelve 401 Unauthorized.</li>
  * </ul>
@@ -236,3 +236,4 @@ class PortfolioIntegrationTest extends AbstractIntegrationTest {
         .andExpect(status().isUnauthorized());
   }
 }
+

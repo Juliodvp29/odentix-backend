@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Pruebas del adaptador WhatsApp (FASE8-05) contra un servidor HTTP falso del
- * JDK — cero red real, cero credenciales (regla §10 de AGENTS.md).
+ * JDK — cero red real, cero credenciales.
  *
  * <p>Es un test unitario plano (sin Spring ni BD): el adaptador es un POJO
  * con el proveedor inyectado por constructor.
@@ -112,3 +112,4 @@ class WhatsappSenderIntegrationTest {
         .hasMessageContaining("WHATSAPP_PHONE_NUMBER_ID");
   }
 }
+

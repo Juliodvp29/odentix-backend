@@ -19,7 +19,7 @@ import org.springframework.stereotype.Repository;
 public interface InventoryItemRepository extends JpaRepository<InventoryItem, UUID> {
 
   /**
-   * Busca un ítem por su ID y tenant (defensa en profundidad, regla §5.2 de AGENTS.md).
+   * Busca un ítem por su ID y tenant (defensa en profundidad por tenant).
    */
   Optional<InventoryItem> findByIdAndTenantId(UUID id, UUID tenantId);
 
@@ -39,7 +39,7 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
    * <p>Comparar dos columnas ({@code quantity <= minThreshold}) no lo soportan
    * las queries derivadas de Spring Data, por eso va con JPQL explícito — con
    * filtro de {@code tenantId} además del automático @TenantId (defensa en
-   * profundidad, regla §5.2 de AGENTS.md).
+   * profundidad por tenant).
    */
   @Query("""
       SELECT i FROM InventoryItem i
@@ -59,3 +59,4 @@ public interface InventoryItemRepository extends JpaRepository<InventoryItem, UU
       """)
   List<InventoryItem> findAllCritical();
 }
+

@@ -24,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Servicio de consulta de oportunidades para la API REST (FASE9-01).
  *
  * <p>El tenant siempre sale del {@code TenantContext}: oportunidades de otro
- * tenant resultan invisibles, conforme a la regla §5 de AGENTS.md.
+ * tenant resultan invisibles, conforme a la regla de aislamiento multi-tenant del proyecto.
  */
 @Service
 public class OpportunityService {
@@ -143,3 +143,4 @@ public class OpportunityService {
         .toList();
   }
 }
+

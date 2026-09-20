@@ -37,7 +37,7 @@ import org.springframework.test.web.servlet.MvcResult;
  *
  * <p>Cubre el DoD: el GET distingue estado actual, diagnóstico, plan y
  * tratamiento realizado sin que el consumidor infiera nada, más el
- * aislamiento cross-tenant obligatorio (regla §5.4 de AGENTS.md).
+ * aislamiento cross-tenant verificado con test.
  */
 @AutoConfigureMockMvc
 class OdontogramIntegrationTest extends AbstractIntegrationTest {
@@ -276,3 +276,4 @@ class OdontogramIntegrationTest extends AbstractIntegrationTest {
         .andExpect(status().isUnauthorized());
   }
 }
+

@@ -22,7 +22,7 @@ import org.hibernate.dialect.type.PostgreSQLEnumJdbcType;
  * <p>Representa una clínica odontológica cliente. Toda información de negocio
  * pertenece directa o indirectamente a un {@code Tenant}.
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Entity
 @Table(name = "tenants")
@@ -212,3 +212,4 @@ public class Tenant {
         '}';
   }
 }
+

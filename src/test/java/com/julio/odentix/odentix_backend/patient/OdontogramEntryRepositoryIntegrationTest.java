@@ -25,7 +25,7 @@ import org.springframework.dao.DataIntegrityViolationException;
  *
  * <p>Cubre el DoD del ticket: varias entradas para la misma pieza dental
  * coexisten sin sobrescribirse, más el aislamiento cross-tenant obligatorio
- * (regla §5.4 de AGENTS.md) y el CHECK de notación FDI.
+ * (test cross-tenant obligatorio) y el CHECK de notación FDI.
  */
 class OdontogramEntryRepositoryIntegrationTest extends AbstractIntegrationTest {
 
@@ -148,3 +148,4 @@ class OdontogramEntryRepositoryIntegrationTest extends AbstractIntegrationTest {
     }
   }
 }
+

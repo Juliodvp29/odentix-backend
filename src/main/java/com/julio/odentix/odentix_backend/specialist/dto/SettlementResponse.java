@@ -8,7 +8,7 @@ import java.util.UUID;
 /**
  * Liquidación de especialista creada (FASE7-02).
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 public class SettlementResponse {
 
@@ -79,3 +79,4 @@ public class SettlementResponse {
     this.status = status;
   }
 }
+

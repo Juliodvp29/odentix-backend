@@ -23,7 +23,7 @@ import org.hibernate.dialect.type.PostgreSQLEnumJdbcType;
  *
  * <p>Hereda de {@link TenantAwareEntity} para aislamiento automático por tenant.
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Entity
 @Table(name = "opportunities")
@@ -151,3 +151,4 @@ public class Opportunity extends TenantAwareEntity {
         + '}';
   }
 }
+

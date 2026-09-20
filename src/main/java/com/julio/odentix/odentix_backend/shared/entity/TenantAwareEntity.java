@@ -19,7 +19,7 @@ import org.hibernate.annotations.TenantId;
  * <p>Toda tabla de negocio (no catálogos globales) debe llevar {@code tenant_id}
  * desde su primera migración, y su entidad debe heredar de esta clase: así el
  * olvido del filtro por tenant se vuelve un error de diseño visible, no un
- * detalle a recordar en cada query (defensa en profundidad, regla §5 de AGENTS.md).
+ * detalle a recordar en cada query (defensa en profundidad, regla de aislamiento multi-tenant del proyecto).
  *
  * <p>Anotado con {@link TenantId} para que Hibernate 6/7 aplique el filtro automático
  * de tenant tanto en queries masivas (findAll, JPQL, Criteria) como en búsquedas por
@@ -34,7 +34,7 @@ import org.hibernate.annotations.TenantId;
  * no pertenece a ningún tenant— y {@code User} —ya modela el tenant vía asociación
  * y su repositorio filtra por tenant desde FASE1-02.
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @MappedSuperclass
 public abstract class TenantAwareEntity {
@@ -128,3 +128,4 @@ public abstract class TenantAwareEntity {
     return getClass().hashCode();
   }
 }
+

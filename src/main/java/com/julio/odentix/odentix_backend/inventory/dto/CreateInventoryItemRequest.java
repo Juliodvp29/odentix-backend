@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotBlank;
  * Solicitud para crear un ítem de inventario (FASE7-04).
  *
  * <p>El stock siempre nace en cero; las existencias iniciales se registran
- * con un movimiento de entrada. Convención: Sin Lombok (§9 de AGENTS.md).
+ * con un movimiento de entrada. Convención: Sin Lombok.
  */
 public class CreateInventoryItemRequest {
 
@@ -46,3 +46,4 @@ public class CreateInventoryItemRequest {
     this.minThreshold = minThreshold;
   }
 }
+

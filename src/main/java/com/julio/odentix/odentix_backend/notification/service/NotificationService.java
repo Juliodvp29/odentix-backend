@@ -31,7 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
  * en FASE8-05) nunca se bloquea por un canal caído.
  *
  * <p>El tenant siempre sale del {@code TenantContext}: una cita de otro tenant
- * resulta invisible (404), conforme a la regla §5 de AGENTS.md.
+ * resulta invisible (404), conforme a la regla de aislamiento multi-tenant del proyecto.
  */
 @Service
 public class NotificationService {
@@ -263,3 +263,4 @@ public class NotificationService {
     return mensaje.length() > 500 ? mensaje.substring(0, 500) : mensaje;
   }
 }
+

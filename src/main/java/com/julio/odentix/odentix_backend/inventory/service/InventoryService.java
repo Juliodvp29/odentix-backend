@@ -35,7 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
  * el catch solo mejora el mensaje, no sustituye la validación.
  *
  * <p>El tenant siempre sale del {@code TenantContext}: un ítem de otro tenant
- * resulta invisible (404), conforme a la regla §5 de AGENTS.md.
+ * resulta invisible (404), conforme a la regla de aislamiento multi-tenant del proyecto.
  */
 @Service
 public class InventoryService {
@@ -205,3 +205,4 @@ public class InventoryService {
     return response;
   }
 }
+

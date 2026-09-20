@@ -20,7 +20,7 @@ import java.util.UUID;
  * <p>Catálogo global como {@link Plan}: sin {@code tenant_id} ni RLS.
  * Las claves válidas están en {@link FeatureKey}.
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Entity
 @Table(name = "plan_features",
@@ -108,3 +108,4 @@ public class PlanFeature {
         + '}';
   }
 }
+

@@ -7,7 +7,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Suscripción actual del tenant (FASE11-05). Sin Lombok (§9 AGENTS.md).
+ * Suscripción actual del tenant (FASE11-05). Sin Lombok.
  */
 public class SubscriptionResponse {
 
@@ -87,3 +87,4 @@ public class SubscriptionResponse {
     this.annualPriceCop = annualPriceCop;
   }
 }
+

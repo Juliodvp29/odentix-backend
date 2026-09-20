@@ -7,7 +7,7 @@ package com.julio.odentix.odentix_backend.subscription.entity;
  * sembrada en V25 (docs/schema.sql §17). Se modelan como constantes String
  * —no como enum— porque la columna es TEXT libre: una feature futura solo
  * exige una fila semilla nueva, sin cambio de código. Las claves son parte
- * de una decisión ya tomada (regla §10 de AGENTS.md): no renombrarlas sin
+ * de una decisión ya tomada: no renombrarlas sin
  * señalarlo explícitamente.
  */
 public final class FeatureKey {
@@ -24,3 +24,4 @@ public final class FeatureKey {
   private FeatureKey() {
   }
 }
+

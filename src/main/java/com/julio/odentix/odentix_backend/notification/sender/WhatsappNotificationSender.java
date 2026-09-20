@@ -22,7 +22,7 @@ import org.springframework.web.client.RestClientResponseException;
  * <p>Se activa con {@code odentix.notifications.whatsapp.enabled=true}. El
  * número del negocio (`phoneNumberId`) y el token van por variables de entorno
  * sin defaults: sin ellos el adaptador reporta mala configuración en vez de
- * inventar credenciales (regla §10 de AGENTS.md). La aprobación del número y
+ * inventar credenciales. La aprobación del número y
  * las plantillas en Meta es un proceso administrativo fuera del código.
  *
  * <p>Timeouts cortos (5s): un proveedor caído falla rápido y el servicio lo
@@ -32,7 +32,7 @@ import org.springframework.web.client.RestClientResponseException;
  * <p><b>Número por clínica</b> (pre-Fase 12): las credenciales salen del tenant
  * (`whatsapp_phone_number_id` + token cifrado); sin ellas se usa el par global
  * de entorno como puente compartido, y sin ninguno se reporta mala
- * configuración en vez de inventar credenciales (regla §10 de AGENTS.md).
+ * configuración en vez de inventar credenciales.
  */
 @Component
 @ConditionalOnProperty(
@@ -149,3 +149,4 @@ public class WhatsappNotificationSender implements NotificationSender {
     return new String[]{globalPhoneNumberId, globalToken};
   }
 }
+

@@ -9,7 +9,7 @@ spring:
     password: ${DB_PASSWORD:odentix}
     driver-class-name: org.postgresql.Driver
   jpa:
-    # AGENTS.md §6: siempre validate, en todos los perfiles, sin excepción.
+    # ddl-auto siempre en validate, en todos los perfiles, sin excepción.
     hibernate:
       ddl-auto: validate
     open-in-view: false
@@ -43,7 +43,7 @@ spring:
       max-request-size: 20MB
 
 server:
-  # AGENTS.md §12: 8081 en local porque el 8080 lo ocupa AgentService.exe.
+  # Puerto 8081 en local porque el 8080 lo ocupa AgentService.exe.
   # No generalizar a otros entornos sin confirmarlo.
   port: 8081
 
@@ -77,7 +77,7 @@ sentry:
   environment: ${SENTRY_ENVIRONMENT:development}
   send-default-pii: false
   # Sin tracing por ahora: solo errores (un OTel collector propio sería infra
-  # nueva sin escala que la justifique — AGENTS.md §10).
+  # nueva sin escala que la justifique).
   traces-sample-rate: 0.0
 
 jwt:
@@ -143,7 +143,7 @@ odentix:
   notifications:
     email:
       # Adaptador SMTP real (SmtpEmailNotificationSender). Apagado por defecto:
-      # sin proveedor elegido no hay credenciales que configurar (AGENTS.md §10),
+      # sin proveedor elegido no hay credenciales que configurar ,
       # y los flujos usan el adaptador de registro en log.
       enabled: ${NOTIFICATIONS_EMAIL_ENABLED:false}
       from: ${NOTIFICATIONS_EMAIL_FROM:}
@@ -156,6 +156,7 @@ odentix:
       api-base-url: ${WHATSAPP_API_BASE_URL:https://graph.facebook.com/v21.0}
       phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
       token: ${WHATSAPP_TOKEN:}
+
 
 
 

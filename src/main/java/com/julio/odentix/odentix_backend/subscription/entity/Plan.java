@@ -21,7 +21,7 @@ import java.util.UUID;
  * de {@code TenantAwareEntity} — igual que {@code Tenant} es una excepción
  * documentada de esa convención.
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Entity
 @Table(name = "plans")
@@ -172,3 +172,4 @@ public class Plan {
         + '}';
   }
 }
+

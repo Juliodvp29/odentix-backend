@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Movimiento de stock registrado (FASE7-04). Sin Lombok (§9 AGENTS.md).
+ * Movimiento de stock registrado (FASE7-04). Sin Lombok.
  */
 public class StockMovementResponse {
 
@@ -66,3 +66,4 @@ public class StockMovementResponse {
     this.createdAt = createdAt;
   }
 }
+

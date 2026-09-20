@@ -21,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>El tenant siempre sale del {@code TenantContext} del usuario
  * autenticado, nunca del request: así un tenant no puede leer ni modificar
  * pacientes de otro ni siquiera conociendo su ID directo (responde 404,
- * para ni confirmar que existen — regla §5 de AGENTS.md).
+ * para ni confirmar que existen — regla de aislamiento multi-tenant del proyecto).
  *
  * <p>Baja lógica: un paciente inactivo es invisible para la API (GET, PATCH
  * y DELETE responden 404); la fila se conserva para las claves foráneas
@@ -130,9 +130,10 @@ public class PatientService {
   private Patient findActiveOrThrow(UUID id) {
     UUID tenantId = TenantContext.getRequiredTenantId();
     // Filtro por tenantId explícito además del automático @TenantId
-    // (defensa en profundidad, regla §5.2 de AGENTS.md).
+    // (defensa en profundidad por tenant).
     return patientRepository.findByIdAndTenantId(id, tenantId)
         .filter(Patient::isActive)
         .orElseThrow(() -> new ResourceNotFoundException("Paciente no encontrado"));
   }
 }
+

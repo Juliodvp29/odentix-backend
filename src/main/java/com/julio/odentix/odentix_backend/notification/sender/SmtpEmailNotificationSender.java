@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
  *
  * <p>Se activa con {@code odentix.notifications.email.enabled=true}; la conexión
  * sale de variables de entorno (`spring.mail.*`) — nunca hay credenciales en el
- * repo (regla §8 de AGENTS.md). Los timeouts SMTP son cortos (ver
+ * repo (regla de seguridad del proyecto). Los timeouts SMTP son cortos (ver
  * `application.yml`): un proveedor caído falla rápido y el servicio lo
  * registra como intento `fallida` sin bloquear el flujo de negocio.
  *

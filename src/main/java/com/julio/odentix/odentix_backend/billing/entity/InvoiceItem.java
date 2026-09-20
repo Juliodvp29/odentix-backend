@@ -16,7 +16,7 @@ import java.util.UUID;
  * <p>{@code totalCop} lo calcula la BD (columna GENERATED): se mapea solo
  * lectura para poder exponerlo sin que Java intente escribirlo nunca.
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Entity
 @Table(name = "invoice_items")
@@ -97,3 +97,4 @@ public class InvoiceItem extends TenantAwareEntity {
         + '}';
   }
 }
+

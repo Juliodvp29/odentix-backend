@@ -37,7 +37,7 @@ import org.springframework.dao.DataIntegrityViolationException;
  *   <li>Verificar la constraint {@code UNIQUE (payment_plan_id, installment_number)}
  *       rechaza cuotas duplicadas en el mismo plan.</li>
  *   <li>Aislamiento cross-tenant: un usuario del tenant B no puede ver ni modificar
- *       el plan de pago del tenant A, incluso conociendo su UUID (regla §5 de AGENTS.md).
+ *       el plan de pago del tenant A, incluso conociendo su UUID (regla de aislamiento multi-tenant del proyecto).
  *       La respuesta es {@code empty} (404 a nivel HTTP), no 403 — para no confirmar
  *       que el recurso existe.</li>
  * </ul>
@@ -213,7 +213,7 @@ class PaymentPlanRepositoryIntegrationTest extends AbstractIntegrationTest {
   }
 
   // ---------------------------------------------------------------------------
-  // Test de aislamiento cross-tenant (regla §5 de AGENTS.md — obligatorio)
+  // Test de aislamiento cross-tenant (regla de aislamiento multi-tenant del proyecto — obligatorio)
   // ---------------------------------------------------------------------------
 
   @Test
@@ -227,7 +227,7 @@ class PaymentPlanRepositoryIntegrationTest extends AbstractIntegrationTest {
     TenantContext.setTenantId(tenantB.getId());
     try {
       Optional<PaymentPlan> resultado = paymentPlanRepository.findById(idPlanA);
-      // Debe ser vacío — no 403, sino como si no existiera (regla §5.3 de AGENTS.md).
+      // Debe ser vacío — no 403, sino como si no existiera .
       assertThat(resultado).isEmpty();
     } finally {
       TenantContext.clear();
@@ -251,3 +251,4 @@ class PaymentPlanRepositoryIntegrationTest extends AbstractIntegrationTest {
     }
   }
 }
+

@@ -24,7 +24,7 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
    * Busca una factura por ID dentro del tenant activo.
    *
    * <p>Filtra por {@code tenantId} explícito además del automático @TenantId
-   * (defensa en profundidad, regla §5.2 de AGENTS.md).
+   * (defensa en profundidad por tenant).
    */
   Optional<Invoice> findByIdAndTenantId(UUID id, UUID tenantId);
 
@@ -37,7 +37,7 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
    * la producción trazable a un tratamiento entra a la liquidación.
    *
    * <p>Filtra por {@code tenantId} explícito además del automático @TenantId
-   * (defensa en profundidad, regla §5.2 de AGENTS.md).
+   * (defensa en profundidad por tenant).
    *
    * @return suma facturada, o cero si no hay facturas en el periodo.
    */
@@ -57,3 +57,4 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
       @Param("desde") Instant desde,
       @Param("hastaExclusivo") Instant hastaExclusivo);
 }
+

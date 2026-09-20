@@ -11,7 +11,7 @@ import java.time.LocalDate;
  * <p>Si {@code firstName} o {@code lastName} son nulos o están vacíos, se inferirán
  * automáticamente a partir del {@code fullName} del prospecto.
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 public class ConvertLeadPatientData {
 
@@ -116,3 +116,4 @@ public class ConvertLeadPatientData {
     this.emergencyContactPhone = emergencyContactPhone;
   }
 }
+

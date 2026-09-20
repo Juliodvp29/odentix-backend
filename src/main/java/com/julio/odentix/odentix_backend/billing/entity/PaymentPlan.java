@@ -28,7 +28,7 @@ import java.util.UUID;
  * {@code PaymentPlan} se eliminen sus cuotas en cascada; en la práctica los planes
  * de pago no se borran, pero es más seguro que dejar huérfanos.
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Entity
 @Table(name = "payment_plans")
@@ -100,7 +100,7 @@ public class PaymentPlan extends TenantAwareEntity {
 
   @Override
   public String toString() {
-    // Sin montos en logs (datos financieros del tenant, regla §5.5 de AGENTS.md).
+    // Sin montos en logs (datos financieros del tenant).
     return "PaymentPlan{"
         + "id=" + getId()
         + ", treatmentPlanId=" + treatmentPlanId
@@ -108,3 +108,4 @@ public class PaymentPlan extends TenantAwareEntity {
         + '}';
   }
 }
+

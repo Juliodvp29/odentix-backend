@@ -22,13 +22,13 @@ import java.util.UUID;
  * {@code trg_check_specialist_is_external} (V19, reutilizado de {@code schema.sql})
  * lo garantiza en BD, y el callback {@link #validarProfesionalExterno()} lo
  * repite en aplicación — defensa en profundidad, igual que con multi-tenancy
- * (regla §5 de AGENTS.md): ninguna capa sustituye a la otra.
+ * (regla de aislamiento multi-tenant del proyecto): ninguna capa sustituye a la otra.
  *
  * <p>Hereda de {@link TenantAwareEntity} para aislamiento automático por tenant.
  * El cálculo de producción bruta y el endpoint de liquidación llegan en FASE7-02;
  * aquí solo el modelo.
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Entity
 @Table(name = "specialists")
@@ -102,10 +102,11 @@ public class Specialist extends TenantAwareEntity {
 
   @Override
   public String toString() {
-    // Sin montos ni términos en logs (datos financieros del tenant, regla §5.5 de AGENTS.md).
+    // Sin montos ni términos en logs (datos financieros del tenant).
     return "Specialist{"
         + "id=" + getId()
         + ", professionalId=" + (professional != null ? professional.getId() : null)
         + '}';
   }
 }
+

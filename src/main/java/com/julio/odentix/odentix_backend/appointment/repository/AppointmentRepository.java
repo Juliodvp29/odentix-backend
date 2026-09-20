@@ -73,7 +73,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
    * Busca una cita por ID dentro del tenant activo (FASE3-04).
    *
    * <p>Filtra por {@code tenantId} explícito además del automático @TenantId
-   * (defensa en profundidad, regla §5.2 de AGENTS.md): una cita de otro
+   * (defensa en profundidad por tenant): una cita de otro
    * tenant resulta invisible aunque se conozca su ID directo.
    */
   Optional<Appointment> findByIdAndTenantId(UUID id, UUID tenantId);
@@ -82,7 +82,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
    * Agenda de un rango de fechas, ordenada por hora de inicio (FASE3-03).
    *
    * <p>Filtra por {@code tenantId} explícito además del automático @TenantId
-   * (defensa en profundidad, regla §5.2 de AGENTS.md).
+   * (defensa en profundidad por tenant).
    */
   List<Appointment> findByTenantIdAndStartsAtBetweenOrderByStartsAtAsc(
       UUID tenantId, Instant from, Instant to);
@@ -98,8 +98,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
    * Suma del valor estimado y conteo de citas de un rango (FASE3-05).
    *
    * <p>Query manual: filtra por {@code tenant_id} explícito aunque el
-   * filtro automático @TenantId ya lo cubra (defensa en profundidad, regla
-   * §5.2 de AGENTS.md — ninguna sustituye a la otra). Devuelve una fila
+   * filtro automático @TenantId ya lo cubra (defensa en profundidad por
+   * tenant — ninguna capa sustituye a la otra). Devuelve una fila
    * {@code [total, conteo]}; sin GROUP BY siempre hay exactamente una fila
    * y el total es 0 (no null) si no hay citas.
    *
@@ -120,3 +120,4 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
       @Param("to") Instant to,
       @Param("excludedStatuses") List<AppointmentStatus> excludedStatuses);
 }
+

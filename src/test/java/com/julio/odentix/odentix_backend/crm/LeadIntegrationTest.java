@@ -59,8 +59,8 @@ import org.springframework.test.web.servlet.MvcResult;
  *   <li>Registro de actividades y actualización reactiva de {@code lastContactAt}.</li>
  *   <li>Conversión de lead a paciente y programación opcional de cita (FASE5-03).</li>
  *   <li>Idempotencia razonable en la conversión para evitar pacientes duplicados.</li>
- *   <li>Aislamiento multi-tenant estricto (§5 de AGENTS.md).</li>
- *   <li>Autorización y control de acceso por rol (§7 de AGENTS.md).</li>
+ *   <li>Aislamiento multi-tenant estricto.</li>
+ *   <li>Autorización y control de acceso por rol.</li>
  * </ul>
  */
 @AutoConfigureMockMvc
@@ -703,3 +703,5 @@ class LeadIntegrationTest extends AbstractIntegrationTest {
     return UUID.fromString(node.get("id").asText());
   }
 }
+
+

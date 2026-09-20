@@ -19,7 +19,7 @@ import org.springframework.stereotype.Repository;
 public interface NotificationRepository extends JpaRepository<Notification, UUID> {
 
   /**
-   * Busca una notificación por su ID y tenant (defensa en profundidad, regla §5.2 de AGENTS.md).
+   * Busca una notificación por su ID y tenant (defensa en profundidad por tenant).
    */
   Optional<Notification> findByIdAndTenantId(UUID id, UUID tenantId);
 
@@ -38,3 +38,4 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
       NotificationStatus status,
       Instant since);
 }
+

@@ -10,7 +10,7 @@ import java.util.UUID;
 /**
  * DTO de salida para una cuota individual de un plan de pago (FASE6-02).
  *
- * <p>No expone la entidad JPA directamente — patrón estándar del proyecto (§9 AGENTS.md).
+ * <p>No expone la entidad JPA directamente — patrón estándar del proyecto.
  */
 public class InstallmentResponse {
 
@@ -70,3 +70,4 @@ public class InstallmentResponse {
     return paidAt;
   }
 }
+

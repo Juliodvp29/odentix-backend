@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
  * Solicitud para registrar un movimiento de stock (FASE7-04).
  *
  * <p>{@code quantityDelta} positivo = entrada, negativo = salida.
- * Sin Lombok (§9 AGENTS.md).
+ * Sin Lombok.
  */
 public class CreateStockMovementRequest {
 
@@ -34,3 +34,4 @@ public class CreateStockMovementRequest {
     this.reason = reason;
   }
 }
+

@@ -23,8 +23,8 @@ import org.springframework.dao.DataIntegrityViolationException;
  *
  * <p>Cubre el DoD del ticket: persistir/recuperar, filtro automático de
  * tenant heredado de TenantAwareEntity sin configuración adicional, y
- * aislamiento cross-tenant desde el primer ticket (regla §5.4 de
- * AGENTS.md: no es opcional ni "para después").
+ * aislamiento cross-tenant desde el primer ticket (obligatorio desde el
+ * inicio: no es opcional ni "para después").
  */
 class PatientRepositoryIntegrationTest extends AbstractIntegrationTest {
 

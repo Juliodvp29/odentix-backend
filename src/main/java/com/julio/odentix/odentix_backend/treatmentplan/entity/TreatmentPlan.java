@@ -34,7 +34,7 @@ import org.hibernate.dialect.type.PostgreSQLEnumJdbcType;
  * con soporte para {@code orphanRemoval}, manteniendo la integridad bidireccional
  * mediante los métodos {@link #addItem(TreatmentPlanItem)} y {@link #removeItem(TreatmentPlanItem)}.
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Entity
 @Table(name = "treatment_plans")
@@ -198,3 +198,4 @@ public class TreatmentPlan extends TenantAwareEntity {
     this.totalPriceCop = sum.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : sum;
   }
 }
+

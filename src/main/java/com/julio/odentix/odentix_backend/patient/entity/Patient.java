@@ -22,7 +22,7 @@ import java.util.UUID;
  * personales, contacto y contacto de emergencia. Sin odontograma ni
  * historia clínica todavía (FASE2-05/07 con sus propias entidades).
  *
- * <p>Convención: Sin Lombok (código explícito según regla §9 de AGENTS.md).
+ * <p>Convención: Sin Lombok (código explícito).
  */
 @Entity
 @Table(name = "patients")
@@ -184,10 +184,11 @@ public class Patient extends TenantAwareEntity {
   @Override
   public String toString() {
     // Nunca incluir documento, teléfono, email ni dirección: son PII del
-    // tenant (regla §5.5 de AGENTS.md: ni en logs de debug).
+    // tenant (ni siquiera en logs de debug).
     return "Patient{"
         + "id=" + getId()
         + ", isActive=" + isActive
         + '}';
   }
 }
+

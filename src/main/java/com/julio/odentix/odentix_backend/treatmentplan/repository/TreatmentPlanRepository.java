@@ -22,7 +22,7 @@ public interface TreatmentPlanRepository extends JpaRepository<TreatmentPlan, UU
    * Busca un plan de tratamiento por su ID y tenant.
    *
    * <p>Filtra explícitamente por {@code tenantId} además del filtro automático
-   * de {@code @TenantId} (defensa en profundidad, regla §5 de AGENTS.md).
+   * de {@code @TenantId} (defensa en profundidad, regla de aislamiento multi-tenant del proyecto).
    */
   Optional<TreatmentPlan> findByIdAndTenantId(UUID id, UUID tenantId);
 
@@ -84,3 +84,4 @@ public interface TreatmentPlanRepository extends JpaRepository<TreatmentPlan, UU
       @Param("statuses") Collection<TreatmentPlanStatus> statuses,
       @Param("cutoff") Instant cutoff);
 }
+

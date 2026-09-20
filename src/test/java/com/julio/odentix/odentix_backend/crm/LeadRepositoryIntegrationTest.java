@@ -37,7 +37,7 @@ import org.springframework.orm.jpa.JpaSystemException;
  *   <li>Registrar y consultar historial de actividades de contacto asociadas al lead.</li>
  *   <li>Garantizar consistencia multi-tenant rechazando usuarios asignados de otro tenant.</li>
  *   <li>Garantizar consistencia multi-tenant rechazando pacientes convertidos de otro tenant.</li>
- *   <li>Aislamiento cross-tenant estricto (regla §5 de AGENTS.md).</li>
+ *   <li>Aislamiento cross-tenant estricto (regla de aislamiento multi-tenant del proyecto).</li>
  * </ul>
  */
 class LeadRepositoryIntegrationTest extends AbstractIntegrationTest {
@@ -204,3 +204,4 @@ class LeadRepositoryIntegrationTest extends AbstractIntegrationTest {
     }
   }
 }
+
