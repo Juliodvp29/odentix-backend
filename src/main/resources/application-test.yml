@@ -18,4 +18,11 @@ security:
       max-requests-per-minute: 5000
       max-failed-attempts: 500
       lockout-duration-minutes: 15
+    public:
+      # Igual que login: holgados por defecto; los tests de FASE12-01 los
+      # sobreescriben con @TestPropertySource para forzar el 429.
+      refresh:
+        max-requests-per-minute: 5000
+      webhook:
+        max-requests-per-minute: 5000
 

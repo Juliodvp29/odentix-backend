@@ -31,6 +31,13 @@
 		<jjwt.version>0.12.6</jjwt.version>
 		<aws.sdk.version>2.30.34</aws.sdk.version>
 		<springdoc.version>3.1.1</springdoc.version>
+		<!-- FASE12-03: SDK de Sentry para Spring Boot 4 (los starters viejos son
+		     para Boot 2/3 — ver docs.sentry.io/platforms/java/guides/spring-boot). -->
+		<sentry.version>8.57.0</sentry.version>
+		<!-- FASE12-04: el BOM de Boot no versiona el encoder JSON de Logstash;
+		     8.1 es la línea compatible con Logback 1.5 de Boot 4 (verificado en
+		     Maven Central; la 9.0 es muy reciente y no aporta nada aquí). -->
+		<logstash.version>8.1</logstash.version>
 	</properties>
 	<!-- FASE0-06: el parent fija la versión del BOM (testcontainers-bom);
 	     importarlo versiona todos los org.testcontainers:* sin fijar cada uno. -->
@@ -62,6 +69,25 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
+		<!-- FASE12-03: endpoint /actuator/prometheus (versión gestionada por el BOM de Boot). -->
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-registry-prometheus</artifactId>
+		</dependency>
+		<!-- FASE12-04: layout JSON para logs estructurados en prod. En dev/test
+		     se usa texto legible. -->
+		<dependency>
+			<groupId>net.logstash.logback</groupId>
+			<artifactId>logstash-logback-encoder</artifactId>
+			<version>${logstash.version}</version>
+		</dependency>
+		<!-- FASE12-03: reporte de errores no controlados a Sentry. Sin DSN el SDK
+		     queda inactivo (dev/test); en prod se activa con SENTRY_DSN. -->
+		<dependency>
+			<groupId>io.sentry</groupId>
+			<artifactId>sentry-spring-boot-4</artifactId>
+			<version>${sentry.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

@@ -36,6 +36,7 @@ public class AuthService {
   private final JwtService jwtService;
   private final RefreshTokenService refreshTokenService;
   private final LoginRateLimitService loginRateLimitService;
+  private final PublicEndpointRateLimitService publicEndpointRateLimitService;
   private final AuditService auditService;
 
   public AuthService(
@@ -44,12 +45,14 @@ public class AuthService {
       JwtService jwtService,
       RefreshTokenService refreshTokenService,
       LoginRateLimitService loginRateLimitService,
+      PublicEndpointRateLimitService publicEndpointRateLimitService,
       AuditService auditService) {
     this.userRepository = userRepository;
     this.passwordEncoder = passwordEncoder;
     this.jwtService = jwtService;
     this.refreshTokenService = refreshTokenService;
     this.loginRateLimitService = loginRateLimitService;
+    this.publicEndpointRateLimitService = publicEndpointRateLimitService;
     this.auditService = auditService;
   }
 
@@ -112,6 +115,16 @@ public class AuthService {
    */
   @Transactional
   public TokenRefreshResponse refreshToken(TokenRefreshRequest request) {
+    return refreshToken(request, null);
+  }
+
+  /**
+   * Rota el refresh token aplicando rate limiting por IP (FASE12-01): el endpoint
+   * es público (sin JWT) y un token opaco es force-bruteable igual que un password.
+   */
+  @Transactional
+  public TokenRefreshResponse refreshToken(TokenRefreshRequest request, String clientIp) {
+    publicEndpointRateLimitService.checkRefreshLimit(clientIp);
     RotatedTokenResult result = refreshTokenService.rotateRefreshToken(request.getRefreshToken());
     String newAccessToken = jwtService.generateToken(result.user());
     long expiresInSeconds = jwtService.getExpirationMinutes() * 60;

@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * Manejador global centralizado de excepciones (FASE2-03).
@@ -29,6 +30,12 @@ import org.springframework.web.server.ResponseStatusException;
 public class GlobalExceptionHandler {
 
   private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+  private final ErrorReporter errorReporter;
+
+  public GlobalExceptionHandler(ErrorReporter errorReporter) {
+    this.errorReporter = errorReporter;
+  }
 
   @ExceptionHandler(ResourceNotFoundException.class)
   public ResponseEntity<ApiErrorResponse> handleResourceNotFound(
@@ -228,11 +235,28 @@ public class GlobalExceptionHandler {
     return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
   }
 
+  @ExceptionHandler(NoResourceFoundException.class)
+  public ResponseEntity<ApiErrorResponse> handleNoResourceFound(
+      NoResourceFoundException ex, HttpServletRequest request) {
+    // FASE12-03: una ruta inexistente es 404, no 500. Sin este handler el
+    // catch-all la convertía en 500 y cada escaneo de bots generaba una falsa
+    // alerta en Sentry. Tampoco se reporta: no es un fallo del sistema.
+    ApiErrorResponse error = new ApiErrorResponse(
+        HttpStatus.NOT_FOUND.value(),
+        HttpStatus.NOT_FOUND.getReasonPhrase(),
+        "Recurso no encontrado",
+        request.getRequestURI());
+    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+  }
+
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ApiErrorResponse> handleUncaughtException(
       Exception ex, HttpServletRequest request) {
     // Loguear el error para diagnóstico sin filtrar datos sensibles ni stack traces al cliente.
     log.error("Error no controlado procesando solicitud en {}: {}", request.getRequestURI(), ex.getMessage(), ex);
+    // FASE12-03: solo los 500 llegan al proveedor (los 4xx tienen su handler
+    // propio y serían ruido). El cliente sigue recibiendo el 500 genérico.
+    errorReporter.reportUnhandled(ex, request.getRequestURI());
 
     ApiErrorResponse error = new ApiErrorResponse(
         HttpStatus.INTERNAL_SERVER_ERROR.value(),

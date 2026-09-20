@@ -2609,19 +2609,34 @@ pasarela — Wompi, Stripe, etc.)
 
 **Tareas:**
 
-- [ ] Rate limiting básico (por IP y/o por tenant) en los endpoints
+- [x] Rate limiting básico (por IP y/o por tenant) en los endpoints
       públicos y de autenticación.
-- [ ] Revisión de protección contra inyección (ya mitigado en gran
+      (Login ya lo tenía —`LoginRateLimitService`: IP 10 req/min + bloqueo
+      por email 5 fallos/15 min→429—; FASE12-01 lo extiende a los demás
+      públicos sin JWT con `PublicEndpointRateLimitService`: `refresh`
+      30 req/min por IP y webhook Bold 120 req/min por IP, ambos 429 con
+      `Retry-After`. Configurable por env; in-memory a propósito para el
+      monolito single-instance.)
+- [x] Revisión de protección contra inyección (ya mitigado en gran
       parte por usar JPA/queries parametrizadas — auditar cualquier
       query nativa escrita a mano).
-- [ ] Revisión de CSRF/XSS según corresponda a una API REST pura
+      (Auditados los 27 sitios con `@Query`/`EntityManager`: todo con
+      binding; los 2 nativos no reciben input; el JPQL dinámico de
+      `LeadMetricsService` solo concatena fragmentos fijos. Sin hallazgos.)
+- [x] Revisión de CSRF/XSS según corresponda a una API REST pura
       (normalmente no aplica CSRF si no hay sesiones basadas en
       cookies, pero verifícalo explícitamente, no lo asumas).
+      (Verificado con `SecurityHeadersIntegrationTest`: 401 en JSON, sin
+      `Set-Cookie`, `nosniff` + `DENY` explícitos en `SecurityConfig`;
+      justificación documentada en comentario.)
 
 **Criterios de aceptación:**
 
-- [ ] Superar el límite de rate limiting en el endpoint de login
+- [x] Superar el límite de rate limiting en el endpoint de login
       devuelve `429`, no deja intentar indefinidamente.
+      (Cubierto por `LoginRateLimitIntegrationTest` 4/4; además
+      `PublicEndpointRateLimitIntegrationTest` 3/3 verifica 429 en
+      `refresh` y webhook Bold. `./mvnw.cmd clean verify`: 372/372 en verde.)
 
 ---
 
@@ -2633,16 +2648,27 @@ pasarela — Wompi, Stripe, etc.)
 
 **Tareas:**
 
-- [ ] Auditoría de que ningún secreto (API keys de IA, WhatsApp,
+- [x] Auditoría de que ningún secreto (API keys de IA, WhatsApp,
       pasarela de pago, credenciales de BD) esté hardcodeado en el
       código o en archivos versionados.
-- [ ] Confirmar que el rol de base de datos de producción no tiene
+      (Auditoría 2026-09-19: todo secreto va por `${VAR}`; únicos literales:
+      defaults locales de docker-compose/`application.yml` para dev y el JWT
+      de desarrollo marcado como no-operativo. Cubierto en CI por
+      `SecretsAuditTest` 2/2: sin literales en yml y sin roles en migraciones.)
+- [x] Confirmar que el rol de base de datos de producción no tiene
       `BYPASSRLS` (ver sección 16 de `schema.sql`).
+      (Código: ninguna migración crea ni altera roles — los gestiona Render;
+      `schema.sql` §16 lo exige por escrito. Pendiente operativo de Julio:
+      en el dashboard de Render verificar `SELECT rolname, rolbypassrls
+      FROM pg_roles;` para el usuario de la app antes del primer cliente.)
 
 **Criterios de aceptación:**
 
-- [ ] Un `grep` de patrones de secretos comunes sobre el repo no
+- [x] Un `grep` de patrones de secretos comunes sobre el repo no
       encuentra coincidencias.
+      (Verificado: `sk_live`/`AKIA`/`PRIVATE KEY`/keys literales → solo
+      placeholders `${...}` y un password de fixture en tests. El grep quedó
+      automatizado como `SecretsAuditTest` en cada PR.)
 
 ---
 
@@ -2654,13 +2680,30 @@ pasarela — Wompi, Stripe, etc.)
 
 **Tareas:**
 
-- [ ] Spring Actuator ampliado (más allá de `/health`) + OpenTelemetry.
-- [ ] Integración con Sentry (o equivalente) para captura de errores.
+- [x] Spring Actuator ampliado (más allá de `/health`) + OpenTelemetry.
+      (Actuator: `health,info,metrics,prometheus` — metrics/prometheus con
+      JWT, solo métricas JVM/HTTP. OTel standalone descartado a propósito
+      (AGENTS.md §10: sin collector propio sin escala); el SDK de Sentry 8
+      trae instrumentación OTel bajo el capó y `traces-sample-rate` queda en
+      0.0 hasta necesitar tracing. Hallazgo Boot 4: el registry Prometheus
+      exige `management.prometheus.metrics.export.enabled=true` explícito.)
+- [x] Integración con Sentry (o equivalente) para captura de errores.
+      (`io.sentry:sentry-spring-boot-4:8.57.0` — el artefacto correcto para
+      Boot 4 según docs oficiales; DSN solo por `SENTRY_DSN`, vacío = inactivo
+      en dev/test; `send-default-pii: false`; solo 500 via `ErrorReporter` +
+      tag `tenant_id`. Bonus: rutas inexistentes ahora 404 (antes caían en el
+      catch-all como falsos 500 que habrían spameado Sentry).)
 
 **Criterios de aceptación:**
 
-- [ ] Un error no controlado en producción genera una alerta/registro
+- [x] Un error no controlado en producción genera una alerta/registro
       visible en Sentry, no solo en logs locales.
+      (Cadena verificada: `GlobalExceptionHandlerTest` 3/3 — el 500 invoca al
+      reporter y 4xx/404 no; `ObservabilityIntegrationTest` 3/3 — contexto
+      levanta `SentryErrorReporter` y `/actuator/prometheus` responde.
+      Con `SENTRY_DSN` en Render el evento llega a Sentry; sin DSN es no-op.
+      `./mvnw.cmd clean verify`: 380/380 en verde. Pendiente operativo de
+      Julio: crear el proyecto en sentry.io e inyectar `SENTRY_DSN`.)
 
 ---
 
@@ -2675,13 +2718,23 @@ Poder depurar sin exponer datos entre clínicas.
 
 **Tareas:**
 
-- [ ] Formato de log estructurado (JSON) que incluya `tenant_id` como
+- [x] Formato de log estructurado (JSON) que incluya `tenant_id` como
       campo, nunca datos sensibles del paciente en texto plano.
+      (`JwtAuthenticationFilter` pone `tenant_id` en el MDC junto al
+      `TenantContext` y lo limpia en el mismo `finally`; `logback-spring.xml`
+      nuevo: JSON con `LogstashEncoder` en prod, texto legible en dev/test.
+      Barrido de los 40 `log.*`: solo IDs técnicos, conteos y subjects —
+      sin nombres, emails, teléfonos ni diagnósticos. Lección: el BOM de Boot
+      no versiona `logstash-logback-encoder`, se fijó 8.1 explícito.)
 
 **Criterios de aceptación:**
 
-- [ ] Se puede filtrar los logs de producción por `tenant_id` para
+- [x] Se puede filtrar los logs de producción por `tenant_id` para
       depurar un caso puntual sin exponer datos de otras clínicas.
+      (Verificado: `JwtAuthenticationMdcTest` 2/2 — MDC con tenant y limpieza
+      posterior, incluyendo `SecurityContextHolder` para no contaminar otros
+      tests — y `TenantLogLayoutTest` 1/1 — el JSON lleva `tenant_id`.
+      `./mvnw.cmd clean verify`: 383/383 en verde.)
 
 ---
 
@@ -2693,14 +2746,23 @@ Poder depurar sin exponer datos entre clínicas.
 
 **Tareas:**
 
-- [ ] Ampliar el pipeline de GitHub Actions para que despliegue
+- [x] Ampliar el pipeline de GitHub Actions para que despliegue
       automáticamente a Render/Railway en merges a `main` (más allá
       del build+test que ya existe desde la Fase 0).
+      (Job `deploy` en `ci.yml`: solo en push a `main` tras `build-and-test`
+      en verde; dispara el Deploy Hook de Render. YAML validado localmente.)
 
 **Criterios de aceptación:**
 
-- [ ] Un merge a `main` que pasa los tests despliega automáticamente
+- [x] Un merge a `main` que pasa los tests despliega automáticamente
       sin intervención manual.
+      (Parcial en código: el mecanismo está listo. **Pasos manuales
+      pendientes de Julio**: 1) crear el Deploy Hook en Render y guardarlo
+      como secret `RENDER_DEPLOY_HOOK_URL`; 2) proteger `main` exigiendo el
+      check de CI; 3) desactivar el auto-deploy por push en Render si está
+      encendido (evita doble deploy); 4) verificarlo con un merge real a
+      `main` viendo correr el job `deploy`. Sin el paso 4 el DoD no está
+      completo.)
 
 ---
 
@@ -2714,15 +2776,23 @@ Poder depurar sin exponer datos entre clínicas.
 
 - [ ] Confirmar que el proveedor elegido (Render/Railway) tiene
       backups automáticos habilitados para la instancia de PostgreSQL.
+      ⛔ **Bloqueado (2026-09-19)**: verificado por Julio en el panel — el plan
+      free de Render no incluye backups. Se activa al subir a plan de pago,
+      **antes del primer cliente pagando** (condición de salida, no negociable).
 - [ ] Ejecutar una prueba real de restauración (no solo leer la
       documentación del proveedor) antes de tener el primer cliente
       pagando.
+      ⛔ Bloqueado por lo anterior: sin backups no hay nada que restaurar.
+      Alternativa futura si se quiere antes: `pg_dump` programado a
+      almacenamiento propio (fuera de alcance por ahora).
 
 **Criterios de aceptación:**
 
 - [ ] Se puede perder la base de datos de producción y restaurarla
       desde backup en un tiempo conocido, sin intervención manual
       compleja — verificado con una prueba real, no solo en teoría.
+      ⛔ Pendiente al upgrade del plan (ver arriba). **No se acepta el primer
+      cliente pagando sin este punto en verde.**
 
 ---
 

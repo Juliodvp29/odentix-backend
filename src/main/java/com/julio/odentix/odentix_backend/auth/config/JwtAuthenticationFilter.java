@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.slf4j.MDC;
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -65,6 +66,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
           if (userOpt.isPresent() && userOpt.get().isActive()) {
             User userEntity = userOpt.get();
             TenantContext.setTenantId(tenantId);
+            // FASE12-04: el tenant viaja también en el MDC para que el layout
+            // JSON de prod lo incluya como campo filtrable (nunca datos del tenant).
+            MDC.put("tenant_id", tenantId.toString());
 
             // Sincronización en tiempo real del rol desde la base de datos
             String actualRole = userEntity.getRole().name();
@@ -97,6 +101,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       filterChain.doFilter(request, response);
     } finally {
       TenantContext.clear();
+      // Misma garantía anti-fugas que el contexto: ningún hilo del pool debe
+      // conservar el tenant_id de una request anterior en sus logs.
+      MDC.clear();
     }
   }
 }
