@@ -44,7 +44,19 @@ public class SecurityConfig {
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     http
+        // FASE12-01 (revisión CSRF/XSS explícita): API REST pura con JWT Bearer
+        // stateless — sin sesiones, sin cookies, sin HTML renderizado. CSRF solo
+        // aplica a sesiones basadas en cookies, así que deshabilitarlo aquí es
+        // correcto (no hay token de sesión que un sitio malicioso pueda hacer
+        // usar al navegador). XSS reflejado tampoco aplica: todo error se
+        // serializa como JSON, nunca como HTML (ver SecurityHeadersIntegrationTest).
         .csrf(AbstractHttpConfigurer::disable)
+        // Cabeceras explícitas anti-clickjacking y anti-MIME-sniffing. La API
+        // nunca se embebe en iframes ni sirve contenido ejecutable.
+        .headers(headers -> headers
+            .contentTypeOptions(contentType -> {
+            })
+            .frameOptions(frame -> frame.deny()))
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .exceptionHandling(ex -> ex
             .authenticationEntryPoint(jwtAuthenticationEntryPoint)
