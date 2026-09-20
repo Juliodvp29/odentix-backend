@@ -2648,16 +2648,27 @@ pasarela — Wompi, Stripe, etc.)
 
 **Tareas:**
 
-- [ ] Auditoría de que ningún secreto (API keys de IA, WhatsApp,
+- [x] Auditoría de que ningún secreto (API keys de IA, WhatsApp,
       pasarela de pago, credenciales de BD) esté hardcodeado en el
       código o en archivos versionados.
-- [ ] Confirmar que el rol de base de datos de producción no tiene
+      (Auditoría 2026-09-19: todo secreto va por `${VAR}`; únicos literales:
+      defaults locales de docker-compose/`application.yml` para dev y el JWT
+      de desarrollo marcado como no-operativo. Cubierto en CI por
+      `SecretsAuditTest` 2/2: sin literales en yml y sin roles en migraciones.)
+- [x] Confirmar que el rol de base de datos de producción no tiene
       `BYPASSRLS` (ver sección 16 de `schema.sql`).
+      (Código: ninguna migración crea ni altera roles — los gestiona Render;
+      `schema.sql` §16 lo exige por escrito. Pendiente operativo de Julio:
+      en el dashboard de Render verificar `SELECT rolname, rolbypassrls
+      FROM pg_roles;` para el usuario de la app antes del primer cliente.)
 
 **Criterios de aceptación:**
 
-- [ ] Un `grep` de patrones de secretos comunes sobre el repo no
+- [x] Un `grep` de patrones de secretos comunes sobre el repo no
       encuentra coincidencias.
+      (Verificado: `sk_live`/`AKIA`/`PRIVATE KEY`/keys literales → solo
+      placeholders `${...}` y un password de fixture en tests. El grep quedó
+      automatizado como `SecretsAuditTest` en cada PR.)
 
 ---
 
