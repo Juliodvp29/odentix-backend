@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ dev, main ]
+    branches: [ dev, develop, main ]
   pull_request:
     branches: [ dev, main ]
 
@@ -26,13 +26,8 @@ jobs:
         run: chmod +x ./mvnw
 
       - name: Compile and run tests
-        # Corre clean verify (incluye compilación, validación de Flyway y pruebas con Testcontainers)
         run: ./mvnw -B clean verify
 
-  # FASE12-05: despliegue continuo a Render. Solo en push directo a main y
-  # solo si build-and-test pasó: un merge que rompa tests no despliega.
-  # Requiere el secret RENDER_DEPLOY_HOOK_URL (Render → Settings → Deploy Hook)
-  # y protección de main exigiendo este workflow (ver nota en el roadmap).
   deploy:
     name: Deploy to Render
     needs: build-and-test
