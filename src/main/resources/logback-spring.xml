@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- FASE12-04: logs estructurados por tenant.
+     - Perfiles dev/test: texto legible (formato Boot por defecto), sin cambios de DX.
+     - Perfil prod: una línea JSON por evento con el tenant_id del MDC como campo
+       filtrable (lo pone JwtAuthenticationFilter y lo limpia en el finally).
+       Nunca se loguean payloads ni datos de pacientes: el JSON solo agrega el
+       MDC al mensaje que ya existía. -->
+<configuration>
+  <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+  <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+
+  <springProfile name="dev,test">
+    <root level="INFO">
+      <appender-ref ref="CONSOLE"/>
+    </root>
+  </springProfile>
+
+  <springProfile name="prod">
+    <appender name="JSON_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+      <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+        <customFields>{"service":"odentix-backend"}</customFields>
+        <!-- El MDC (tenant_id) se serializa como campo automáticamente. -->
+      </encoder>
+    </appender>
+    <root level="INFO">
+      <appender-ref ref="JSON_CONSOLE"/>
+    </root>
+  </springProfile>
+</configuration>

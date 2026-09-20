@@ -2718,13 +2718,23 @@ Poder depurar sin exponer datos entre clínicas.
 
 **Tareas:**
 
-- [ ] Formato de log estructurado (JSON) que incluya `tenant_id` como
+- [x] Formato de log estructurado (JSON) que incluya `tenant_id` como
       campo, nunca datos sensibles del paciente en texto plano.
+      (`JwtAuthenticationFilter` pone `tenant_id` en el MDC junto al
+      `TenantContext` y lo limpia en el mismo `finally`; `logback-spring.xml`
+      nuevo: JSON con `LogstashEncoder` en prod, texto legible en dev/test.
+      Barrido de los 40 `log.*`: solo IDs técnicos, conteos y subjects —
+      sin nombres, emails, teléfonos ni diagnósticos. Lección: el BOM de Boot
+      no versiona `logstash-logback-encoder`, se fijó 8.1 explícito.)
 
 **Criterios de aceptación:**
 
-- [ ] Se puede filtrar los logs de producción por `tenant_id` para
+- [x] Se puede filtrar los logs de producción por `tenant_id` para
       depurar un caso puntual sin exponer datos de otras clínicas.
+      (Verificado: `JwtAuthenticationMdcTest` 2/2 — MDC con tenant y limpieza
+      posterior, incluyendo `SecurityContextHolder` para no contaminar otros
+      tests — y `TenantLogLayoutTest` 1/1 — el JSON lleva `tenant_id`.
+      `./mvnw.cmd clean verify`: 383/383 en verde.)
 
 ---
 
