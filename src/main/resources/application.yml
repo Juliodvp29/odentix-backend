@@ -110,6 +110,10 @@ security:
         max-requests-per-minute: ${WEBHOOK_RATE_LIMIT_IP_MAX:120}
 
 odentix:
+  cors:
+    # Orígenes de navegador permitidos (coma-separados). En prod se sobreescribe
+    # con CORS_ALLOWED_ORIGINS sin default (ver application-prod.yml).
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:4200}
   crypto:
     # Llave AES-256 (32 bytes en base64) para secretos por tenant (tokens
     # WhatsApp). Generar con: openssl rand -base64 32. Nunca en el repo.
