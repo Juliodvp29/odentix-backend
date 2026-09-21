@@ -33,3 +33,9 @@ springdoc:
 # Sin DSN no se envía nada; el entorno por defecto distingue los eventos.
 sentry:
   environment: ${SENTRY_ENVIRONMENT:production}
+
+odentix:
+  cors:
+    # En prod NO hay default a localhost: la plataforma inyecta el dominio real
+    # del frontend. Si falta, la app falla al arrancar antes que abrir CORS vacío.
+    allowed-origins: ${CORS_ALLOWED_ORIGINS}

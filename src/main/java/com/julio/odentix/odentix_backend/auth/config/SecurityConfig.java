@@ -2,6 +2,8 @@ package com.julio.odentix.odentix_backend.auth.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -51,6 +53,10 @@ public class SecurityConfig {
         // usar al navegador). XSS reflejado tampoco aplica: todo error se
         // serializa como JSON, nunca como HTML (ver SecurityHeadersIntegrationTest).
         .csrf(AbstractHttpConfigurer::disable)
+        // CORS para el frontend (ver CorsConfig): el bean CorsConfigurationSource
+        // se aplica aquí; sin esta línea el preflight OPTIONS no devuelve
+        // Access-Control-Allow-Origin y el navegador bloquea la llamada.
+        .cors(Customizer.withDefaults())
         // Cabeceras explícitas anti-clickjacking y anti-MIME-sniffing. La API
         // nunca se embebe en iframes ni sirve contenido ejecutable.
         .headers(headers -> headers
@@ -64,6 +70,9 @@ public class SecurityConfig {
         )
         .authorizeHttpRequests(auth -> auth
             .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+            // El preflight CORS nunca lleva JWT: debe pasar antes de cualquier
+            // regla autenticada o el navegador bloquea la petición real.
+            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             // FASE12-03: /actuator/metrics y /actuator/prometheus quedan bajo
             // anyRequest().authenticated (requieren JWT): son métricas JVM/HTTP
             // para scrapear desde red interna, no endpoints públicos.
