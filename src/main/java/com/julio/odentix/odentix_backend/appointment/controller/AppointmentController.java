@@ -6,7 +6,12 @@ import com.julio.odentix.odentix_backend.appointment.dto.CreateAppointmentReques
 import com.julio.odentix.odentix_backend.appointment.dto.UpdateAppointmentStatusRequest;
 import com.julio.odentix.odentix_backend.appointment.dto.WaitlistEntryResponse;
 import com.julio.odentix.odentix_backend.appointment.service.AppointmentService;
+import com.julio.odentix.odentix_backend.shared.exception.ApiErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -134,6 +139,17 @@ public class AppointmentController {
       summary = "Candidatos de lista de espera para cita",
       description = "Devuelve los pacientes en lista de espera compatibles con el horario y procedimiento de la cita para recuperación de espacio."
   )
+  @ApiResponses({
+      @ApiResponse(responseCode = "200", description = "Candidatos encontrados"),
+      @ApiResponse(
+          responseCode = "403",
+          description = "Rol sin permiso",
+          content = @Content(schema = @Schema(implementation = ApiErrorResponse.class))),
+      @ApiResponse(
+          responseCode = "404",
+          description = "Cita no encontrada",
+          content = @Content(schema = @Schema(implementation = ApiErrorResponse.class)))
+  })
   public ResponseEntity<List<WaitlistEntryResponse>> getWaitlistCandidates(@PathVariable UUID id) {
     return ResponseEntity.ok(appointmentService.findWaitlistCandidates(id));
   }
