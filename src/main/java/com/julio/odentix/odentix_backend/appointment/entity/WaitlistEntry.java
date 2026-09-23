@@ -9,6 +9,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
@@ -49,6 +50,26 @@ public class WaitlistEntry extends TenantAwareEntity {
   @JdbcType(PostgreSQLEnumJdbcType.class)
   @Column(name = "status", nullable = false)
   private WaitlistStatus status = WaitlistStatus.activa;
+
+  @Column(name = "contacted_at")
+  private Instant contactedAt;
+
+  @Column(name = "converted_at")
+  private Instant convertedAt;
+
+  @Column(name = "discarded_at")
+  private Instant discardedAt;
+
+  @Column(name = "discard_reason", columnDefinition = "TEXT")
+  private String discardReason;
+
+  @OneToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "converted_appointment_id")
+  private Appointment convertedAppointment;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "recovered_from_appointment_id")
+  private Appointment recoveredFromAppointment;
 
   public WaitlistEntry() {
     super();
@@ -98,6 +119,54 @@ public class WaitlistEntry extends TenantAwareEntity {
 
   public void setStatus(WaitlistStatus status) {
     this.status = status != null ? status : WaitlistStatus.activa;
+  }
+
+  public Instant getContactedAt() {
+    return contactedAt;
+  }
+
+  public void setContactedAt(Instant contactedAt) {
+    this.contactedAt = contactedAt;
+  }
+
+  public Instant getConvertedAt() {
+    return convertedAt;
+  }
+
+  public void setConvertedAt(Instant convertedAt) {
+    this.convertedAt = convertedAt;
+  }
+
+  public Instant getDiscardedAt() {
+    return discardedAt;
+  }
+
+  public void setDiscardedAt(Instant discardedAt) {
+    this.discardedAt = discardedAt;
+  }
+
+  public String getDiscardReason() {
+    return discardReason;
+  }
+
+  public void setDiscardReason(String discardReason) {
+    this.discardReason = discardReason;
+  }
+
+  public Appointment getConvertedAppointment() {
+    return convertedAppointment;
+  }
+
+  public void setConvertedAppointment(Appointment convertedAppointment) {
+    this.convertedAppointment = convertedAppointment;
+  }
+
+  public Appointment getRecoveredFromAppointment() {
+    return recoveredFromAppointment;
+  }
+
+  public void setRecoveredFromAppointment(Appointment recoveredFromAppointment) {
+    this.recoveredFromAppointment = recoveredFromAppointment;
   }
 
   @Override

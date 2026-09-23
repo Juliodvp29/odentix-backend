@@ -20,6 +20,13 @@ public class WaitlistEntryResponse {
   private final Instant desiredFrom;
   private final Instant desiredTo;
   private final WaitlistStatus status;
+  private final Instant createdAt;
+  private final Instant updatedAt;
+  private final Instant contactedAt;
+  private final Instant convertedAt;
+  private final Instant discardedAt;
+  private final String discardReason;
+  private final UUID convertedAppointmentId;
 
   public WaitlistEntryResponse(
       UUID id,
@@ -30,7 +37,14 @@ public class WaitlistEntryResponse {
       UUID procedureId,
       Instant desiredFrom,
       Instant desiredTo,
-      WaitlistStatus status) {
+      WaitlistStatus status,
+      Instant createdAt,
+      Instant updatedAt,
+      Instant contactedAt,
+      Instant convertedAt,
+      Instant discardedAt,
+      String discardReason,
+      UUID convertedAppointmentId) {
     this.id = id;
     this.tenantId = tenantId;
     this.patientId = patientId;
@@ -40,6 +54,13 @@ public class WaitlistEntryResponse {
     this.desiredFrom = desiredFrom;
     this.desiredTo = desiredTo;
     this.status = status;
+    this.createdAt = createdAt;
+    this.updatedAt = updatedAt;
+    this.contactedAt = contactedAt;
+    this.convertedAt = convertedAt;
+    this.discardedAt = discardedAt;
+    this.discardReason = discardReason;
+    this.convertedAppointmentId = convertedAppointmentId;
   }
 
   public static WaitlistEntryResponse fromEntity(WaitlistEntry entry) {
@@ -52,7 +73,14 @@ public class WaitlistEntryResponse {
         entry.getProcedureId(),
         entry.getDesiredFrom(),
         entry.getDesiredTo(),
-        entry.getStatus());
+        entry.getStatus(),
+        entry.getCreatedAt(),
+        entry.getUpdatedAt(),
+        entry.getContactedAt(),
+        entry.getConvertedAt(),
+        entry.getDiscardedAt(),
+        entry.getDiscardReason(),
+        entry.getConvertedAppointment() != null ? entry.getConvertedAppointment().getId() : null);
   }
 
   public UUID getId() {
@@ -89,5 +117,33 @@ public class WaitlistEntryResponse {
 
   public WaitlistStatus getStatus() {
     return status;
+  }
+
+  public Instant getCreatedAt() {
+    return createdAt;
+  }
+
+  public Instant getUpdatedAt() {
+    return updatedAt;
+  }
+
+  public Instant getContactedAt() {
+    return contactedAt;
+  }
+
+  public Instant getConvertedAt() {
+    return convertedAt;
+  }
+
+  public Instant getDiscardedAt() {
+    return discardedAt;
+  }
+
+  public String getDiscardReason() {
+    return discardReason;
+  }
+
+  public UUID getConvertedAppointmentId() {
+    return convertedAppointmentId;
   }
 }

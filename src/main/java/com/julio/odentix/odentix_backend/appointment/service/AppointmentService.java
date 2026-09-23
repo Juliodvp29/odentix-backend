@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -93,6 +94,16 @@ public class AppointmentService {
    */
   @Transactional
   public AppointmentResponse createAppointment(CreateAppointmentRequest request) {
+    return createAppointment(request, true);
+  }
+
+  @Transactional
+  public AppointmentResponse createAppointmentWithoutNotification(CreateAppointmentRequest request) {
+    return createAppointment(request, false);
+  }
+
+  private AppointmentResponse createAppointment(
+      CreateAppointmentRequest request, boolean sendNotification) {
     if (!request.getStartsAt().isBefore(request.getEndsAt())) {
       throw new IllegalArgumentException("La fecha y hora de fin debe ser posterior a la de inicio");
     }
@@ -131,12 +142,16 @@ public class AppointmentService {
     // de forma síncrona dentro del bloque transaccional.
     Appointment saved = appointmentRepository.saveAndFlush(appointment);
 
-    // FASE8-04: avisar que la cita quedó agendada. El servicio de
-    // notificaciones nunca lanza: si el proveedor falla, queda registrada
-    // como fallida sin revertir la creación de la cita.
-    notificationService.sendAppointmentScheduled(saved.getId());
+    if (sendNotification) {
+      notificationService.sendAppointmentScheduled(saved.getId());
+    }
 
     return AppointmentResponse.fromEntity(saved);
+  }
+
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  public void notifyAppointmentScheduled(UUID appointmentId) {
+    notificationService.sendAppointmentScheduled(appointmentId);
   }
 
   /**
