@@ -113,7 +113,9 @@ class SlotRecoveryIntegrationTest extends AbstractIntegrationTest {
     TenantContext.setTenantId(tenantA.getId());
     try {
       patientCancela = patientRepository.save(new Patient(tenantA.getId(), "Homero", "Simpson"));
-      patientInteresado1 = patientRepository.save(new Patient(tenantA.getId(), "Ned", "Flanders"));
+      Patient interesado1 = new Patient(tenantA.getId(), "Ned", "Flanders");
+      interesado1.setPhone("3001234567");
+      patientInteresado1 = patientRepository.save(interesado1);
       patientInteresado2 = patientRepository.save(new Patient(tenantA.getId(), "Moe", "Szyslak"));
       professionalA = professionalRepository.save(new Professional(tenantA.getId(), "Dr. Julius Hibbert"));
     } finally {
@@ -186,7 +188,9 @@ class SlotRecoveryIntegrationTest extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.waitlistCandidates").isArray())
         .andExpect(jsonPath("$.waitlistCandidates.length()").value(1))
         .andExpect(jsonPath("$.waitlistCandidates[0].id").value(entryCompatible.getId().toString()))
-        .andExpect(jsonPath("$.waitlistCandidates[0].patientId").value(patientInteresado1.getId().toString()));
+        .andExpect(jsonPath("$.waitlistCandidates[0].patientId").value(patientInteresado1.getId().toString()))
+        .andExpect(jsonPath("$.waitlistCandidates[0].patientName").value("Ned Flanders"))
+        .andExpect(jsonPath("$.waitlistCandidates[0].patientPhone").value("3001234567"));
   }
 
   @Test

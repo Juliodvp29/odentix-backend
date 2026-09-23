@@ -116,6 +116,7 @@ class WaitlistIntegrationTest extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.id").isNotEmpty())
         .andExpect(jsonPath("$.tenantId").value(tenantA.getId().toString()))
         .andExpect(jsonPath("$.patientId").value(patientA.getId().toString()))
+        .andExpect(jsonPath("$.patientName").value("Ana Torres"))
         .andExpect(jsonPath("$.procedureId").value(procedureId.toString()))
         .andExpect(jsonPath("$.desiredFrom").value(request.getDesiredFrom().toString()))
         .andExpect(jsonPath("$.desiredTo").value(request.getDesiredTo().toString()))

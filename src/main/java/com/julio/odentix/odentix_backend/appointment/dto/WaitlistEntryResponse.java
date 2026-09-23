@@ -14,6 +14,8 @@ public class WaitlistEntryResponse {
   private final UUID id;
   private final UUID tenantId;
   private final UUID patientId;
+  private final String patientName;
+  private final String patientPhone;
   private final UUID procedureId;
   private final Instant desiredFrom;
   private final Instant desiredTo;
@@ -23,6 +25,8 @@ public class WaitlistEntryResponse {
       UUID id,
       UUID tenantId,
       UUID patientId,
+      String patientName,
+      String patientPhone,
       UUID procedureId,
       Instant desiredFrom,
       Instant desiredTo,
@@ -30,6 +34,8 @@ public class WaitlistEntryResponse {
     this.id = id;
     this.tenantId = tenantId;
     this.patientId = patientId;
+    this.patientName = patientName;
+    this.patientPhone = patientPhone;
     this.procedureId = procedureId;
     this.desiredFrom = desiredFrom;
     this.desiredTo = desiredTo;
@@ -41,6 +47,8 @@ public class WaitlistEntryResponse {
         entry.getId(),
         entry.getTenantId(),
         entry.getPatient().getId(),
+        entry.getPatient().getFirstName() + " " + entry.getPatient().getLastName(),
+        entry.getPatient().getPhone(),
         entry.getProcedureId(),
         entry.getDesiredFrom(),
         entry.getDesiredTo(),
@@ -57,6 +65,14 @@ public class WaitlistEntryResponse {
 
   public UUID getPatientId() {
     return patientId;
+  }
+
+  public String getPatientName() {
+    return patientName;
+  }
+
+  public String getPatientPhone() {
+    return patientPhone;
   }
 
   public UUID getProcedureId() {
