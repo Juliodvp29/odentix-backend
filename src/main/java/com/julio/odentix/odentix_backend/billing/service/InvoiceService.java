@@ -27,6 +27,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -160,6 +162,53 @@ public class InvoiceService {
         .toList();
 
     return InvoiceResponse.fromEntity(releida, items);
+  }
+
+  /**
+   * Consulta una factura por ID dentro del tenant activo, con sus ítems.
+   *
+   * @param invoiceId identificador de la factura.
+   * @return factura con ítems.
+   */
+  @Transactional(readOnly = true)
+  public InvoiceResponse getInvoiceById(UUID invoiceId) {
+    UUID tenantId = TenantContext.getRequiredTenantId();
+    Invoice invoice = invoiceRepository.findByIdAndTenantId(invoiceId, tenantId)
+        .orElseThrow(() -> new ResourceNotFoundException("Factura no encontrada: " + invoiceId));
+    return toResponse(tenantId, invoice);
+  }
+
+  /**
+   * Lista facturas del tenant activo con filtros opcionales y paginación.
+   *
+   * @param patientId filtra por paciente (opcional).
+   * @param status filtra por estado (opcional).
+   * @param pageable paginación y orden.
+   * @return página de facturas con sus ítems.
+   */
+  @Transactional(readOnly = true)
+  public Page<InvoiceResponse> listInvoices(UUID patientId, InvoiceStatus status, Pageable pageable) {
+    UUID tenantId = TenantContext.getRequiredTenantId();
+    Page<Invoice> page;
+    if (patientId != null && status != null) {
+      page = invoiceRepository.findAllByTenantIdAndPatientIdAndStatus(tenantId, patientId, status, pageable);
+    } else if (patientId != null) {
+      page = invoiceRepository.findAllByTenantIdAndPatientId(tenantId, patientId, pageable);
+    } else if (status != null) {
+      page = invoiceRepository.findAllByTenantIdAndStatus(tenantId, status, pageable);
+    } else {
+      page = invoiceRepository.findAllByTenantId(tenantId, pageable);
+    }
+    return page.map(invoice -> toResponse(tenantId, invoice));
+  }
+
+  private InvoiceResponse toResponse(UUID tenantId, Invoice invoice) {
+    List<InvoiceItemResponse> items = invoiceItemRepository
+        .findAllByTenantIdAndInvoiceId(tenantId, invoice.getId())
+        .stream()
+        .map(InvoiceItemResponse::fromEntity)
+        .toList();
+    return InvoiceResponse.fromEntity(invoice, items);
   }
 
   /**

@@ -6,6 +6,8 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -27,6 +29,19 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
    * (defensa en profundidad por tenant).
    */
   Optional<Invoice> findByIdAndTenantId(UUID id, UUID tenantId);
+
+  /**
+   * Listado paginado dentro del tenant activo (doble filtro por tenant:
+   * automático @TenantId más tenantId explícito).
+   */
+  Page<Invoice> findAllByTenantId(UUID tenantId, Pageable pageable);
+
+  Page<Invoice> findAllByTenantIdAndPatientId(UUID tenantId, UUID patientId, Pageable pageable);
+
+  Page<Invoice> findAllByTenantIdAndStatus(UUID tenantId, InvoiceStatus status, Pageable pageable);
+
+  Page<Invoice> findAllByTenantIdAndPatientIdAndStatus(
+      UUID tenantId, UUID patientId, InvoiceStatus status, Pageable pageable);
 
   /**
    * Producción bruta facturada de un profesional en un periodo (FASE7-02).
