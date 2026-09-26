@@ -1,5 +1,6 @@
 package com.julio.odentix.odentix_backend.billing;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -316,6 +317,84 @@ class InvoiceIntegrationTest extends AbstractIntegrationTest {
                 "patientId", patientA.getId().toString(),
                 "items", List.of(itemManual("Limpieza", 1, "80000.00"))))))
         .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void consultarFacturaPorIdDevuelveDetalleConItems() throws Exception {
+    String facturaId = crearFactura(tokenA, Map.of(
+        "patientId", patientA.getId().toString(),
+        "items", List.of(itemManual("Limpieza", 1, "80000.00"))));
+
+    mockMvc.perform(get("/api/v1/invoices/" + facturaId)
+            .header("Authorization", "Bearer " + tokenA))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(facturaId))
+        .andExpect(jsonPath("$.patientId").value(patientA.getId().toString()))
+        .andExpect(jsonPath("$.totalCop").value(80000.00))
+        .andExpect(jsonPath("$.items.length()").value(1));
+  }
+
+  @Test
+  void consultarFacturaAjenaDevuelve404() throws Exception {
+    String facturaIdB = crearFactura(tokenB, Map.of(
+        "patientId", patientB.getId().toString(),
+        "items", List.of(itemManual("Limpieza", 1, "80000.00"))));
+
+    mockMvc.perform(get("/api/v1/invoices/" + facturaIdB)
+            .header("Authorization", "Bearer " + tokenA))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void listarFacturasFiltraPorPacienteYEstadoConAislamiento() throws Exception {
+    String facturaId = crearFactura(tokenA, Map.of(
+        "patientId", patientA.getId().toString(),
+        "items", List.of(itemManual("Limpieza", 1, "80000.00"))));
+    crearFactura(tokenB, Map.of(
+        "patientId", patientB.getId().toString(),
+        "items", List.of(itemManual("Limpieza", 1, "80000.00"))));
+
+    // Sin filtros: solo la del tenant A.
+    mockMvc.perform(get("/api/v1/invoices")
+            .header("Authorization", "Bearer " + tokenA))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content.length()").value(1))
+        .andExpect(jsonPath("$.content[0].id").value(facturaId));
+
+    // Filtro por paciente propio.
+    mockMvc.perform(get("/api/v1/invoices")
+            .header("Authorization", "Bearer " + tokenA)
+            .param("patientId", patientA.getId().toString()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content.length()").value(1));
+
+    // Filtro por paciente de otro tenant: vacío, sin filtrar datos ajenos.
+    mockMvc.perform(get("/api/v1/invoices")
+            .header("Authorization", "Bearer " + tokenA)
+            .param("patientId", patientB.getId().toString()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content.length()").value(0));
+
+    // Filtro por estado pendiente.
+    mockMvc.perform(get("/api/v1/invoices")
+            .header("Authorization", "Bearer " + tokenA)
+            .param("status", "pendiente"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.content.length()").value(1));
+  }
+
+  @Test
+  void consultarFacturaConRolNoAutorizadoDevuelve403() throws Exception {
+    String facturaId = crearFactura(tokenA, Map.of(
+        "patientId", patientA.getId().toString(),
+        "items", List.of(itemManual("Limpieza", 1, "80000.00"))));
+
+    mockMvc.perform(get("/api/v1/invoices/" + facturaId)
+            .header("Authorization", "Bearer " + tokenEspecialistaA))
+        .andExpect(status().isForbidden());
+    mockMvc.perform(get("/api/v1/invoices")
+            .header("Authorization", "Bearer " + tokenEspecialistaA))
+        .andExpect(status().isForbidden());
   }
 }
 
