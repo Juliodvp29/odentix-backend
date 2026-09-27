@@ -1,53 +1,44 @@
 package com.julio.odentix.odentix_backend.specialist.dto;
 
 import com.julio.odentix.odentix_backend.specialist.entity.SettlementStatus;
-import com.julio.odentix.odentix_backend.specialist.entity.SpecialistSettlement;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 /**
- * Liquidación de especialista creada (FASE7-02).
+ * Desglose de una liquidación: las facturas que componen la producción
+ * bruta del periodo con los totales de la liquidación.
+ *
+ * <p>Las líneas se calculan al momento de la consulta con el mismo criterio
+ * del cálculo original (facturas emitidas en el periodo vinculadas a
+ * tratamientos del profesional, excluyendo anuladas): si después de generar
+ * la liquidación se emiten o anulan facturas del periodo, el desglose
+ * refleja el estado vigente, no una foto del momento de la generación.
  *
  * <p>Convención: Sin Lombok (código explícito).
  */
-public class SettlementResponse {
+public class SettlementBreakdownResponse {
 
-  private UUID id;
+  private UUID settlementId;
   private UUID specialistId;
   private LocalDate periodStart;
   private LocalDate periodEnd;
   private BigDecimal grossProductionCop;
   private BigDecimal feeAmountCop;
   private SettlementStatus status;
+  private int invoiceCount;
+  private List<SettlementBreakdownLineResponse> invoices;
 
-  public SettlementResponse() {
+  public SettlementBreakdownResponse() {
   }
 
-  /**
-   * Construye el DTO desde la liquidación con su especialista ya cargado.
-   *
-   * <p>Debe llamarse dentro de una transacción de lectura porque el
-   * especialista se carga de forma diferida.
-   */
-  public static SettlementResponse fromEntity(SpecialistSettlement liquidacion) {
-    SettlementResponse r = new SettlementResponse();
-    r.id = liquidacion.getId();
-    r.specialistId = liquidacion.getSpecialist().getId();
-    r.periodStart = liquidacion.getPeriodStart();
-    r.periodEnd = liquidacion.getPeriodEnd();
-    r.grossProductionCop = liquidacion.getGrossProductionCop();
-    r.feeAmountCop = liquidacion.getFeeAmountCop();
-    r.status = liquidacion.getStatus();
-    return r;
+  public UUID getSettlementId() {
+    return settlementId;
   }
 
-  public UUID getId() {
-    return id;
-  }
-
-  public void setId(UUID id) {
-    this.id = id;
+  public void setSettlementId(UUID settlementId) {
+    this.settlementId = settlementId;
   }
 
   public UUID getSpecialistId() {
@@ -97,5 +88,20 @@ public class SettlementResponse {
   public void setStatus(SettlementStatus status) {
     this.status = status;
   }
-}
 
+  public int getInvoiceCount() {
+    return invoiceCount;
+  }
+
+  public void setInvoiceCount(int invoiceCount) {
+    this.invoiceCount = invoiceCount;
+  }
+
+  public List<SettlementBreakdownLineResponse> getInvoices() {
+    return invoices;
+  }
+
+  public void setInvoices(List<SettlementBreakdownLineResponse> invoices) {
+    this.invoices = invoices;
+  }
+}

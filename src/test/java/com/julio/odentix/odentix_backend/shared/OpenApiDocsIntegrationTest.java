@@ -117,8 +117,12 @@ class OpenApiDocsIntegrationTest extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.paths./api/v1/leads/{id}/convert.post").exists())
         .andExpect(jsonPath("$.paths./api/v1/leads/metrics/conversion.get").exists())
         .andExpect(jsonPath("$.paths./api/v1/leads/metrics/response-time.get").exists())
-        // especialistas: liquidación de honorarios (FASE7-02).
+        // especialistas: lista, liquidación de honorarios y lecturas (FASE7-02).
+        .andExpect(jsonPath("$.paths./api/v1/specialists.get").exists())
         .andExpect(jsonPath("$.paths./api/v1/specialists/{id}/settlements.post").exists())
+        .andExpect(jsonPath("$.paths./api/v1/specialists/{id}/settlements.get").exists())
+        .andExpect(jsonPath("$.paths./api/v1/specialists/{specialistId}/settlements/{settlementId}.get").exists())
+        .andExpect(jsonPath("$.paths./api/v1/specialists/{specialistId}/settlements/{settlementId}/breakdown.get").exists())
         // inventario: CRUD, movimientos y críticos (FASE7-04).
         .andExpect(jsonPath("$.paths./api/v1/inventory/items.post").exists())
         .andExpect(jsonPath("$.paths./api/v1/inventory/items.get").exists())

@@ -1,12 +1,16 @@
 package com.julio.odentix.odentix_backend.specialist.service;
 
+import com.julio.odentix.odentix_backend.billing.entity.Invoice;
 import com.julio.odentix.odentix_backend.billing.entity.InvoiceStatus;
 import com.julio.odentix.odentix_backend.billing.repository.InvoiceRepository;
 import com.julio.odentix.odentix_backend.shared.context.TenantContext;
 import com.julio.odentix.odentix_backend.shared.exception.ConflictException;
 import com.julio.odentix.odentix_backend.shared.exception.ResourceNotFoundException;
 import com.julio.odentix.odentix_backend.specialist.dto.CreateSettlementRequest;
+import com.julio.odentix.odentix_backend.specialist.dto.SettlementBreakdownLineResponse;
+import com.julio.odentix.odentix_backend.specialist.dto.SettlementBreakdownResponse;
 import com.julio.odentix.odentix_backend.specialist.dto.SettlementResponse;
+import com.julio.odentix.odentix_backend.specialist.dto.SpecialistResponse;
 import com.julio.odentix.odentix_backend.specialist.entity.Specialist;
 import com.julio.odentix.odentix_backend.specialist.entity.SpecialistSettlement;
 import com.julio.odentix.odentix_backend.specialist.entity.SettlementStatus;
@@ -15,8 +19,11 @@ import com.julio.odentix.odentix_backend.specialist.repository.SpecialistSettlem
 import com.julio.odentix.odentix_backend.tenant.repository.TenantRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -94,12 +101,13 @@ public class SettlementService {
     }
 
     ZoneId zona = zonaDeLaClinica(tenantId);
+    Instant[] rango = rangoPeriodo(zona, inicio, fin);
     BigDecimal bruto = invoiceRepository.sumFacturadoPorProfesionalEnPeriodo(
         tenantId,
         specialist.getProfessional().getId(),
         InvoiceStatus.anulada,
-        inicio.atStartOfDay(zona).toInstant(),
-        fin.plusDays(1).atStartOfDay(zona).toInstant());
+        rango[0],
+        rango[1]);
     if (bruto == null) {
       bruto = BigDecimal.ZERO;
     }
@@ -112,15 +120,136 @@ public class SettlementService {
     liquidacion.setStatus(SettlementStatus.pendiente);
     liquidacion = settlementRepository.save(liquidacion);
 
-    SettlementResponse response = new SettlementResponse();
-    response.setId(liquidacion.getId());
-    response.setSpecialistId(specialist.getId());
-    response.setPeriodStart(inicio);
-    response.setPeriodEnd(fin);
-    response.setGrossProductionCop(bruto);
-    response.setFeeAmountCop(honorarios);
-    response.setStatus(SettlementStatus.pendiente);
+    return SettlementResponse.fromEntity(liquidacion);
+  }
+
+  /**
+   * Lista los especialistas externos del tenant activo, ordenados por nombre.
+   *
+   * @return especialistas del tenant con sus condiciones financieras.
+   */
+  @Transactional(readOnly = true)
+  public List<SpecialistResponse> listarEspecialistas() {
+    TenantContext.getRequiredTenantId();
+
+    // El repositorio filtra por el tenant activo de forma automática.
+    return specialistRepository.findAll().stream()
+        .map(SpecialistResponse::fromEntity)
+        .sorted(Comparator.comparing(SpecialistResponse::getFullName))
+        .toList();
+  }
+
+  /**
+   * Lista las liquidaciones de un especialista, ordenadas por inicio de periodo.
+   *
+   * <p>El especialista debe pertenecer al tenant activo; de lo contrario se
+   * responde 404 para no revelar la existencia de recursos de otro tenant.
+   *
+   * @param specialistId UUID del especialista (debe pertenecer al tenant activo).
+   * @return liquidaciones del especialista en el tenant activo.
+   */
+  @Transactional(readOnly = true)
+  public List<SettlementResponse> listarLiquidaciones(UUID specialistId) {
+    UUID tenantId = TenantContext.getRequiredTenantId();
+
+    specialistRepository.findByIdAndTenantId(specialistId, tenantId)
+        .orElseThrow(() -> new ResourceNotFoundException(
+            "Especialista no encontrado: " + specialistId));
+
+    // El repositorio filtra por el tenant activo de forma automática.
+    return settlementRepository.findBySpecialistIdOrderByPeriodStartAsc(specialistId).stream()
+        .map(SettlementResponse::fromEntity)
+        .toList();
+  }
+
+  /**
+   * Consulta una liquidación por ID dentro de un especialista.
+   *
+   * <p>La liquidación debe pertenecer al especialista indicado y al tenant
+   * activo; cualquier otra combinación responde 404.
+   *
+   * @param specialistId UUID del especialista (debe pertenecer al tenant activo).
+   * @param settlementId UUID de la liquidación.
+   * @return liquidación encontrada.
+   */
+  @Transactional(readOnly = true)
+  public SettlementResponse obtenerLiquidacion(UUID specialistId, UUID settlementId) {
+    return SettlementResponse.fromEntity(liquidacionDeEspecialista(specialistId, settlementId));
+  }
+
+  /**
+   * Desglosa una liquidación en las facturas que componen su producción bruta.
+   *
+   * <p>Aplica el mismo criterio del cálculo original (facturas emitidas en el
+   * periodo vinculadas a tratamientos del profesional, excluyendo anuladas).
+   * Los totales del encabezado son los registrados al generar la liquidación;
+   * las líneas reflejan las facturas vigentes al momento de la consulta.
+   *
+   * @param specialistId UUID del especialista (debe pertenecer al tenant activo).
+   * @param settlementId UUID de la liquidación.
+   * @return desglose con las facturas del periodo ordenadas por emisión.
+   */
+  @Transactional(readOnly = true)
+  public SettlementBreakdownResponse obtenerDesglose(UUID specialistId, UUID settlementId) {
+    UUID tenantId = TenantContext.getRequiredTenantId();
+    SpecialistSettlement liquidacion = liquidacionDeEspecialista(specialistId, settlementId);
+
+    Instant[] rango = rangoPeriodo(
+        zonaDeLaClinica(tenantId), liquidacion.getPeriodStart(), liquidacion.getPeriodEnd());
+    List<Invoice> facturas = invoiceRepository.findFacturasPorProfesionalEnPeriodo(
+        tenantId,
+        liquidacion.getSpecialist().getProfessional().getId(),
+        InvoiceStatus.anulada,
+        rango[0],
+        rango[1]);
+
+    SettlementBreakdownResponse response = new SettlementBreakdownResponse();
+    response.setSettlementId(liquidacion.getId());
+    response.setSpecialistId(specialistId);
+    response.setPeriodStart(liquidacion.getPeriodStart());
+    response.setPeriodEnd(liquidacion.getPeriodEnd());
+    response.setGrossProductionCop(liquidacion.getGrossProductionCop());
+    response.setFeeAmountCop(liquidacion.getFeeAmountCop());
+    response.setStatus(liquidacion.getStatus());
+    response.setInvoiceCount(facturas.size());
+    response.setInvoices(facturas.stream()
+        .map(SettlementBreakdownLineResponse::fromEntity)
+        .toList());
     return response;
+  }
+
+  /**
+   * Carga una liquidación verificando que pertenece al especialista indicado
+   * y al tenant activo (404 en cualquier otro caso).
+   */
+  private SpecialistSettlement liquidacionDeEspecialista(UUID specialistId, UUID settlementId) {
+    UUID tenantId = TenantContext.getRequiredTenantId();
+
+    specialistRepository.findByIdAndTenantId(specialistId, tenantId)
+        .orElseThrow(() -> new ResourceNotFoundException(
+            "Especialista no encontrado: " + specialistId));
+
+    SpecialistSettlement liquidacion = settlementRepository.findByIdAndTenantId(settlementId, tenantId)
+        .orElseThrow(() -> new ResourceNotFoundException(
+            "Liquidación no encontrada: " + settlementId));
+
+    if (!liquidacion.getSpecialist().getId().equals(specialistId)) {
+      throw new ResourceNotFoundException(
+          "Liquidación no encontrada: " + settlementId);
+    }
+    return liquidacion;
+  }
+
+  /**
+   * Convierte un rango de días calendario (fin inclusivo) a instantes UTC
+   * para comparar contra {@code issued_at}.
+   *
+   * @return arreglo de dos instantes: inicio inclusivo y fin exclusivo.
+   */
+  private Instant[] rangoPeriodo(ZoneId zona, LocalDate inicio, LocalDate fin) {
+    return new Instant[]{
+        inicio.atStartOfDay(zona).toInstant(),
+        fin.plusDays(1).atStartOfDay(zona).toInstant()};
   }
 
   private ZoneId zonaDeLaClinica(UUID tenantId) {
