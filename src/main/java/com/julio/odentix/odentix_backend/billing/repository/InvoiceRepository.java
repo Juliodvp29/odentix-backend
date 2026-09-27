@@ -4,6 +4,7 @@ import com.julio.odentix.odentix_backend.billing.entity.Invoice;
 import com.julio.odentix.odentix_backend.billing.entity.InvoiceStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -66,6 +67,36 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
         AND i.issuedAt < :hastaExclusivo
       """)
   BigDecimal sumFacturadoPorProfesionalEnPeriodo(
+      @Param("tenantId") UUID tenantId,
+      @Param("professionalId") UUID professionalId,
+      @Param("excludedStatus") InvoiceStatus excludedStatus,
+      @Param("desde") Instant desde,
+      @Param("hastaExclusivo") Instant hastaExclusivo);
+
+  /**
+   * Facturas que componen la producción bruta de un profesional en un periodo (desglose).
+   *
+   * <p>Mismo criterio que {@link #sumFacturadoPorProfesionalEnPeriodo}: facturas
+   * emitidas en el rango vinculadas a tratamientos del profesional, excluyendo
+   * el estado indicado (normalmente {@code anulada}) y facturas sin tratamiento
+   * (join interno). Ordenadas por fecha de emisión para un desglose legible.
+   *
+   * <p>Filtra por {@code tenantId} explícito además del automático @TenantId
+   * (defensa en profundidad por tenant).
+   *
+   * @return facturas del profesional en el periodo, ordenadas por emisión.
+   */
+  @Query("""
+      SELECT i
+      FROM Invoice i
+      WHERE i.tenantId = :tenantId
+        AND i.treatmentPlan.professional.id = :professionalId
+        AND i.status <> :excludedStatus
+        AND i.issuedAt >= :desde
+        AND i.issuedAt < :hastaExclusivo
+      ORDER BY i.issuedAt ASC
+      """)
+  List<Invoice> findFacturasPorProfesionalEnPeriodo(
       @Param("tenantId") UUID tenantId,
       @Param("professionalId") UUID professionalId,
       @Param("excludedStatus") InvoiceStatus excludedStatus,

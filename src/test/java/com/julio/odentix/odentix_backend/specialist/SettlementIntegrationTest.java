@@ -1,6 +1,7 @@
 package com.julio.odentix.odentix_backend.specialist;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -55,6 +56,11 @@ import org.springframework.test.web.servlet.MvcResult;
  *   <li>Aislamiento cross-tenant: liquidar un especialista de otro tenant → 404
  *       (regla de aislamiento multi-tenant del proyecto).</li>
  *   <li>Autorización por rol: solo PROPIETARIO liquida (recepción → 403).</li>
+ *   <li>Lecturas: lista de especialistas del tenant, lista y detalle de
+ *       liquidaciones por especialista, y desglose con las facturas que
+ *       componen el bruto (la suma de líneas cierra con la liquidación).</li>
+ *   <li>Lecturas con aislamiento: recursos de otro tenant → 404, liquidación
+ *       bajo otro especialista → 404, recepción en lecturas → 403.</li>
  * </ul>
  */
 @AutoConfigureMockMvc
@@ -306,6 +312,205 @@ class SettlementIntegrationTest extends AbstractIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(body)))
         .andExpect(status().isUnauthorized());
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tests de lectura: lista de especialistas, liquidaciones y desglose
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void listarEspecialistasDevuelveSoloLosDelTenant() throws Exception {
+    MvcResult resultA = mockMvc.perform(
+            get("/api/v1/specialists")
+                .header("Authorization", "Bearer " + tokenPropietarioA))
+        .andExpect(status().isOk())
+        .andReturn();
+    JsonNode listaA = objectMapper.readTree(resultA.getResponse().getContentAsString());
+    assertThat(listaA).hasSize(1);
+    assertThat(listaA.get(0).get("id").asText()).isEqualTo(specialistA.getId().toString());
+    assertThat(listaA.get(0).get("fullName").asText()).isEqualTo("Dra. Externa Liquida");
+    assertThat(new BigDecimal(listaA.get(0).get("feePercentage").asText()))
+        .isEqualByComparingTo(new BigDecimal("40.00"));
+
+    // El propietario B solo ve su propio especialista (aislamiento por listado).
+    MvcResult resultB = mockMvc.perform(
+            get("/api/v1/specialists")
+                .header("Authorization", "Bearer " + tokenPropietarioB))
+        .andExpect(status().isOk())
+        .andReturn();
+    JsonNode listaB = objectMapper.readTree(resultB.getResponse().getContentAsString());
+    assertThat(listaB).hasSize(1);
+    assertThat(listaB.get(0).get("id").asText()).isEqualTo(specialistB.getId().toString());
+  }
+
+  @Test
+  void listarLiquidacionesDevuelveOrdenadasPorPeriodo() throws Exception {
+    JsonNode sept = liquidar(
+        tokenPropietarioA, specialistA.getId(), "2026-09-01", "2026-09-30");
+    JsonNode oct = liquidar(
+        tokenPropietarioA, specialistA.getId(), "2026-10-01", "2026-10-31");
+
+    MvcResult result = mockMvc.perform(
+            get("/api/v1/specialists/{id}/settlements", specialistA.getId())
+                .header("Authorization", "Bearer " + tokenPropietarioA))
+        .andExpect(status().isOk())
+        .andReturn();
+    JsonNode lista = objectMapper.readTree(result.getResponse().getContentAsString());
+    assertThat(lista).hasSize(2);
+    assertThat(lista.get(0).get("id").asText()).isEqualTo(sept.get("id").asText());
+    assertThat(lista.get(0).get("periodStart").asText()).isEqualTo("2026-09-01");
+    assertThat(lista.get(1).get("id").asText()).isEqualTo(oct.get("id").asText());
+    assertThat(lista.get(1).get("periodStart").asText()).isEqualTo("2026-10-01");
+  }
+
+  @Test
+  void listarLiquidacionesSinDatosDevuelveArregloVacio() throws Exception {
+    // El especialista B no tiene liquidaciones: 200 con [] (no 404).
+    MvcResult result = mockMvc.perform(
+            get("/api/v1/specialists/{id}/settlements", specialistB.getId())
+                .header("Authorization", "Bearer " + tokenPropietarioB))
+        .andExpect(status().isOk())
+        .andReturn();
+    JsonNode lista = objectMapper.readTree(result.getResponse().getContentAsString());
+    assertThat(lista).hasSize(0);
+  }
+
+  @Test
+  void consultarLiquidacionDevuelveElDetalle() throws Exception {
+    JsonNode creada = liquidar(
+        tokenPropietarioA, specialistA.getId(), "2026-09-01", "2026-09-30");
+
+    MvcResult result = mockMvc.perform(
+            get("/api/v1/specialists/{specialistId}/settlements/{settlementId}",
+                specialistA.getId(), creada.get("id").asText())
+                .header("Authorization", "Bearer " + tokenPropietarioA))
+        .andExpect(status().isOk())
+        .andReturn();
+    JsonNode json = objectMapper.readTree(result.getResponse().getContentAsString());
+    assertThat(json.get("id").asText()).isEqualTo(creada.get("id").asText());
+    assertThat(json.get("specialistId").asText()).isEqualTo(specialistA.getId().toString());
+    assertThat(new BigDecimal(json.get("grossProductionCop").asText()))
+        .isEqualByComparingTo(new BigDecimal("800000.00"));
+    assertThat(new BigDecimal(json.get("feeAmountCop").asText()))
+        .isEqualByComparingTo(new BigDecimal("320000.00"));
+    assertThat(json.get("status").asText()).isEqualTo("pendiente");
+  }
+
+  @Test
+  void desgloseListaLasFacturasQueComponenElBruto() throws Exception {
+    JsonNode creada = liquidar(
+        tokenPropietarioA, specialistA.getId(), "2026-09-01", "2026-09-30");
+
+    MvcResult result = mockMvc.perform(
+            get("/api/v1/specialists/{specialistId}/settlements/{settlementId}/breakdown",
+                specialistA.getId(), creada.get("id").asText())
+                .header("Authorization", "Bearer " + tokenPropietarioA))
+        .andExpect(status().isOk())
+        .andReturn();
+    JsonNode json = objectMapper.readTree(result.getResponse().getContentAsString());
+
+    // Solo LIQ-001 y LIQ-002 componen el bruto (excluye anulada, fuera de
+    // periodo, otro profesional y sin tratamiento), ordenadas por emisión.
+    assertThat(json.get("settlementId").asText()).isEqualTo(creada.get("id").asText());
+    assertThat(json.get("invoiceCount").asInt()).isEqualTo(2);
+    JsonNode lineas = json.get("invoices");
+    assertThat(lineas).hasSize(2);
+    assertThat(lineas.get(0).get("invoiceNumber").asText()).isEqualTo("LIQ-001");
+    assertThat(new BigDecimal(lineas.get(0).get("totalCop").asText()))
+        .isEqualByComparingTo(new BigDecimal("500000.00"));
+    assertThat(lineas.get(1).get("invoiceNumber").asText()).isEqualTo("LIQ-002");
+    assertThat(new BigDecimal(lineas.get(1).get("totalCop").asText()))
+        .isEqualByComparingTo(new BigDecimal("300000.00"));
+
+    // La suma de las líneas cierra con el bruto de la liquidación.
+    BigDecimal suma = new BigDecimal(lineas.get(0).get("totalCop").asText())
+        .add(new BigDecimal(lineas.get(1).get("totalCop").asText()));
+    assertThat(suma).isEqualByComparingTo(
+        new BigDecimal(json.get("grossProductionCop").asText()));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Aislamiento cross-tenant y autorización por rol de las lecturas
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void lecturasDeOtroTenantDevuelven404() throws Exception {
+    JsonNode creada = liquidar(
+        tokenPropietarioA, specialistA.getId(), "2026-09-01", "2026-09-30");
+    String liquidacionA = creada.get("id").asText();
+
+    // Propietario de B sobre el especialista de A: lista, detalle y desglose → 404.
+    mockMvc.perform(
+            get("/api/v1/specialists/{id}/settlements", specialistA.getId())
+                .header("Authorization", "Bearer " + tokenPropietarioB))
+        .andExpect(status().isNotFound());
+    mockMvc.perform(
+            get("/api/v1/specialists/{specialistId}/settlements/{settlementId}",
+                specialistA.getId(), liquidacionA)
+                .header("Authorization", "Bearer " + tokenPropietarioB))
+        .andExpect(status().isNotFound());
+    mockMvc.perform(
+            get("/api/v1/specialists/{specialistId}/settlements/{settlementId}/breakdown",
+                specialistA.getId(), liquidacionA)
+                .header("Authorization", "Bearer " + tokenPropietarioB))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void liquidacionDeOtroEspecialistaDelMismoTenantDevuelve404() throws Exception {
+    JsonNode creada = liquidar(
+        tokenPropietarioA, specialistA.getId(), "2026-09-01", "2026-09-30");
+
+    // Segundo especialista en el mismo tenant A.
+    TenantContext.setTenantId(tenantA.getId());
+    Specialist otro;
+    try {
+      Professional profesional = new Professional(tenantA.getId(), "Dra. Otra Externa");
+      profesional.setExternal(true);
+      profesional = professionalRepository.saveAndFlush(profesional);
+      otro = specialistRepository.saveAndFlush(
+          new Specialist(tenantA.getId(), profesional, new BigDecimal("30.00")));
+    } finally {
+      TenantContext.clear();
+    }
+
+    // La liquidación de A pedida bajo el otro especialista → 404.
+    mockMvc.perform(
+            get("/api/v1/specialists/{specialistId}/settlements/{settlementId}",
+                otro.getId(), creada.get("id").asText())
+                .header("Authorization", "Bearer " + tokenPropietarioA))
+        .andExpect(status().isNotFound());
+    mockMvc.perform(
+            get("/api/v1/specialists/{specialistId}/settlements/{settlementId}/breakdown",
+                otro.getId(), creada.get("id").asText())
+                .header("Authorization", "Bearer " + tokenPropietarioA))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void recepcionNoPuedeLeerEspecialistasNiLiquidacionesDevuelve403() throws Exception {
+    JsonNode creada = liquidar(
+        tokenPropietarioA, specialistA.getId(), "2026-09-01", "2026-09-30");
+    String liquidacionA = creada.get("id").asText();
+
+    mockMvc.perform(
+            get("/api/v1/specialists")
+                .header("Authorization", "Bearer " + tokenRecepcionA))
+        .andExpect(status().isForbidden());
+    mockMvc.perform(
+            get("/api/v1/specialists/{id}/settlements", specialistA.getId())
+                .header("Authorization", "Bearer " + tokenRecepcionA))
+        .andExpect(status().isForbidden());
+    mockMvc.perform(
+            get("/api/v1/specialists/{specialistId}/settlements/{settlementId}",
+                specialistA.getId(), liquidacionA)
+                .header("Authorization", "Bearer " + tokenRecepcionA))
+        .andExpect(status().isForbidden());
+    mockMvc.perform(
+            get("/api/v1/specialists/{specialistId}/settlements/{settlementId}/breakdown",
+                specialistA.getId(), liquidacionA)
+                .header("Authorization", "Bearer " + tokenRecepcionA))
+        .andExpect(status().isForbidden());
   }
 }
 
