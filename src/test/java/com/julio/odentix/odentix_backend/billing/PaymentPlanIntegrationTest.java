@@ -1,5 +1,6 @@
 package com.julio.odentix.odentix_backend.billing;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -48,6 +49,9 @@ import com.fasterxml.jackson.databind.JsonNode;
  *   <li>Crear plan para tratamiento de otro tenant → 404 (aislamiento cross-tenant).</li>
  *   <li>Pagar cuota de otro tenant → 404 (aislamiento cross-tenant).</li>
  *   <li>Crear segundo plan para el mismo tratamiento → 409 Conflict.</li>
+ *   <li>Consultar plan por tratamiento → 200 con cuotas ordenadas.</li>
+ *   <li>Consultar tratamiento sin plan → 404.</li>
+ *   <li>Consultar plan de otro tenant → 404 (aislamiento cross-tenant).</li>
  * </ul>
  */
 @AutoConfigureMockMvc
@@ -256,6 +260,47 @@ class PaymentPlanIntegrationTest extends AbstractIntegrationTest {
 
     // tokenA (tenantA) intenta pagar la cuota de tenantB → 404.
     mockMvc.perform(post("/api/v1/installments/{id}/pay", cuotaIdB)
+            .header("Authorization", "Bearer " + tokenA))
+        .andExpect(status().isNotFound());
+  }
+
+  // ---------------------------------------------------------------------------
+  // Tests del GET de plan de pago por tratamiento
+  // ---------------------------------------------------------------------------
+
+  @Test
+  void consultarPlanPagoDevuelvePlanConCuotas() throws Exception {
+    String planId = crearPlanPago(tokenA, planTratamientoA.getId().toString(), "900000.00", 3);
+
+    mockMvc.perform(get("/api/v1/treatment-plans/{id}/payment-plan", planTratamientoA.getId())
+            .header("Authorization", "Bearer " + tokenA))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(planId))
+        .andExpect(jsonPath("$.treatmentPlanId").value(planTratamientoA.getId().toString()))
+        .andExpect(jsonPath("$.totalAmountCop").value(900000.00))
+        .andExpect(jsonPath("$.installmentsCount").value(3))
+        .andExpect(jsonPath("$.installments.length()").value(3))
+        .andExpect(jsonPath("$.installments[0].installmentNumber").value(1))
+        .andExpect(jsonPath("$.installments[1].installmentNumber").value(2))
+        .andExpect(jsonPath("$.installments[2].installmentNumber").value(3))
+        .andExpect(jsonPath("$.installments[0].status").value("pendiente"));
+  }
+
+  @Test
+  void consultarPlanPagoSinPlanDevuelve404() throws Exception {
+    // El tratamiento A aún no tiene plan de pago en este test.
+    mockMvc.perform(get("/api/v1/treatment-plans/{id}/payment-plan", planTratamientoA.getId())
+            .header("Authorization", "Bearer " + tokenA))
+        .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void consultarPlanPagoDeOtroTenantDevuelve404() throws Exception {
+    // Crear plan con tokenB (tenantB).
+    crearPlanPago(tokenB, planTratamientoB.getId().toString(), "600000.00", 2);
+
+    // tokenA (tenantA) intenta consultar el plan del tratamiento de tenantB → 404.
+    mockMvc.perform(get("/api/v1/treatment-plans/{id}/payment-plan", planTratamientoB.getId())
             .header("Authorization", "Bearer " + tokenA))
         .andExpect(status().isNotFound());
   }

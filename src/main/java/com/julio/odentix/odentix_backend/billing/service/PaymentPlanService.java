@@ -128,6 +128,42 @@ public class PaymentPlanService {
   }
 
   /**
+   * Consulta el plan de pago de un plan de tratamiento con todas sus cuotas.
+   *
+   * <p>El tratamiento debe pertenecer al tenant activo; de lo contrario se
+   * responde 404 para no revelar la existencia de recursos de otro tenant.
+   * Si el tratamiento no tiene plan de pago, también se responde 404.
+   *
+   * @param treatmentPlanId UUID del plan de tratamiento (debe pertenecer al tenant activo).
+   * @return plan de pago con sus cuotas ordenadas por número.
+   */
+  @Transactional(readOnly = true)
+  public PaymentPlanResponse getPaymentPlanByTreatmentPlanId(UUID treatmentPlanId) {
+    UUID tenantId = TenantContext.getRequiredTenantId();
+
+    // Verificar que el tratamiento existe y pertenece al tenant activo.
+    treatmentPlanRepository.findByIdAndTenantId(treatmentPlanId, tenantId)
+        .orElseThrow(() -> new ResourceNotFoundException(
+            "Plan de tratamiento no encontrado: " + treatmentPlanId));
+
+    // El repositorio filtra por tenant automáticamente; un plan de otro
+    // tenant resulta invisible y termina en 404.
+    PaymentPlan plan = paymentPlanRepository.findByTreatmentPlanId(treatmentPlanId)
+        .stream()
+        .findFirst()
+        .orElseThrow(() -> new ResourceNotFoundException(
+            "El plan de tratamiento no tiene un plan de pago: " + treatmentPlanId));
+
+    List<Installment> cuotas = installmentRepository
+        .findByPaymentPlanIdOrderByInstallmentNumberAsc(plan.getId());
+    List<InstallmentResponse> cuotasDto = cuotas.stream()
+        .map(InstallmentResponse::fromEntity)
+        .toList();
+
+    return PaymentPlanResponse.fromEntity(plan, cuotasDto);
+  }
+
+  /**
    * Marca una cuota como pagada y genera la factura + pago correspondientes.
    *
    * <p>El pago genera un {@code Invoice} automático (paciente del tratamiento,
