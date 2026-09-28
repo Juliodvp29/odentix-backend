@@ -2,7 +2,8 @@
 
 > Living architecture and decision document for the backend SaaS for dental
 > clinics (multi-tenant: each clinic is a `tenant`).
-> **Status:** documents Phase 0 through Phase 11 and Phase 12 in progress. When closing each phase this file must
+> **Status:** documents Phase 0 through Phase 11, Phase 12 in progress, plus
+> post-Phase 11 read-model/selector endpoints (§12, 2026-09-28). When closing each phase this file must
 > be updated (rule in `AGENTS.md` §11: without that update the phase is not
 > considered closed).
 >
@@ -79,9 +80,16 @@ com.julio.odentix.odentix_backend/
 ├── patient/     # Phase 2
 ├── appointment/ # Phase 3
 ├── treatmentplan/ # Phase 4
-├── billing/     # Phase 4
+├── billing/     # Phases 4 (invoicing) and 6 (receivables)
 ├── crm/         # Phase 5
-└── inventory/   # Phase 7
+├── inventory/   # Phase 7
+├── specialist/  # Phase 7 (external specialists + settlements)
+├── task/        # Phase 8
+├── notification/ # Phase 8 (email/WhatsApp senders)
+├── opportunity/ # Phase 9 (engine: detect → propose → execute → measure)
+├── assistant/   # Phase 10 (Groq AI over tenant snapshot)
+├── subscription/ # Phase 11 (plans, features, numeric limits)
+└── saas/        # Phase 11 (Bold checkout + webhooks)
 ```
 
 Rules:
@@ -110,6 +118,8 @@ repo only holds local defaults with no production value.
 | `JWT_SECRET` | development key in `application.yml` | **mandatory**: real `JWT_SECRET` (≥32 characters) |
 | `JWT_EXPIRATION_MINUTES` | `15` (15 min) | `15` recommended; adjustable |
 | `JWT_REFRESH_TOKEN_EXPIRATION_DAYS` | `7` (7 days) | `7` recommended; adjustable |
+| `CORS_ALLOWED_ORIGINS` | `http://localhost:4200` | **mandatory**: frontend origin(s), comma-separated; a missing var crashes prod boot (fail-fast in `application-prod.yml`, incident 2026-09-28) |
+| `GROQ_API_KEY` | empty (assistant answers fixed-template fallback only) | Groq key for real AI answers; boot never fails without it |
 
 Dev-machine particularities (do not generalize):
 
@@ -152,6 +162,25 @@ docker compose up -d                                   # local Postgres
 | `V8__create_patient_files` | `storage_provider` type, `patient_files` table (S3 metadata), trigger, RLS |
 | `V9__test_patient_file_data` | Test migration (only applied in the `test` profile via `V999`) |
 | `V10__create_refresh_tokens` | `refresh_tokens` table (SHA-256 hash of the token, `expires_at`, `revoked`, `revoked_at`, `tenant_id`/`user_id` FKs), indexes, trigger, RLS (allows `current_tenant_id() IS NULL` because refresh happens before `TenantContext` exists) |
+| `V11__create_professionals_and_rooms` | `professionals` + `rooms` tables (FASE3-01) |
+| `V12__create_appointments` | `appointments` table + `EXCLUDE USING gist` overlap guard (FASE3-02) |
+| `V13__create_waitlist_entries` | `waitlist_entries` table (FASE3-06; lifecycle extended in V29) |
+| `V14__create_treatment_plans` | `treatment_plans` + items, FDI check, tenant-consistency trigger (FASE4-01) |
+| `V15__create_billing` | `invoices`, `invoice_items`, `payments` tables (FASE4-03) |
+| `V16__invoice_number_seq` | atomic per-tenant `FAC-000001` numbering (FASE4-03) |
+| `V17__create_leads` | `leads` + `lead_activities`, partial `idx_leads_unresponded` index (FASE5-01) |
+| `V18__create_payment_plans` | `payment_plans` + `installments`, `mark_overdue_installments()` function (FASE6-01) |
+| `V19__create_specialists` | `specialists` + `specialist_settlements`, `check_specialist_is_external` trigger (FASE7-01) |
+| `V20__create_inventory` | `inventory_items` + `stock_movements`, `apply_stock_movement` trigger (FASE7-03) |
+| `V21__create_tasks` | `tasks` table (FASE8-01) |
+| `V22__create_notifications` | `notifications` table (FASE8-03) |
+| `V23__create_opportunities` | `opportunities` table (FASE9-01) |
+| `V24__create_opportunity_actions` | `opportunity_actions` table (FASE9-03) |
+| `V25__create_plans_and_subscriptions` | `plans`, `plan_features`, `plan_limits`, `tenant_subscriptions` + seeds (FASE11-01) |
+| `V26__create_saas_payments` | `saas_payments` table for Bold checkout/webhooks (FASE11-04) |
+| `V27__tenant_notification_email` | per-clinic sender columns on `tenants` (pre-Phase 12) |
+| `V28__tenant_whatsapp_credentials` | per-clinic AES-GCM-encrypted WhatsApp columns on `tenants` (pre-Phase 12) |
+| `V29__extend_waitlist_entry_lifecycle` | `contacted/converted/discarded_at`, `discard_reason`, conversion link (waitlist convert) |
 
 RLS pattern on every business table (defense in depth, §6):
 
@@ -678,3 +707,46 @@ The SaaS itself bills and governs access (`subscription/` and `saas/` modules):
 - **Boot/prod hardening (findings from real 2026-09-19 deploys):** container-sized heap (`JAVA_OPTS` with `MaxRAMPercentage=50`, bounded metaspace, serial GC); `bootstrap-mode: lazy` prod-only (JPQL parsing took ~13 min on free CPU); `@Value` numerics tolerant to empty vars; `health.mail.enabled=false`.
 - **Per-tenant notification identities (pre-Phase 12):** per-clinic email sender (`V27` + `GET/PATCH /tenant/settings`) and AES-GCM-encrypted WhatsApp credentials (`V28` + `DATA_ENCRYPTION_KEY`), write-only token.
 - Total project tests: **367/367 green** in `./mvnw.cmd clean verify`.
+
+### Post-Phase 11 read-model and selector endpoints (2026-09-27/28, PRs #37–#41)
+
+Frontend-driven reads (Angular app on Vercel, no frozen contract yet). No schema
+changes, hence no migrations:
+- **Payment-plan read (PR #37):** `GET /api/v1/treatment-plans/{id}/payment-plan`
+  (plan + installments; 404 if cross-tenant or plan-less). Fixed the POST
+  `Location`, which pointed to a non-existent `.../payment-plan/{planId}` URL.
+  `PaymentPlanIntegrationTest` 6/6 → 9/9.
+- **Settlement reads (PR #39):** `GET /api/v1/specialists` (new
+  `SpecialistResponse`), `GET /{id}/settlements`, single
+  `GET /{specialistId}/settlements/{settlementId}` (the POST `Location` target,
+  previously 404),   and `GET .../breakdown` (invoices behind the gross via
+  `InvoiceRepository.findFacturasPorProfesionalEnPeriodo` with the
+  same criteria as the sum; header totals are stored, lines are live).
+  `SettlementIntegrationTest` 7/7 → 15/15.
+- **Professionals + specialist ficha (PR #40):** `GET /api/v1/professionals`
+  (agenda roles, `?onlyActive`/`?externalOnly`, ordered) + `POST` (owner only)
+  with `ProfessionalResponse`/`CreateProfessionalRequest`; `POST
+  /api/v1/specialists` (new `SpecialistService`, owner + `specialists` feature;
+  404 foreign professional, 400 non-external, 409 duplicate ficha).
+  `ProfessionalIntegrationTest` 8/8, `SpecialistCreationIntegrationTest` 7/7.
+- **Front contract note:** DTO booleans serialize as `isExternal`/`isActive`
+  via `@JsonProperty` (without it Jackson yields `external`/`active`, cf.
+  `PatientResponse`); ordered repository methods
+  (`findAllByOrderByFullNameAsc`, …) with in-memory boolean filters.
+- **Rooms + tenant users (PR #41):** `GET /api/v1/rooms` (`RoomResponse`,
+  agenda roles) and `GET /api/v1/users` (reuses `UserSummaryDto`, tenant from
+  the token like `TaskService.listarTareas()`). `RoomIntegrationTest` 3/3,
+  `UserListIntegrationTest` 3/3.
+- **Notifications inbox (PR #41):** paginated `GET /api/v1/notifications`
+  (delivery debugging). `NotificationListIntegrationTest` 5/5.
+- **Assistant snapshot enrichment (no prompt change):** uncontacted leads as
+  top-5 oldest-first with age/last-contact (`+procedureOfInterest`) and
+  opportunity detection dates; then undecided plans (patient/value/status/date),
+  appointments (professional/room), overdue installments (amount/due/days/patient
+  via payment plan → treatment plan), and origin names for all 6 detector types
+  (unknown → "—"). The system prompt already forbids inventing, so each row is
+  direct gain; TOP=5 bound kept.
+- **Prod incident 2026-09-28:** deploy crashed in loop on missing
+  `CORS_ALLOWED_ORIGINS` (fail-fast in `application-prod.yml`); fixed by setting
+  it to the Vercel frontend origin on Render (no code change). See §4.
+- Total project tests: **450/450 green** in `./mvnw.cmd clean verify` (2026-09-28).
