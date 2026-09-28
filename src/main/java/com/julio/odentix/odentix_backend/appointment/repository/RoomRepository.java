@@ -18,6 +18,13 @@ import org.springframework.stereotype.Repository;
 public interface RoomRepository extends JpaRepository<Room, UUID> {
 
   /**
+   * Retorna todos los consultorios del tenant ordenados por nombre.
+   *
+   * @return consultorios del tenant activo en orden alfabético.
+   */
+  List<Room> findAllByOrderByNameAsc();
+
+  /**
    * Busca un consultorio por su nombre (sin distinguir mayúsculas/minúsculas).
    *
    * @param name nombre del consultorio.

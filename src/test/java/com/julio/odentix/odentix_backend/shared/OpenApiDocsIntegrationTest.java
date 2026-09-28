@@ -90,9 +90,12 @@ class OpenApiDocsIntegrationTest extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.components.schemas.ConvertWaitlistEntryRequest").exists())
         .andExpect(jsonPath("$.components.schemas.UpdateWaitlistStatusRequest").exists())
         .andExpect(jsonPath("$.components.schemas.ApiErrorResponse").exists())
-        // profesionales de la clínica (base de agenda y especialistas).
+        // profesionales y consultorios de la clínica (base de agenda y especialistas).
         .andExpect(jsonPath("$.paths./api/v1/professionals.get").exists())
         .andExpect(jsonPath("$.paths./api/v1/professionals.post").exists())
+        .andExpect(jsonPath("$.paths./api/v1/rooms.get").exists())
+        // miembros del tenant.
+        .andExpect(jsonPath("$.paths./api/v1/users.get").exists())
         // planes de tratamiento.
         .andExpect(jsonPath("$.paths./api/v1/treatment-plans.post").exists())
         .andExpect(jsonPath("$.paths./api/v1/treatment-plans.get").exists())

@@ -1,12 +1,15 @@
 package com.julio.odentix.odentix_backend.auth.service;
 
+import com.julio.odentix.odentix_backend.auth.dto.UserSummaryDto;
 import com.julio.odentix.odentix_backend.auth.entity.User;
 import com.julio.odentix.odentix_backend.auth.entity.UserRole;
 import com.julio.odentix.odentix_backend.auth.repository.UserRepository;
+import com.julio.odentix.odentix_backend.shared.context.TenantContext;
 import com.julio.odentix.odentix_backend.subscription.entity.LimitKey;
 import com.julio.odentix.odentix_backend.subscription.service.SubscriptionService;
 import com.julio.odentix.odentix_backend.tenant.entity.Tenant;
 import com.julio.odentix.odentix_backend.tenant.repository.TenantRepository;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -64,6 +67,23 @@ public class UserService {
         userRepository.countByTenantIdAndIsActiveTrue(tenantId));
     User user = new User(tenant, email, passwordEncoder.encode(rawPassword), fullName, role);
     return userRepository.save(user);
+  }
+
+  /**
+   * Lista los miembros del tenant activo ordenados por nombre.
+   *
+   * <p>El tenant sale del token (vía {@code TenantContext}), nunca de un
+   * parámetro: igual que {@code TaskService.listarTareas()}.
+   *
+   * @return miembros del tenant activo.
+   */
+  @Transactional(readOnly = true)
+  public List<UserSummaryDto> listarUsuarios() {
+    UUID tenantId = TenantContext.getRequiredTenantId();
+
+    return userRepository.findAllByTenantIdOrderByFullNameAsc(tenantId).stream()
+        .map(UserSummaryDto::fromEntity)
+        .toList();
   }
 }
 
