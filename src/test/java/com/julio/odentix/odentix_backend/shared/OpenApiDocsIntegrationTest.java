@@ -146,6 +146,8 @@ class OpenApiDocsIntegrationTest extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.paths./api/v1/tasks/{id}.patch").exists())
         .andExpect(jsonPath("$.paths./api/v1/tasks/{id}.delete").exists())
         .andExpect(jsonPath("$.paths./api/v1/tasks/{id}/complete.post").exists())
+        // notificaciones: historial paginado con estado y error (vista de depuración).
+        .andExpect(jsonPath("$.paths./api/v1/notifications.get").exists())
         // oportunidades, acciones y valor recuperado (FASE9-01, FASE9-03, FASE9-04).
         .andExpect(jsonPath("$.paths./api/v1/opportunities.get").exists())
         .andExpect(jsonPath("$.paths./api/v1/opportunities/recovered-value.get").exists())
