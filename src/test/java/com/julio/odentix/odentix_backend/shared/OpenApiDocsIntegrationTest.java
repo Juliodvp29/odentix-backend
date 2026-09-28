@@ -90,6 +90,9 @@ class OpenApiDocsIntegrationTest extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.components.schemas.ConvertWaitlistEntryRequest").exists())
         .andExpect(jsonPath("$.components.schemas.UpdateWaitlistStatusRequest").exists())
         .andExpect(jsonPath("$.components.schemas.ApiErrorResponse").exists())
+        // profesionales de la clínica (base de agenda y especialistas).
+        .andExpect(jsonPath("$.paths./api/v1/professionals.get").exists())
+        .andExpect(jsonPath("$.paths./api/v1/professionals.post").exists())
         // planes de tratamiento.
         .andExpect(jsonPath("$.paths./api/v1/treatment-plans.post").exists())
         .andExpect(jsonPath("$.paths./api/v1/treatment-plans.get").exists())
@@ -117,8 +120,9 @@ class OpenApiDocsIntegrationTest extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.paths./api/v1/leads/{id}/convert.post").exists())
         .andExpect(jsonPath("$.paths./api/v1/leads/metrics/conversion.get").exists())
         .andExpect(jsonPath("$.paths./api/v1/leads/metrics/response-time.get").exists())
-        // especialistas: lista, liquidación de honorarios y lecturas (FASE7-02).
+        // especialistas: lista, ficha, liquidación de honorarios y lecturas (FASE7-02).
         .andExpect(jsonPath("$.paths./api/v1/specialists.get").exists())
+        .andExpect(jsonPath("$.paths./api/v1/specialists.post").exists())
         .andExpect(jsonPath("$.paths./api/v1/specialists/{id}/settlements.post").exists())
         .andExpect(jsonPath("$.paths./api/v1/specialists/{id}/settlements.get").exists())
         .andExpect(jsonPath("$.paths./api/v1/specialists/{specialistId}/settlements/{settlementId}.get").exists())
