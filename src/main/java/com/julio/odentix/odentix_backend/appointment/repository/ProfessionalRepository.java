@@ -18,6 +18,13 @@ import org.springframework.stereotype.Repository;
 public interface ProfessionalRepository extends JpaRepository<Professional, UUID> {
 
   /**
+   * Retorna todos los profesionales del tenant ordenados por nombre.
+   *
+   * @return profesionales del tenant activo en orden alfabético.
+   */
+  List<Professional> findAllByOrderByFullNameAsc();
+
+  /**
    * Busca un profesional por su ID y tenant (defensa en profundidad por tenant).
    */
   Optional<Professional> findByIdAndTenantId(UUID id, UUID tenantId);

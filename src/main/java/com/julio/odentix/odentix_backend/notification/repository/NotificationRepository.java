@@ -7,6 +7,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -22,6 +24,13 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
    * Busca una notificación por su ID y tenant (defensa en profundidad por tenant).
    */
   Optional<Notification> findByIdAndTenantId(UUID id, UUID tenantId);
+
+  /**
+   * Historial paginado del tenant para la vista de estado. El filtro por
+   * tenant es explícito (defensa en profundidad, además del filtro
+   * automático de Hibernate).
+   */
+  Page<Notification> findByTenantId(UUID tenantId, Pageable pageable);
 
   /**
    * Historial de intentos hacia un destinatario en un canal.

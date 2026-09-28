@@ -2,6 +2,7 @@ package com.julio.odentix.odentix_backend.notification.service;
 
 import com.julio.odentix.odentix_backend.appointment.entity.Appointment;
 import com.julio.odentix.odentix_backend.appointment.repository.AppointmentRepository;
+import com.julio.odentix.odentix_backend.notification.dto.NotificationResponse;
 import com.julio.odentix.odentix_backend.notification.entity.Notification;
 import com.julio.odentix.odentix_backend.notification.entity.NotificationChannel;
 import com.julio.odentix.odentix_backend.notification.entity.NotificationStatus;
@@ -18,6 +19,8 @@ import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -227,6 +230,22 @@ public class NotificationService {
     intento.setStatus(NotificationStatus.enviada);
     intento.setSentAt(Instant.now());
     return notificationRepository.save(intento);
+  }
+
+  /**
+   * Historial paginado de intentos del tenant activo para la vista de
+   * estado (depurar entregas sin acceder a los logs).
+   *
+   * <p>Solo lectura: nunca lanza, igual que el resto del servicio.
+   *
+   * @param pageable paginación (el controlador fija el orden por defecto).
+   * @return página de intentos con su estado y detalle de error.
+   */
+  @Transactional(readOnly = true)
+  public Page<NotificationResponse> listarNotificaciones(Pageable pageable) {
+    UUID tenantId = TenantContext.getRequiredTenantId();
+    return notificationRepository.findByTenantId(tenantId, pageable)
+        .map(NotificationResponse::fromEntity);
   }
 
   private NotificationSender senderPara(NotificationChannel channel) {

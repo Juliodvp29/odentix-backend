@@ -33,5 +33,5 @@ build/
 .vscode/
 .kiro/
 
-
+k6/
 docs/
