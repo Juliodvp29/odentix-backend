@@ -43,6 +43,7 @@ public class NotificationService {
 
   private static final String TEMPLATE_CONFIRMACION_CITA = "cita_confirmacion";
   private static final String TEMPLATE_CITA_AGENDADA = "cita_agendada";
+  private static final String TEMPLATE_MENSAJE_REVISADO = "mensaje_revisado";
 
   private final List<NotificationSender> notificationSenders;
   private final NotificationRepository notificationRepository;
@@ -246,6 +247,53 @@ public class NotificationService {
     UUID tenantId = TenantContext.getRequiredTenantId();
     return notificationRepository.findByTenantId(tenantId, pageable)
         .map(NotificationResponse::fromEntity);
+  }
+
+  /**
+   * Envía un mensaje revisado por un humano para una cita (flujo del
+   * asistente: sugerir → revisar → confirmar → enviar).
+   *
+   * <p>El destinatario se resuelve en el servidor desde el paciente de la
+   * cita según el canal (email o teléfono frescos); el cliente nunca lo
+   * aporta. Sin contacto queda un intento {@code fallida} auditable, igual
+   * que las confirmaciones automáticas.
+   *
+   * @param appointmentId cita dentro del tenant activo.
+   * @param channel canal de envío.
+   * @param asunto asunto (solo email; si viene vacío se usa uno genérico).
+   * @param cuerpo mensaje ya revisado, tal como se envía.
+   * @return intento registrado, con su estado final.
+   */
+  @Transactional
+  public Notification enviarMensajeRevisado(
+      UUID appointmentId, NotificationChannel channel, String asunto, String cuerpo) {
+    UUID tenantId = TenantContext.getRequiredTenantId();
+    Appointment cita = appointmentRepository.findByIdAndTenantId(appointmentId, tenantId)
+        .orElseThrow(() -> new ResourceNotFoundException(
+            "Cita no encontrada: " + appointmentId));
+
+    UUID patientId = cita.getPatient() != null ? cita.getPatient().getId() : null;
+    String contacto = null;
+    if (cita.getPatient() != null) {
+      contacto = channel == NotificationChannel.email
+          ? cita.getPatient().getEmail()
+          : cita.getPatient().getPhone();
+    }
+    if (contacto == null || contacto.isBlank()) {
+      Notification intento = nuevoIntento(tenantId, patientId, null, channel, "");
+      intento.setTemplateKey(TEMPLATE_MENSAJE_REVISADO);
+      String medio = channel == NotificationChannel.email ? "email" : "teléfono";
+      return registrarFallida(intento, "El paciente no tiene " + medio + " registrado.");
+    }
+
+    String asuntoFinal = asunto;
+    if (channel == NotificationChannel.email && (asuntoFinal == null || asuntoFinal.isBlank())) {
+      asuntoFinal = "Mensaje de tu clínica";
+    }
+    return sendCustomMessage(
+        tenantId, channel, contacto.strip(), asuntoFinal != null ? asuntoFinal : "",
+        cuerpo, TEMPLATE_MENSAJE_REVISADO, patientId,
+        Map.of("appointmentId", cita.getId().toString()));
   }
 
   private NotificationSender senderPara(NotificationChannel channel) {
