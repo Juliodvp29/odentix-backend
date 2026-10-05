@@ -3,9 +3,11 @@ package com.julio.odentix.odentix_backend.subscription.service;
 import com.julio.odentix.odentix_backend.notification.entity.NotificationChannel;
 import com.julio.odentix.odentix_backend.notification.entity.NotificationStatus;
 import com.julio.odentix.odentix_backend.notification.repository.NotificationRepository;
+import com.julio.odentix.odentix_backend.saas.dto.PlanSummaryResponse;
 import com.julio.odentix.odentix_backend.shared.context.TenantContext;
 import com.julio.odentix.odentix_backend.subscription.entity.LimitKey;
 import com.julio.odentix.odentix_backend.subscription.entity.Plan;
+import com.julio.odentix.odentix_backend.subscription.entity.PlanFeature;
 import com.julio.odentix.odentix_backend.subscription.entity.SubscriptionStatus;
 import com.julio.odentix.odentix_backend.subscription.entity.TenantSubscription;
 import com.julio.odentix.odentix_backend.subscription.exception.FeatureNotAvailableException;
@@ -14,7 +16,9 @@ import com.julio.odentix.odentix_backend.subscription.repository.PlanFeatureRepo
 import com.julio.odentix.odentix_backend.subscription.repository.PlanLimitRepository;
 import com.julio.odentix.odentix_backend.subscription.repository.TenantSubscriptionRepository;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -96,6 +100,40 @@ public class SubscriptionService {
       throw new FeatureNotAvailableException(featureKey, plan.getCode());
     }
     return true;
+  }
+
+  /**
+   * Resumen del plan del tenant activo para gating en el frontend.
+   *
+   * <p>Sin suscripción viva devuelve código nulo con listas vacías: el
+   * frontend lo trata como gating inactivo (fail-open pre-billing, la
+   * misma razón que en `requireFeature`).
+   *
+   * @return código del plan, features habilitados y límites no nulos.
+   */
+  @Transactional(readOnly = true)
+  public PlanSummaryResponse resumenPlan() {
+    UUID tenantId = TenantContext.getRequiredTenantId();
+
+    Optional<TenantSubscription> suscripcion =
+        subscriptionRepository.findLiveByTenantId(tenantId, ESTADOS_VIVOS);
+    if (suscripcion.isEmpty()) {
+      return new PlanSummaryResponse(null, List.of(), Map.of());
+    }
+
+    Plan plan = suscripcion.get().getPlan();
+    List<String> features = planFeatureRepository.findByPlanId(plan.getId()).stream()
+        .filter(PlanFeature::isEnabled)
+        .map(PlanFeature::getFeatureKey)
+        .sorted()
+        .toList();
+    Map<String, Integer> limits = new HashMap<>();
+    planLimitRepository.findByPlanId(plan.getId()).forEach(limite -> {
+      if (limite.getMaxValue() != null) {
+        limits.put(limite.getLimitKey(), limite.getMaxValue());
+      }
+    });
+    return new PlanSummaryResponse(plan.getCode(), features, limits);
   }
 
   /**
