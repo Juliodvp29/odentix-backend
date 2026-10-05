@@ -4,13 +4,17 @@ import com.julio.odentix.odentix_backend.auth.exception.RateLimitExceededExcepti
 import com.julio.odentix.odentix_backend.auth.service.PublicEndpointRateLimitService;
 import com.julio.odentix.odentix_backend.saas.dto.CheckoutRequest;
 import com.julio.odentix.odentix_backend.saas.dto.CheckoutResponse;
+import com.julio.odentix.odentix_backend.saas.dto.PlanCatalogResponse;
+import com.julio.odentix.odentix_backend.saas.dto.PlanSummaryResponse;
 import com.julio.odentix.odentix_backend.saas.dto.SubscriptionResponse;
 import com.julio.odentix.odentix_backend.saas.service.SaasBillingService;
+import com.julio.odentix.odentix_backend.subscription.service.SubscriptionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -34,12 +38,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class SaasBillingController {
 
   private final SaasBillingService billingService;
+  private final SubscriptionService subscriptionService;
   private final PublicEndpointRateLimitService publicEndpointRateLimitService;
 
   public SaasBillingController(
       SaasBillingService billingService,
+      SubscriptionService subscriptionService,
       PublicEndpointRateLimitService publicEndpointRateLimitService) {
     this.billingService = billingService;
+    this.subscriptionService = subscriptionService;
     this.publicEndpointRateLimitService = publicEndpointRateLimitService;
   }
 
@@ -69,6 +76,41 @@ public class SaasBillingController {
   )
   public ResponseEntity<SubscriptionResponse> miSuscripcion() {
     return ResponseEntity.ok(billingService.miSuscripcion());
+  }
+
+  /**
+   * Resumen del plan para gating en el frontend: código, features
+   * habilitados y límites. Legible por todos los roles operativos (a
+   * diferencia de la suscripción completa, reservada al propietario) y
+   * sin exigir ningún feature (sería circular).
+   */
+  @GetMapping("/plan")
+  @PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
+  @Operation(
+      summary = "Ver resumen del plan",
+      description = "Plan actual del tenant con sus features y límites, "
+          + "para ocultar o explicar funciones no incluidas antes de usarlas."
+  )
+  public ResponseEntity<PlanSummaryResponse> resumenPlan() {
+    return ResponseEntity.ok(subscriptionService.resumenPlan());
+  }
+
+  /**
+   * Catálogo de planes activos con precios, features y límites.
+   *
+   * <p>Legible por todos los roles operativos: elegir plan es del
+   * propietario (el checkout lo exige), pero ver el catálogo no tiene
+   * por qué estar restringido.
+   */
+  @GetMapping("/plans")
+  @PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
+  @Operation(
+      summary = "Ver catálogo de planes",
+      description = "Planes activos con sus precios, features y límites, "
+          + "ordenados por precio. Sin hardcodear nada en el frontend."
+  )
+  public ResponseEntity<List<PlanCatalogResponse>> catalogoPlanes() {
+    return ResponseEntity.ok(billingService.catalogoPlanes());
   }
 
   /**

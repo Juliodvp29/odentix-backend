@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.julio.odentix.odentix_backend.saas.client.BoldClient;
 import com.julio.odentix.odentix_backend.saas.dto.CheckoutRequest;
 import com.julio.odentix.odentix_backend.saas.dto.CheckoutResponse;
+import com.julio.odentix.odentix_backend.saas.dto.PlanCatalogResponse;
 import com.julio.odentix.odentix_backend.saas.dto.SubscriptionResponse;
 import com.julio.odentix.odentix_backend.saas.entity.SaasPayment;
 import com.julio.odentix.odentix_backend.saas.entity.SaasPaymentStatus;
@@ -13,8 +14,11 @@ import com.julio.odentix.odentix_backend.shared.context.TenantContext;
 import com.julio.odentix.odentix_backend.shared.exception.ResourceNotFoundException;
 import com.julio.odentix.odentix_backend.subscription.entity.BillingCycle;
 import com.julio.odentix.odentix_backend.subscription.entity.Plan;
+import com.julio.odentix.odentix_backend.subscription.entity.PlanFeature;
 import com.julio.odentix.odentix_backend.subscription.entity.SubscriptionStatus;
 import com.julio.odentix.odentix_backend.subscription.entity.TenantSubscription;
+import com.julio.odentix.odentix_backend.subscription.repository.PlanFeatureRepository;
+import com.julio.odentix.odentix_backend.subscription.repository.PlanLimitRepository;
 import com.julio.odentix.odentix_backend.subscription.repository.PlanRepository;
 import com.julio.odentix.odentix_backend.subscription.repository.TenantSubscriptionRepository;
 import java.math.BigDecimal;
@@ -24,7 +28,10 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Base64;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import javax.crypto.Mac;
@@ -64,6 +71,8 @@ public class SaasBillingService {
   private final SaasPaymentRepository paymentRepository;
   private final TenantSubscriptionRepository subscriptionRepository;
   private final PlanRepository planRepository;
+  private final PlanFeatureRepository planFeatureRepository;
+  private final PlanLimitRepository planLimitRepository;
   private final ObjectMapper objectMapper;
   private final String webhookSecret;
 
@@ -72,11 +81,15 @@ public class SaasBillingService {
       SaasPaymentRepository paymentRepository,
       TenantSubscriptionRepository subscriptionRepository,
       PlanRepository planRepository,
+      PlanFeatureRepository planFeatureRepository,
+      PlanLimitRepository planLimitRepository,
       @Value("${odentix.saas.bold.webhook-secret:}") String webhookSecret) {
     this.boldClient = boldClient;
     this.paymentRepository = paymentRepository;
     this.subscriptionRepository = subscriptionRepository;
     this.planRepository = planRepository;
+    this.planFeatureRepository = planFeatureRepository;
+    this.planLimitRepository = planLimitRepository;
     // Sin bean ObjectMapper en el contexto: instancia propia (thread-safe para lectura).
     this.objectMapper = new ObjectMapper();
     this.webhookSecret = webhookSecret != null ? webhookSecret : "";
@@ -171,6 +184,37 @@ public class SaasBillingService {
     response.setMonthlyPriceCop(sub.getPlan().getMonthlyPriceCop());
     response.setAnnualPriceCop(sub.getPlan().getAnnualPriceCop());
     return response;
+  }
+
+  /**
+   * Catálogo de planes activos con su detalle para la pantalla de planes.
+   *
+   * <p>Ordenado por precio mensual ascendente. No depende del tenant: es
+   * el mismo catálogo para todas las clínicas.
+   *
+   * @return planes activos con features habilitados y límites no nulos.
+   */
+  @Transactional(readOnly = true)
+  public List<PlanCatalogResponse> catalogoPlanes() {
+    return planRepository.findByActiveTrue().stream()
+        .sorted(Comparator.comparing(Plan::getMonthlyPriceCop))
+        .map(plan -> {
+          List<String> features = planFeatureRepository.findByPlanId(plan.getId()).stream()
+              .filter(PlanFeature::isEnabled)
+              .map(PlanFeature::getFeatureKey)
+              .sorted()
+              .toList();
+          Map<String, Integer> limits = new HashMap<>();
+          planLimitRepository.findByPlanId(plan.getId()).forEach(limite -> {
+            if (limite.getMaxValue() != null) {
+              limits.put(limite.getLimitKey(), limite.getMaxValue());
+            }
+          });
+          return new PlanCatalogResponse(
+              plan.getCode(), plan.getName(), plan.getMonthlyPriceCop(),
+              plan.getAnnualPriceCop(), features, limits);
+        })
+        .toList();
   }
 
   /**
