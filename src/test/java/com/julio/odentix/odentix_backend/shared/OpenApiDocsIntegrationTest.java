@@ -152,6 +152,8 @@ class OpenApiDocsIntegrationTest extends AbstractIntegrationTest {
         .andExpect(jsonPath("$.paths./api/v1/notifications/send.post").exists())
         // resumen del plan para gating en el frontend.
         .andExpect(jsonPath("$.paths./api/v1/billing/plan.get").exists())
+        // catálogo de planes para la pantalla de planes.
+        .andExpect(jsonPath("$.paths./api/v1/billing/plans.get").exists())
         // oportunidades, acciones y valor recuperado (FASE9-01, FASE9-03, FASE9-04).
         .andExpect(jsonPath("$.paths./api/v1/opportunities.get").exists())
         .andExpect(jsonPath("$.paths./api/v1/opportunities/recovered-value.get").exists())

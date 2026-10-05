@@ -4,6 +4,7 @@ import com.julio.odentix.odentix_backend.auth.exception.RateLimitExceededExcepti
 import com.julio.odentix.odentix_backend.auth.service.PublicEndpointRateLimitService;
 import com.julio.odentix.odentix_backend.saas.dto.CheckoutRequest;
 import com.julio.odentix.odentix_backend.saas.dto.CheckoutResponse;
+import com.julio.odentix.odentix_backend.saas.dto.PlanCatalogResponse;
 import com.julio.odentix.odentix_backend.saas.dto.PlanSummaryResponse;
 import com.julio.odentix.odentix_backend.saas.dto.SubscriptionResponse;
 import com.julio.odentix.odentix_backend.saas.service.SaasBillingService;
@@ -13,6 +14,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -91,6 +93,24 @@ public class SaasBillingController {
   )
   public ResponseEntity<PlanSummaryResponse> resumenPlan() {
     return ResponseEntity.ok(subscriptionService.resumenPlan());
+  }
+
+  /**
+   * Catálogo de planes activos con precios, features y límites.
+   *
+   * <p>Legible por todos los roles operativos: elegir plan es del
+   * propietario (el checkout lo exige), pero ver el catálogo no tiene
+   * por qué estar restringido.
+   */
+  @GetMapping("/plans")
+  @PreAuthorize("hasAnyRole('PROPIETARIO', 'ODONTOLOGO', 'RECEPCION', 'AUXILIAR')")
+  @Operation(
+      summary = "Ver catálogo de planes",
+      description = "Planes activos con sus precios, features y límites, "
+          + "ordenados por precio. Sin hardcodear nada en el frontend."
+  )
+  public ResponseEntity<List<PlanCatalogResponse>> catalogoPlanes() {
+    return ResponseEntity.ok(billingService.catalogoPlanes());
   }
 
   /**
